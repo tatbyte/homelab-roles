@@ -1,0 +1,12 @@
+---
+# Bootstrap role: main orchestrator
+# Handles admin user creation and authorized keys
+# Task flow: assert → configure → validate
+
+- name: Execute task flow
+  ansible.builtin.include_tasks: ../../../_common/tasks/task_flow.yml
+  vars:
+    _task_flow_phases:
+      - assert
+      - configure
+      - validate

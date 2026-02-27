@@ -1,0 +1,33 @@
+---
+# Common task flow shared across all sub-roles
+# Reduces duplication by providing a single reusable orchestrator
+#
+# Phases executed in order: assert → install → configure → validate
+# Each phase is optional — only included if listed in _task_flow_phases
+#
+# Usage (from any sub-role tasks/main.yml):
+#   - name: Execute task flow
+#     ansible.builtin.include_tasks: ../../../_common/tasks/task_flow.yml
+#     vars:
+#       _task_flow_phases:
+#         - assert
+#         - configure
+#         - validate
+#
+# Issue: #36 — Common Setup for Role and Task Flow
+
+- name: Include assertion phase
+  ansible.builtin.include_tasks: "{{ role_path }}/tasks/assert.yml"
+  when: "'assert' in _task_flow_phases"
+
+- name: Include installation phase
+  ansible.builtin.include_tasks: "{{ role_path }}/tasks/install.yml"
+  when: "'install' in _task_flow_phases"
+
+- name: Include configuration phase
+  ansible.builtin.include_tasks: "{{ role_path }}/tasks/configure.yml"
+  when: "'configure' in _task_flow_phases"
+
+- name: Include post-deployment validation phase
+  ansible.builtin.include_tasks: "{{ role_path }}/tasks/validate.yml"
+  when: "'validate' in _task_flow_phases"

@@ -1,0 +1,36 @@
+---
+# monitoring/authorized_key: validation
+
+- name: Get user home directory
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ monitoring_authorized_user }}"
+  register: user_info
+
+- name: Set user home path
+  ansible.builtin.set_fact:
+    monitoring_user_home: "{{ user_info.ansible_facts.getent_passwd[monitoring_authorized_user][4] }}"
+
+- name: Verify authorized_keys file exists for user
+  ansible.builtin.stat:
+    path: "{{ monitoring_user_home }}/.ssh/authorized_keys"
+  register: auth_keys_file
+
+- name: Assert authorized_keys file exists
+  ansible.builtin.assert:
+    that:
+      - auth_keys_file.stat.exists
+    fail_msg: "authorized_keys file not found for user {{ monitoring_authorized_user }}"
+
+- name: Verify monitoring key is present in authorized_keys
+  ansible.builtin.command:
+    cmd: "grep -qF '{{ monitoring_authorized_key }}' {{ monitoring_user_home }}/.ssh/authorized_keys"
+  changed_when: false
+  failed_when: false
+  register: key_check
+
+- name: Assert monitoring key is present
+  ansible.builtin.assert:
+    that:
+      - key_check.rc == 0
+    fail_msg: "Monitoring authorized key not found in authorized_keys for {{ monitoring_authorized_user }}"

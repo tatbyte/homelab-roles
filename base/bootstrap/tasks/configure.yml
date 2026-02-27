@@ -1,0 +1,29 @@
+---
+# Bootstrap role: configuration tasks (admin user management)
+
+- name: Check if admin user exists
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ bootstrap_user }}"
+  ignore_errors: yes
+  register: user_exists
+
+- name: Ensure admin user exists
+  ansible.builtin.user:
+    name: "{{ bootstrap_user }}"
+    state: present
+    shell: "{{ user_shell }}"
+    groups: sudo
+    append: yes
+    uid: "{{ bootstrap_puid }}"
+    group: "{{ bootstrap_pgid }}"
+  when: >
+    user_exists.failed | default(false) or
+    bootstrap_user not in (user_exists.ansible_facts.getent_passwd | default({}))
+
+- name: Add main authorized_keys for admin user
+  ansible.builtin.authorized_key:
+    user: "{{ bootstrap_user }}"
+    state: present
+    key: "{{ bootstrap_authorized_key }}"
+  when: bootstrap_authorized_key is defined and bootstrap_authorized_key | length > 0

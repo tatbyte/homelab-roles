@@ -1,0 +1,17 @@
+---
+# monitoring/authorized_key: assertions
+
+- name: Validate monitoring_authorized_key is defined and non-empty
+  ansible.builtin.assert:
+    that:
+      - monitoring_authorized_key is defined
+      - monitoring_authorized_key | length > 0
+      - monitoring_authorized_key.startswith('ssh-')
+    fail_msg: "monitoring_authorized_key must be a valid SSH public key"
+
+- name: Validate monitoring_authorized_user is defined
+  ansible.builtin.assert:
+    that:
+      - monitoring_authorized_user is defined
+      - monitoring_authorized_user | length > 0
+    fail_msg: "monitoring_authorized_user must be defined"

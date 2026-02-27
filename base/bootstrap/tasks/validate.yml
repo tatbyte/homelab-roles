@@ -1,0 +1,32 @@
+---
+# Bootstrap role: validation and verification tasks
+
+- name: Verify admin user exists
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ bootstrap_user }}"
+  register: user_check
+
+- name: Assert admin user exists
+  ansible.builtin.assert:
+    that:
+      - bootstrap_user in user_check.ansible_facts.getent_passwd
+    fail_msg: "Admin user does not exist"
+
+- name: Assert admin user shell is correct
+  ansible.builtin.assert:
+    that:
+      - user_check.ansible_facts.getent_passwd[bootstrap_user][5] == user_shell
+    fail_msg: "Admin user shell does not match expected value"
+
+- name: Verify admin user is in sudo group
+  ansible.builtin.getent:
+    database: group
+    key: sudo
+  register: sudo_group
+
+- name: Assert admin user is in sudo group
+  ansible.builtin.assert:
+    that:
+      - bootstrap_user in (sudo_group.ansible_facts.getent_group['sudo'][2] | default(''))
+    fail_msg: "Admin user is not in the sudo group"
