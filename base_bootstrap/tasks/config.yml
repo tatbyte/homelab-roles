@@ -17,9 +17,6 @@
     append: yes
     uid: "{{ bootstrap_puid }}"
     group: "{{ bootstrap_pgid }}"
-  when: >
-    user_exists.failed | default(false) or
-    bootstrap_user not in (user_exists.ansible_facts.getent_passwd | default({}))
 
 - name: Add main authorized_keys for admin user
   ansible.builtin.authorized_key:

@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.3.0] - 2026-03-02
+### Added
+- `base/meta/main.yml`: Declared `base_bootstrap` as a dependency for the `base` role, with tags for orchestration.
+- `base/tasks/main.yml`: Placeholder for future base role tasks.
+- `base_bootstrap/tasks/config.yml`: Now always ensures the admin user exists and is in the correct group, regardless of prior existence.
+
+### Changed
+- `_common/tasks/task_flow.yml`:
+	- Improved path resolution for shared vars.
+	- Pre-check for phase task files now runs on localhost without privilege escalation, ensuring correct detection and avoiding sudo errors.
+	- Added `become_user` and `run_once` for robust local checks.
+	- Fixed tag application logic for included phase tasks.
+- `base_bootstrap/defaults/main.yml`: Added `bootstrap_sudo_group` default variable.
+- `base_bootstrap/tasks/main.yml`: Updated to use the correct include path and streamlined variables for the task flow.
+- `base_bootstrap/tasks/validate.yml`: Now dynamically checks group membership using the `bootstrap_sudo_group` variable.
+
 ## [v0.2.0]
 ### Added
 - Introduced `_common` role directory with shared `tasks/task_flow.yml` orchestrator for consistent role execution flow (assert, install, configure, validate).
