@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.3.1] - 2026-03-02
+### Added
+- `.pre-commit-config.yaml`: Added and refined pre-commit configuration for linting and hygiene (trailing whitespace, EOF, merge conflicts, YAML validation, yamllint, ansible-lint).
+- Pre-commit now uses relaxed yamllint rules for Ansible YAML conventions.
+
+### Changed
+- Updated `base_bootstrap/tasks/config.yml`, `_common/vars/task_flow.yml`, and `monitoring/authorized_key/tasks/configure.yml` for ansible-lint compliance (canonical FQCNs, truthy values, YAML formatting).
+- Cleaned up `.pre-commit-config.yaml` to remove broken requirements.yml hook and duplicate keys.
+
+### Fixed
+- All pre-commit hooks now pass successfully after configuration and code fixes.
+
 ## [v0.3.0] - 2026-03-02
 ### Added
 - `base/meta/main.yml`: Declared `base_bootstrap` as a dependency for the `base` role, with tags for orchestration.
