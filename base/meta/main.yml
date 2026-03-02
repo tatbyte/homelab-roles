@@ -1,0 +1,17 @@
+## File: base/meta/main.yml
+## Dependencies: List roles required before executing this role, in order of execution
+
+dependencies:
+  - role: base_bootstrap
+    tags: [base, base_bootstrap]
+  # - role: base_idmap
+  # - role: base_packages
+  # - role: base_timezone
+  # - role: base_ntp
+  # - role: base_hostname
+  # - role: base_sudo
+  # - role: base_sshd
+  # - role: base_firewall
+  # - role: base_logging
+  # - role: base_updates
+  # - role: base_security
