@@ -1,17 +1,25 @@
-## [v0.3.2] - 2026-03-03
-### Added
-- Documentation for pre-commit installation, usage, and linting setup for all roles (`docs/00-pre-commit.md`).
-- Updated root `README.md` to include pre-commit usage, installation, and linting details, referencing the new docs and configuration.
-
-### Changed
-- Enhanced `.pre-commit-config.yaml`: Cleaned up and future-proofed ansible-lint hook to lint all YAML files and `ansible.cfg`, covering all current and future roles automatically.
-
-### Merged
-- Merged PR #11: Enhance pre-commit setup, clean up ansible-lint configuration, and add documentation for installation and usage.
-
 # Changelog
 
 All notable changes to this project will be documented in this file.
+
+## [v0.3.2] - 2026-03-04
+### Added
+- Documentation for pre-commit installation, usage, and linting setup for all roles (`docs/00-pre-commit.mb`).
+- Added troubleshooting/common failure guidance for local pre-commit environments (cache permissions, missing `ansible-lint`, hook bootstrap issues).
+
+### Changed
+- Updated `.pre-commit-config.yaml` for a roles-only repo:
+  - Added `minimum_pre_commit_version` and default hook install types (`pre-commit`, `pre-push`).
+  - Added `meta` self-check hooks (`check-hooks-apply`, `check-useless-excludes`).
+  - Added safety hooks (`check-case-conflict`, `detect-private-key`).
+  - Simplified ansible-lint trigger to YAML files only.
+- Updated root `README.md` pre-commit section and quick start instructions for accuracy.
+
+### Removed
+- Removed root `ansible.cfg` (not required for this roles-only repository).
+
+### Merged
+- Merged PR #11: Enhance pre-commit setup, clean up ansible-lint configuration, and add documentation for installation and usage.
 
 ## [v0.3.1] - 2026-03-02
 ### Added

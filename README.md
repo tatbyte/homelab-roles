@@ -34,19 +34,16 @@ This repository contains modular, production-ready Ansible roles designed for us
 This repository uses [pre-commit](https://pre-commit.com/) to enforce code quality and linting for YAML and Ansible files.
 
 - See [docs/00-pre-commit.mb](docs/00-pre-commit.mb) for setup, installation, and usage instructions.
-- The `.pre-commit-config.yaml` is configured to lint all YAML files and `ansible.cfg` automatically, including future roles.
-- Hooks include:
-  - Trailing whitespace
-  - End-of-file fixer
-  - Merge conflict check
-  - YAML syntax and style (yamllint)
-  - Ansible linting (ansible-lint)
+- The `.pre-commit-config.yaml` applies repository-wide, so future roles/files are checked automatically.
+- Hooks include formatting/safety checks, YAML validation, yamllint, and ansible-lint.
+- Git hooks are installed for both commit and push (`pre-commit` + `pre-push`).
 
 ### Quick Start
 1. Install pre-commit (recommended via pipx):
    ```sh
    pip install pipx
    pipx install pre-commit
+   pipx install ansible-lint
    pre-commit install
    ```
 2. Run all hooks manually:

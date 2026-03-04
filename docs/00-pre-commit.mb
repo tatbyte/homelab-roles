@@ -35,7 +35,7 @@ Pre-commit is a framework for managing and maintaining multi-language pre-commit
    ```sh
    pre-commit install
    ```
-   This sets up the git hook so pre-commit runs automatically on `git commit`.
+   This repository config installs both `pre-commit` and `pre-push` hooks by default.
 
 2. **Run pre-commit manually:**
    ```sh
@@ -45,12 +45,17 @@ Pre-commit is a framework for managing and maintaining multi-language pre-commit
 
 ## How it works in this repo
 - The `.pre-commit-config.yaml` file defines hooks for:
+  - `meta` checks for config quality:
+    - `check-hooks-apply`
+    - `check-useless-excludes`
   - Trailing whitespace
   - End-of-file fixer
   - Merge conflict check
+  - Case conflict check
+  - Private key detection
   - YAML syntax and style (yamllint)
   - Ansible linting (ansible-lint)
-- The ansible-lint hook is configured to lint all YAML files and `ansible.cfg`, so new roles are automatically covered.
+- Hooks are repository-wide by default. New files and future roles are automatically included without editing the config.
 
 ## Troubleshooting
 - If you see errors about unstaged configuration, run:
@@ -58,7 +63,37 @@ Pre-commit is a framework for managing and maintaining multi-language pre-commit
   git add .pre-commit-config.yaml
   ```
 - If hooks modify files, re-add and recommit as needed.
+- If `pre-commit` cannot write to `~/.cache/pre-commit` in restricted environments, set a writable cache path:
+  ```sh
+  PRE_COMMIT_HOME=/tmp/pre-commit-cache pre-commit run --all-files
+  ```
 - For more details, see [pre-commit documentation](https://pre-commit.com/).
+
+## Common failures
+- `ansible-lint: command not found`
+  - Cause: local hook uses `language: system` and expects `ansible-lint` to be installed on your machine.
+  - Fix:
+    ```sh
+    pipx install ansible-lint
+    ```
+
+- `yamllint: command not found` or yamllint hook install issues
+  - Cause: pre-commit hook environments not initialized yet, or bootstrap failed.
+  - Fix:
+    ```sh
+    PRE_COMMIT_HOME=/tmp/pre-commit-cache pre-commit run yamllint --all-files
+    ```
+  - Then run:
+    ```sh
+    PRE_COMMIT_HOME=/tmp/pre-commit-cache pre-commit run --all-files
+    ```
+
+- `PermissionError` / `readonly database` under `~/.cache/pre-commit`
+  - Cause: current environment cannot write to default pre-commit cache.
+  - Fix:
+    ```sh
+    PRE_COMMIT_HOME=/tmp/pre-commit-cache pre-commit run --all-files
+    ```
 
 ## Updating Hooks
 - To update hook versions, edit `.pre-commit-config.yaml` and run:

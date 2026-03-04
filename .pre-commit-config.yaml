@@ -1,10 +1,20 @@
+minimum_pre_commit_version: "3.7.0"
+default_install_hook_types: [pre-commit, pre-push]
+
 repos:
+  - repo: meta
+    hooks:
+      - id: check-hooks-apply
+      - id: check-useless-excludes
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: detect-private-key
       - id: check-yaml
         args: ["--unsafe"]
       - id: check-added-large-files
@@ -13,7 +23,6 @@ repos:
     rev: v1.38.0
     hooks:
       - id: yamllint
-        files: \.(yaml|yml)$
         args:
           - -d
           - |
@@ -34,5 +43,4 @@ repos:
         entry: ansible-lint -q
         language: system
         pass_filenames: false
-        files: (?x)^(ansible\.cfg|.*\.ya?ml)$
-        exclude: (?x)^(\n          \.git/|\n          \.cache/|\n          \.venv/|\n          vendor/|\n          collections/\n        )
+        files: \.ya?ml$
