@@ -1,0 +1,7 @@
+---
+- name: Test base_bootstrap role
+  hosts: all
+  become: true
+  roles:
+    - role: base_bootstrap
+      tags: [base_bootstrap]

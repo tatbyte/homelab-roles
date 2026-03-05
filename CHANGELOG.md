@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.4.0]
+### Added
+- Added tests/README.md with documentation for new test files and structure.
+- Created docs/01-test-lab.md for test lab setup documentation.
+
+### Changed
+- Renamed docs/01.md to docs/01-test-lab.md for clarity.
+
 ## [v0.3.2] - 2026-03-04
 ### Added
 - Documentation for pre-commit installation, usage, and linting setup for all roles (`docs/00-pre-commit.mb`).

@@ -1,0 +1,25 @@
+---
+# Global variables for all hosts in the test lab
+
+# From _common/vars/task_flow.yml
+task_flow:
+  order:
+    - assert
+    - install
+    - config
+    - validate
+  profiles:
+    full: [assert, install, config, validate]
+    config: [assert, config, validate]
+    guard: [assert]
+    full_dev: [assert, install, config]
+    config_dev: [assert, config]
+
+# ── base_bootstrap ───────────────────────
+base_bootstrap_enabled: true
+bootstrap_user: admin
+bootstrap_puid: 1000
+bootstrap_pgid: 1000
+bootstrap_sudo_group: sudo
+user_shell: /bin/bash
+bootstrap_authorized_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAn7kkLsf1GYLBmx4D3R4t/C3H7eWStv9u8vXJdc3LYr ansible-test"
