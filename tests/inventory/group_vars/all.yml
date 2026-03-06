@@ -2,10 +2,9 @@
 # Global variables for all hosts in the test lab
 
 # ── base_bootstrap ───────────────────────
-base_bootstrap_enabled: true
-bootstrap_user: admin
-bootstrap_puid: 1000
-bootstrap_pgid: 1000
-bootstrap_sudo_group: sudo
-user_shell: /bin/bash
-bootstrap_authorized_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAn7kkLsf1GYLBmx4D3R4t/C3H7eWStv9u8vXJdc3LYr ansible-test"
+base_bootstrap_user: admin
+base_bootstrap_puid: 1000
+base_bootstrap_pgid: 1000
+base_bootstrap_sudo_group: sudo
+base_bootstrap_user_shell: /bin/bash
+base_bootstrap_authorized_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAn7kkLsf1GYLBmx4D3R4t/C3H7eWStv9u8vXJdc3LYr ansible-test"

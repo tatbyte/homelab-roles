@@ -9,6 +9,16 @@ All notable changes to this project will be documented in this file.
 - Fixed YAML syntax, indentation, and document start markers in all task files.
 - Updated and added roles/monitoring_authorized_key/tasks/main.yml for new task structure and lint compliance.
 
+### Changed
+- Added granular phase-specific tags (`base_bootstrap_assert`, `base_bootstrap_config`, `base_bootstrap_validate`) to each imported task block in `roles/base_bootstrap/tasks/main.yml` for finer tag-based execution control.
+
+### Fixed
+- Corrected all `base_bootstrap` task variables in `assert.yml` from bare `bootstrap_*` / `user_shell` names to the proper `base_bootstrap_*` prefix.
+- Prefixed all task names in `assert.yml`, `config.yml`, and `validate.yml` with their phase name (e.g. `assert |`, `config |`, `validate |`) for consistency.
+- Fixed register variable collision in `validate.yml`: renamed `base_bootstrap_sudo_group` register to `base_bootstrap_sudo_group_check` to avoid shadowing the variable.
+- Improved sudo group membership assertion in `validate.yml` to correctly parse the group members list (trim, reject empty, map).
+- Updated `tests/inventory/group_vars/all.yml` to use `base_bootstrap_*` variable names and removed deprecated `base_bootstrap_enabled` and bare `bootstrap_*` variables.
+
 ## [v0.4.0]
 ### Added
 - Added tests/README.md with documentation for new test files and structure.

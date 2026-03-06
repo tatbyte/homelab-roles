@@ -1,32 +1,41 @@
 ---
 # Bootstrap role: validation and verification tasks
 
-- name: Verify Admin User Exists
+- name: "validate | Verify Admin User Exists"
   ansible.builtin.getent:
     database: passwd
     key: "{{ base_bootstrap_user }}"
   register: base_bootstrap_user_check
 
-- name: Assert Admin User Exists
+- name: "validate | Assert Admin User Exists"
   ansible.builtin.assert:
     that:
       - base_bootstrap_user in base_bootstrap_user_check.ansible_facts.getent_passwd
     fail_msg: "Admin user does not exist"
 
-- name: Assert Admin User Shell Is Correct
+- name: "validate | Assert Admin User Shell Is Correct"
   ansible.builtin.assert:
     that:
       - base_bootstrap_user_check.ansible_facts.getent_passwd[base_bootstrap_user][5] == base_bootstrap_user_shell
     fail_msg: "Admin user shell does not match expected value"
 
-- name: Verify Admin User Is In Sudo Group
+- name: "validate | Verify Admin User Is In Sudo Group"
   ansible.builtin.getent:
     database: group
     key: "{{ base_bootstrap_sudo_group }}"
-  register: base_bootstrap_sudo_group
+  register: base_bootstrap_sudo_group_check
 
-- name: Assert Admin User Is In Sudo Group
+- name: "validate | Assert Admin User Is In Sudo Group"
   ansible.builtin.assert:
     that:
-      - base_bootstrap_user in (base_bootstrap_sudo_group.ansible_facts.getent_group[base_bootstrap_sudo_group][2] | default('') | string | split(','))
+      - base_bootstrap_user in (
+          base_bootstrap_sudo_group_check.ansible_facts.getent_group[base_bootstrap_sudo_group]
+          | last
+          | default('')
+          | string
+          | split(',')
+          | map('trim')
+          | reject('equalto', '')
+          | list
+        )
     fail_msg: "Admin user is not in the sudo group"
