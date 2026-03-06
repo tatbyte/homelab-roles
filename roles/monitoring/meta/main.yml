@@ -1,0 +1,6 @@
+## File: roles/monitoring/meta/main.yml
+## Dependencies: List roles required before executing this role, in order of execution
+
+dependencies:
+  - role: monitoring_authorized_key
+    tags: [monitoring, monitoring_authorized_key]

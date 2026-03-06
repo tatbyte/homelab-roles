@@ -1,0 +1,4 @@
+---
+# Default variables for monitoring/authorized_key role
+monitoring_authorized_key_user: "{{ monitoring_authorized_key_user | default('root') }}"
+monitoring_authorized_key_key: ""

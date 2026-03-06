@@ -1,63 +1,83 @@
 # ansible-roles
 
-Reusable Ansible roles for homelab, infrastructure, and server automation.
+Reusable Ansible roles for homelab and infrastructure automation.
 
 ## Overview
-This repository contains modular, production-ready Ansible roles designed for use in homelab and cloud environments. Roles are structured for easy reuse, testing, and integration with other projects via Ansible Galaxy or as a git submodule.
+This repository is a roles source repository. It is intended to be consumed by a separate infra repository that contains your environment-specific inventory and playbooks.
 
-## Features
-- Strict input validation and post-deployment checks
-- Shared task flow orchestrator for consistency (`_common`)
-- Roles for user/bootstrap, monitoring/authorized_key, and more
-- Designed for idempotency and safe re-runs
+## Repository Layout
+```text
+ansible-roles/
+├── roles/
+│   ├── base/
+│   ├── base_bootstrap/
+│   ├── monitoring/
+│   └── monitoring_authorized_key/
+├── tests/
+│   ├── ansible.cfg
+│   ├── inventory/
+│   └── playbooks/
+├── docs/
+├── CHANGELOG.md
+└── README.md
+```
 
-## Usage
-1. Add this repository to your `requirements.yml`:
-   ```yaml
-   - src: https://github.com/tatbyte/ansible-roles.git
-     version: main
-     name: base
-   ```
-2. Install roles:
-   ```sh
-   ansible-galaxy install -r requirements.yml -p roles/
-   ```
-3. Reference roles in your playbooks:
-   ```yaml
-   - hosts: all
-     roles:
-       - base/bootstrap
-       - monitoring/authorized_key
-   ```
+## Available Roles
+- `base`: Aggregate role that currently depends on `base_bootstrap`.
+- `base_bootstrap`: Creates and validates a bootstrap/admin user and SSH access.
+- `monitoring`: Aggregate role that currently depends on `monitoring_authorized_key`.
+- `monitoring_authorized_key`: Installs an SSH authorized key for monitoring-style access.
 
-## Linting and Pre-commit
-This repository uses [pre-commit](https://pre-commit.com/) to enforce code quality and linting for YAML and Ansible files.
+## Consume From Another Repo
+Recommended pattern: add this repository to your infra repository (submodule or vendored checkout), then point `roles_path` to `ansible-roles/roles`.
 
-- See [docs/00-pre-commit.mb](docs/00-pre-commit.mb) for setup, installation, and usage instructions.
-- The `.pre-commit-config.yaml` applies repository-wide, so future roles/files are checked automatically.
-- Hooks include formatting/safety checks, YAML validation, yamllint, and ansible-lint.
-- Git hooks are installed for both commit and push (`pre-commit` + `pre-push`).
+Example infra repo `ansible.cfg`:
 
-### Quick Start
-1. Install pre-commit (recommended via pipx):
-   ```sh
-   pip install pipx
-   pipx install pre-commit
-   pipx install ansible-lint
-   pre-commit install
-   ```
-2. Run all hooks manually:
-   ```sh
-   pre-commit run --all-files
-   ```
+```ini
+[defaults]
+inventory = ./inventory/hosts.ini
+roles_path = ./roles:./vendor/ansible-roles/roles
+```
 
-## Development
-- See `_common/README.md` for the shared task flow pattern.
-- Each role contains its own README with usage and variable documentation.
-- Test roles using the provided playbooks in your consuming project.
+Example infra playbook:
 
-## Contributing
-PRs and issues are welcome! Please follow the established role/task structure and add tests for new features.
+```yaml
+---
+- name: Apply base setup
+  hosts: all
+  become: true
+  roles:
+    - role: base
+
+- name: Apply monitoring access
+  hosts: monitoring_targets
+  become: true
+  roles:
+    - role: monitoring_authorized_key
+```
+
+## Local Role Testing
+This repository keeps a local test harness in `tests/`.
+
+Run tests from repo root:
+
+```sh
+ANSIBLE_CONFIG=tests/ansible.cfg ansible-playbook tests/playbooks/base.yml
+```
+
+See [tests/README.md](tests/README.md) and [docs/01-test-lab.md](docs/01-test-lab.md) for test-lab details.
+
+## Linting
+Pre-commit and linting are configured in this repository.
+
+Quick start:
+
+```sh
+pre-commit install
+pre-commit run --all-files
+```
+
+See [docs/00-pre-commit.mb](docs/00-pre-commit.mb) for full setup details.
 
 ## License
 MIT

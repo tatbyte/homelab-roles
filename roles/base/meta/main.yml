@@ -1,4 +1,4 @@
-## File: base/meta/main.yml
+## File: roles/base/meta/main.yml
 ## Dependencies: List roles required before executing this role, in order of execution
 
 dependencies:

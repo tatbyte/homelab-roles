@@ -1,9 +1,0 @@
----
-# This task file executes the common task flow for the base_bootstrap role.
-# It includes the shared _common/tasks/task_flow.yml with role-specific variables.
-- name: "Execute base_bootstrap task flow"
-  ansible.builtin.include_tasks: "{{ role_path }}/../_common/tasks/task_flow.yml"
-  when: base_bootstrap_enabled | default(true) | bool
-  vars:
-    _role_tag: "base_bootstrap"
-    _task_flow_profile: "config"

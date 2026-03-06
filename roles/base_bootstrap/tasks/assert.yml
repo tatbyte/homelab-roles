@@ -1,0 +1,34 @@
+---
+# Bootstrap role: assertions and validation
+
+- name: "assert | Validate required variables are defined"
+  ansible.builtin.assert:
+    that:
+      - base_bootstrap_user is defined
+      - base_bootstrap_user | length > 0
+    fail_msg: "Required variables are not defined"
+
+- name: "assert | Validate PUID and PGID are valid numbers"
+  ansible.builtin.assert:
+    that:
+      - base_bootstrap_puid is number
+      - base_bootstrap_pgid is number
+      - base_bootstrap_puid | int >= 1000
+      - base_bootstrap_pgid | int >= 1000
+    fail_msg: "PUID and PGID must be valid numbers >= 1000"
+
+- name: "assert | Validate user_shell is defined"
+  ansible.builtin.assert:
+    that:
+      - base_bootstrap_user_shell is defined
+      - base_bootstrap_user_shell | length > 0
+      - base_bootstrap_user_shell.startswith('/')
+    fail_msg: "base_bootstrap_user_shell must be defined and be an absolute path"
+
+- name: "assert | Validate bootstrap_authorized_key if defined"
+  ansible.builtin.assert:
+    that:
+      - base_bootstrap_authorized_key | length > 0
+      - base_bootstrap_authorized_key.startswith('ssh-')
+    fail_msg: "base_bootstrap_authorized_key must be a valid SSH public key"
+  when: base_bootstrap_authorized_key is defined and base_bootstrap_authorized_key != ''

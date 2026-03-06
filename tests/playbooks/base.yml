@@ -3,5 +3,5 @@
   hosts: all
   become: true
   roles:
-    - role: base_bootstrap
-      tags: [base_bootstrap]
+    - role: base
+      tags: [base]

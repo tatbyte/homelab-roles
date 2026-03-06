@@ -1,8 +1,0 @@
----
-# Default variables for bootstrap role
-bootstrap_user: admin
-bootstrap_puid: 1000
-bootstrap_pgid: 1000
-bootstrap_sudo_group: sudo
-user_shell: /bin/bash
-bootstrap_authorized_key: ""

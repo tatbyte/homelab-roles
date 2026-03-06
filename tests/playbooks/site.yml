@@ -1,3 +1,3 @@
 ---
-- name: Include base_bootstrap playbook
-  ansible.builtin.import_playbook: base_bootstrap.yml
+- name: Include base playbook
+  ansible.builtin.import_playbook: base.yml

@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.5.0]
+### Refactored
+- Refactored variable naming in all roles to use role-specific prefixes for ansible-lint compliance.
+- Capitalized all task names for lint and readability.
+- Fixed YAML syntax, indentation, and document start markers in all task files.
+- Updated and added roles/monitoring_authorized_key/tasks/main.yml for new task structure and lint compliance.
+
+### Changed
+- Added granular phase-specific tags (`base_bootstrap_assert`, `base_bootstrap_config`, `base_bootstrap_validate`) to each imported task block in `roles/base_bootstrap/tasks/main.yml` for finer tag-based execution control.
+
+### Fixed
+- Corrected all `base_bootstrap` task variables in `assert.yml` from bare `bootstrap_*` / `user_shell` names to the proper `base_bootstrap_*` prefix.
+- Prefixed all task names in `assert.yml`, `config.yml`, and `validate.yml` with their phase name (e.g. `assert |`, `config |`, `validate |`) for consistency.
+- Fixed register variable collision in `validate.yml`: renamed `base_bootstrap_sudo_group` register to `base_bootstrap_sudo_group_check` to avoid shadowing the variable.
+- Improved sudo group membership assertion in `validate.yml` to correctly parse the group members list (trim, reject empty, map).
+- Updated `tests/inventory/group_vars/all.yml` to use `base_bootstrap_*` variable names and removed deprecated `base_bootstrap_enabled` and bare `bootstrap_*` variables.
+
 ## [v0.4.0]
 ### Added
 - Added tests/README.md with documentation for new test files and structure.
@@ -10,7 +27,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Renamed docs/01.md to docs/01-test-lab.md for clarity.
 
-## [v0.3.2] - 2026-03-04
+## [v0.3.2]
 ### Added
 - Documentation for pre-commit installation, usage, and linting setup for all roles (`docs/00-pre-commit.mb`).
 - Added troubleshooting/common failure guidance for local pre-commit environments (cache permissions, missing `ansible-lint`, hook bootstrap issues).
@@ -29,7 +46,7 @@ All notable changes to this project will be documented in this file.
 ### Merged
 - Merged PR #11: Enhance pre-commit setup, clean up ansible-lint configuration, and add documentation for installation and usage.
 
-## [v0.3.1] - 2026-03-02
+## [v0.3.1]
 ### Added
 - `.pre-commit-config.yaml`: Added and refined pre-commit configuration for linting and hygiene (trailing whitespace, EOF, merge conflicts, YAML validation, yamllint, ansible-lint).
 - Pre-commit now uses relaxed yamllint rules for Ansible YAML conventions.

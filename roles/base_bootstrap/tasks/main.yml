@@ -1,0 +1,14 @@
+---
+# roles/base_bootstrap/tasks/main.yml
+
+- name: Base_bootstrap | Assert
+  ansible.builtin.import_tasks: assert.yml
+  tags: [base, base_bootstrap, assert, base_bootstrap_assert]
+
+- name: Base_bootstrap | Config
+  ansible.builtin.import_tasks: config.yml
+  tags: [base, base_bootstrap, config, base_bootstrap_config]
+
+- name: Base_bootstrap | Validate
+  ansible.builtin.import_tasks: validate.yml
+  tags: [base, base_bootstrap, validate, base_bootstrap_validate]

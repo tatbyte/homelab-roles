@@ -1,0 +1,14 @@
+---
+# roles/monitoring_authorized_key/tasks/main.yml
+
+- name: Monitoring_authorized_key | Assert
+  ansible.builtin.import_tasks: assert.yml
+  tags: [monitoring, monitoring_authorized_key, assert]
+
+- name: Monitoring_authorized_key | Configure
+  ansible.builtin.import_tasks: configure.yml
+  tags: [monitoring, monitoring_authorized_key, configure]
+
+- name: Monitoring_authorized_key | Validate
+  ansible.builtin.import_tasks: validate.yml
+  tags: [monitoring, monitoring_authorized_key, validate]
