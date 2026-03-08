@@ -1,6 +1,8 @@
 ---
-- name: Test base_bootstrap role
+- name: Apply base role after bootstrap
   hosts: all
   become: true
+  vars:
+    base_run_bootstrap: false
   roles:
     - role: base

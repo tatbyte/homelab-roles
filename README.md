@@ -13,7 +13,7 @@ ansible-roles/
 │   ├── base_bootstrap/
 │   ├── monitoring/
 │   └── monitoring_authorized_key/
-├── tests/
+├── examples/
 │   ├── ansible.cfg
 │   ├── inventory/
 │   └── playbooks/
@@ -23,8 +23,8 @@ ansible-roles/
 ```
 
 ## Available Roles
-- `base`: Aggregate role that currently depends on `base_bootstrap`.
-- `base_bootstrap`: Creates and validates a bootstrap/admin user and SSH access.
+- `base`: Aggregate role that conditionally runs `base_bootstrap` (bootstrap phase) and `base_packages` (normal phase).
+- `base_bootstrap`: Creates and validates the automation account used by later plays (for example `ansible`).
 - `monitoring`: Aggregate role that currently depends on `monitoring_authorized_key`.
 - `monitoring_authorized_key`: Installs an SSH authorized key for monitoring-style access.
 
@@ -57,15 +57,21 @@ Example infra playbook:
 ```
 
 ## Local Role Testing
-This repository keeps a local test harness in `tests/`.
+This repository keeps a local test harness in `examples/`.
 
 Run tests from repo root:
 
 ```sh
-ANSIBLE_CONFIG=tests/ansible.cfg ansible-playbook tests/playbooks/base.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/site.yml --tags base
 ```
 
-See [tests/README.md](tests/README.md) and [docs/01-test-lab.md](docs/01-test-lab.md) for test-lab details.
+Or from the `examples/` directory:
+
+```sh
+ansible-playbook playbooks/site.yml --tags base
+```
+
+See [examples/README.md](examples/README.md) and [docs/01-examples.md](docs/01-examples.md) for lab details.
 
 ## Linting
 Pre-commit and linting are configured in this repository.

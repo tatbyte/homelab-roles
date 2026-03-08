@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.7.0] - 2026-03-08
+### Added
+- `examples/playbooks/bootstrap.yml`: New bootstrap phase playbook to run initial provisioning with bootstrap inventory credentials.
+- `roles/base_bootstrap/defaults/main.yml`: Added `base_bootstrap_passwordless_sudo` (default `false`).
+- `roles/base_bootstrap/tasks/config.yml`: Added task to optionally manage `/etc/sudoers.d/90-<user>` with `NOPASSWD` for the bootstrap-managed automation account.
+- `examples/inventory/hosts.ini`: Added `[bootstrap:vars]` with dedicated bootstrap login/become variables used only by bootstrap phase.
+
+### Changed
+- `roles/base/meta/main.yml`: Kept `base_bootstrap` in dependencies and added conditional execution based on `base_run_bootstrap`; `base_packages` now runs in the non-bootstrap phase.
+- `examples/playbooks/base.yml`: Set `base_run_bootstrap: false` for normal/base phase.
+- `examples/playbooks/site.yml`: Explicit two-phase order (bootstrap playbook, then base playbook).
+- `examples/inventory/group_vars/all.yml`: Updated bootstrap example values to manage `ansible` as the automation user (`UID/GID 1100`) and enabled `base_bootstrap_passwordless_sudo: true` in example lab config.
+- `roles/base_bootstrap/tasks/config.yml`: User primary group assignment now targets ensured group by name.
+
+### Fixed
+- `roles/base_bootstrap/tasks/main.yml`: Fixed typo in config phase tag (`base_bootstrap_config`).
+- Corrected bootstrap connection precedence by using dedicated bootstrap variables from inventory in `examples/playbooks/bootstrap.yml` instead of relying on `remote_user` against `ansible_user` from `[all:vars]`.
+- Resolved bootstrap failure path where `Group <gid> does not exist` by ensuring the primary group before user creation.
+- Resolved example `Missing sudo password` follow-up by enabling optional passwordless sudo in bootstrap-managed account for the example flow.
+
+### Documentation
+- Updated docs and READMEs to match current example topology and execution flow:
+  - `README.md`
+  - `examples/README.md`
+  - `docs/01-examples.md`
+  - `roles/base/README.md`
+  - `roles/base_bootstrap/README.md`
+
 ## [v0.6.0]
 ### Added
 - `roles/base_packages/`: New role for managing common packages. Includes assert, install, config, and validate phase tasks.

@@ -3,8 +3,10 @@
 
 dependencies:
   - role: base_bootstrap
+    when: base_run_bootstrap | default(false) | bool
     tags: [base, base_bootstrap]
   - role: base_packages
+    when: not (base_run_bootstrap | default(false) | bool)
     tags: [base, base_packages]
   # - role: base_timezone
   # - role: base_ntp

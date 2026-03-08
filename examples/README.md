@@ -6,23 +6,33 @@ This directory contains a minimal local harness for validating roles in this rep
 - `ansible.cfg`: Test-specific Ansible configuration.
 - `inventory/hosts.ini`: Test inventory.
 - `inventory/group_vars/all.yml`: Shared variables for test hosts.
-- `playbooks/base.yml`: Runs the `base` role test.
-- `playbooks/site.yml`: Entry playbook that imports `base.yml`.
+- `playbooks/bootstrap.yml`: Bootstrap phase (connect as initial admin account).
+- `playbooks/base.yml`: Normal phase (connect as automation account).
+- `playbooks/site.yml`: Entry playbook that imports `bootstrap.yml` then `base.yml`.
 
 ## Usage
 Run from repository root:
 
 ```sh
-ANSIBLE_CONFIG=tests/ansible.cfg ansible-playbook tests/playbooks/site.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/site.yml --tags base
 ```
 
-Or run directly from the `tests/` directory:
+Or run directly from the `examples/` directory:
 
 ```sh
-ansible-playbook -i inventory/hosts.ini playbooks/site.yml
+ansible-playbook playbooks/site.yml --tags base
 ```
 
-## Adding Tests
-- Add playbooks under `tests/playbooks/`.
-- Update `tests/inventory/hosts.ini` and `tests/inventory/group_vars/` as needed.
+## Bootstrap Credentials
+Bootstrap login values are intentionally stored in inventory for this example:
+
+- `bootstrap_login_user`
+- `bootstrap_login_password`
+- `bootstrap_become_password`
+
+They live under `[bootstrap:vars]` in `inventory/hosts.ini` and are consumed by `playbooks/bootstrap.yml`.
+
+## Extending
+- Add playbooks under `examples/playbooks/`.
+- Update `examples/inventory/hosts.ini` and `examples/inventory/group_vars/` as needed.
 - Keep this README aligned with any new test scenarios.

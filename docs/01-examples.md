@@ -18,21 +18,23 @@ Use it as a reference template for validating roles on your side.
 - `examples/ansible.cfg`: Example Ansible configuration for local test runs.
 - `examples/inventory/hosts.ini`: Example hosts and groups.
 - `examples/inventory/group_vars/all.yml`: Example variables for all hosts.
-- `examples/playbooks/base.yml`: Example playbook for the `base` role.
-- `examples/playbooks/site.yml`: Example entry playbook that imports other playbooks.
+- `examples/playbooks/bootstrap.yml`: Bootstrap phase using initial host credentials.
+- `examples/playbooks/base.yml`: Normal phase for post-bootstrap role execution.
+- `examples/playbooks/site.yml`: Entry playbook that imports both phases in order.
 
 ## How to Use the Example
 
 1. Copy or adapt the files in `examples/` to your own lab.
 2. Replace inventory hosts and credentials with your environment values.
 3. Update variables in `group_vars/all.yml` for your role inputs.
-4. Run playbooks with the provided config pattern:
+4. Run the two-phase flow with the provided config pattern:
 
 ```bash
-ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/site.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/site.yml --tags base
 ```
 
 ## Notes
 
 - The lab content is intentionally simple and meant as an example baseline.
+- `hosts.ini` keeps default `ansible_user=ansible` in `[all:vars]`, while `[bootstrap:vars]` holds initial login values used only during bootstrap.
 - Extend the inventory, vars, and playbooks to fit your own infrastructure and test scope.

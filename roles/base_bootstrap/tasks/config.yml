@@ -1,6 +1,12 @@
 ---
 # Bootstrap role: configuration tasks (admin user management)
 
+- name: "Config | Ensure Admin Primary Group Exists"
+  ansible.builtin.group:
+    name: "{{ base_bootstrap_user }}"
+    gid: "{{ base_bootstrap_pgid }}"
+    state: present
+
 - name: "Config | Ensure Admin User Exists"
   ansible.builtin.user:
     name: "{{ base_bootstrap_user }}"
@@ -9,7 +15,17 @@
     groups: "{{ base_bootstrap_sudo_group | default('sudo') }}"
     append: true
     uid: "{{ base_bootstrap_puid }}"
-    group: "{{ base_bootstrap_pgid }}"
+    group: "{{ base_bootstrap_user }}"
+
+- name: "Config | Allow Passwordless Sudo For Admin User"
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/90-{{ base_bootstrap_user }}"
+    content: "{{ base_bootstrap_user }} ALL=(ALL:ALL) NOPASSWD:ALL\n"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "visudo -cf %s"
+  when: base_bootstrap_passwordless_sudo | bool
 
 - name: "Config | Add Main Authorized_keys For Admin User"
   ansible.posix.authorized_key:
