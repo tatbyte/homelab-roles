@@ -1,0 +1,9 @@
+---
+# roles/base_sudo/defaults/main.yml
+# Default variables for the `base_sudo` role.
+# Defines the sudo package, managed user, and sudo group enforced during the base phase.
+
+base_sudo_packages:
+  - sudo
+base_sudo_user: ansible
+base_sudo_group: sudo

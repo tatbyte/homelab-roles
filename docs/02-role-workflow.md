@@ -65,6 +65,29 @@ If a role manages one narrow piece of state, keep the phase structure but reduce
 
 Use this compact style when it improves readability and reduces task noise without hiding important state changes.
 
+## Aggregate Base Order
+
+The aggregate `base` role in this repository applies its dependency roles in a stable order.
+
+Current order:
+
+1. `base_packages`
+2. `base_locale`
+3. `base_timezone`
+4. `base_ntp`
+5. `base_hostname`
+6. `base_sudo`
+
+Use this sequence to keep foundational packages and environment settings first, then time synchronization, then final host identity and sudo policy.
+
+Planned future additions should follow after the current foundational roles:
+
+1. `base_sshd`
+2. `base_firewall`
+3. `base_logging`
+4. `base_updates`
+5. `base_apparmor`
+
 ## Tag Usage
 
 Run specific phases during development or troubleshooting:

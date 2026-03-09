@@ -1,0 +1,29 @@
+---
+# roles/base_sudo/tasks/config.yml
+# Config phase tasks for the `base_sudo` role.
+# Ensures the managed user stays in the sudo group and always has the managed passwordless sudo drop-in.
+
+- name: "Config | Ensure sudo group exists"
+  ansible.builtin.group:
+    name: "{{ base_sudo_group }}"
+    state: present
+
+- name: "Config | Confirm managed user exists"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ base_sudo_user }}"
+
+- name: "Config | Ensure user is in sudo group"
+  ansible.builtin.user:
+    name: "{{ base_sudo_user }}"
+    groups: "{{ base_sudo_group }}"
+    append: true
+
+- name: "Config | Allow passwordless sudo for managed user"
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/90-{{ base_sudo_user }}"
+    content: "{{ base_sudo_user }} ALL=(ALL:ALL) NOPASSWD:ALL\n"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "visudo -cf %s"

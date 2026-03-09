@@ -3,6 +3,27 @@
 Release history for `ansible-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v0.13.0]
+### Added
+- `roles/base_sudo/`: New role for enforcing recurring sudo policy during the base phase.
+- `roles/base_sudo/defaults/main.yml`: Added `base_sudo_packages`, `base_sudo_user`, and `base_sudo_group` defaults.
+- `roles/base_sudo/tasks/`: Added assert, install, config, and validate phase task files for Debian-family sudo management.
+- `roles/base_sudo/README.md`: Added role documentation for sudo management and direct usage.
+- `examples/inventory/group_vars/all/base_sudo.yml`: Added example sudo variables for the Debian-family example lab.
+
+### Changed
+- `roles/base_sudo/tasks/config.yml` and `roles/base_sudo/tasks/validate.yml`: Simplified the role to always enforce the managed passwordless sudo drop-in so the base phase keeps a stable, homelab-friendly sudo path.
+- `roles/base_sudo/tasks/assert.yml`: Removed the passwordless-toggle and confirmation-variable handling so validation stays focused on package, user, and group inputs.
+- `roles/base_sudo/README.md`, `examples/inventory/group_vars/all/base_sudo.yml`, and `README.md`: Updated the documentation to reflect the always-managed passwordless sudo behavior.
+- `roles/base/meta/main.yml`: Added `base_sudo` as a dependency of the `base` role with `base` and `base_sudo` tags.
+- `roles/base/README.md`: Updated base role documentation to reflect the `base_sudo` dependency, inputs, and active dependency order.
+- `examples/README.md` and `docs/01-examples.md`: Updated the example documentation to include the new `base_sudo.yml` role-scoped variables file.
+- `docs/02-role-workflow.md`: Updated the documented aggregate base-role order so `base_sudo` is part of the active sequence and removed it from the future placeholder order.
+
+### Fixed
+- `roles/base_sudo/tasks/assert.yml` and `roles/base_sudo/tasks/config.yml`: Fail early when `base_sudo_user` does not already exist so the role enforces sudo policy for an existing account instead of silently creating one.
+- `README.md`: Restored `base_locale` to the aggregate `base` role description so the top-level dependency summary matches the implemented role order.
+
 ## [v0.12.0]
 ### Added
 - `roles/base_hostname/`: New role for enforcing the system hostname during the base phase.
@@ -16,6 +37,7 @@ Documents notable changes across repository structure, roles, examples, and docu
 - `roles/base/README.md`: Updated base role documentation to reflect the `base_hostname` dependency and inputs.
 - `README.md`: Added `base_hostname` to the available roles list and aligned the `base` role description.
 - `examples/README.md` and `docs/01-examples.md`: Updated the example documentation to include the new `base_hostname.yml` role-scoped variables file.
+- `roles/base/meta/main.yml`, `roles/base/README.md`, and `docs/02-role-workflow.md`: Documented and aligned the aggregate base-role execution order as packages, locale, timezone, NTP, then hostname, followed by the planned future base roles.
 
 ### Fixed
 - `roles/base_hostname/tasks/assert.yml`: Tightened hostname validation to require real DNS-style hostname labels instead of only rejecting whitespace and edge punctuation.
