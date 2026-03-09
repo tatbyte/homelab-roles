@@ -17,6 +17,9 @@ Documents notable changes across repository structure, roles, examples, and docu
 - `roles/base_packages/tasks/config.yml`: Switched package removal to `ansible.builtin.apt`.
 - `roles/base_packages/tasks/validate.yml`: Updated package validation to gather package facts with `manager: apt`.
 - `roles/base_locale/tasks/install.yml`: Uses `ansible.builtin.apt` for locale package installation on Debian-family hosts.
+- `roles/base_locale/tasks/assert.yml`: Tightened supported locale inputs to built-in locales plus Debian-style `ll_CC.CHARMAP` names.
+- `roles/base_locale/tasks/config.yml`: Now fully manages `/etc/locale.gen`, runs `locale-gen` when the managed file changes, and keeps `localedef` only as a fallback for minimal/container environments.
+- `roles/base_locale/tasks/validate.yml`: Now validates the full managed `/etc/locale.gen` content in addition to generated locale availability and configured locale categories.
 - `roles/base_timezone/tasks/install.yml`: Uses `ansible.builtin.apt` for timezone package installation on Debian-family hosts.
 - `README.md`: Added an explicit Debian-family support note and updated role descriptions to match current repository scope.
 - `examples/README.md`: Documented the Debian-family scope of the example lab.
@@ -27,11 +30,13 @@ Documents notable changes across repository structure, roles, examples, and docu
 ### Fixed
 - `roles/base_locale/tasks/validate.yml`: Resolved register overwrite and invalid assert-option failures in locale validation.
 - `roles/base_locale/tasks/config.yml` and `roles/base_locale/tasks/validate.yml`: Restored correct locale normalization logic after lint-driven refactoring so generated locale checks operate on real lists.
+- `roles/base_locale/tasks/config.yml`: Replaced malformed or stale locale state by rewriting `/etc/locale.gen` to the requested canonical Debian entries during convergence.
 - `roles/base_locale/tasks/`: Brought locale tasks into `yamllint` and `ansible-lint` compliance without changing intended behavior.
 
 ### Documentation
 - Updated repository and role documentation to state that the repository currently targets Debian-family hosts such as Debian and Ubuntu.
 - Documented 24-hour time configuration through `base_locale_lc_time` in the `base_locale` role README and example variables.
+- Clarified in the `base_locale` role README that locale generation is driven by a fully managed `/etc/locale.gen` file and that supported locale names are built-ins plus `ll_CC.CHARMAP`.
 
 ## [v0.8.0]
 ### Added

@@ -6,9 +6,10 @@ Explains how the role ensures requested locales exist and configures the system 
 ## Features
 - Installs locale support packages with APT when needed
 - Validates the requested locale variables before changes are made
-- Ensures requested locales are available with `localedef` when they are missing
+- Fully manages `/etc/locale.gen` from the requested locale list
+- Generates requested locales with `locale-gen` and backfills them with `localedef` only when needed
 - Writes `/etc/default/locale` for Debian-family hosts
-- Verifies both the generated locales and the configured default locale state
+- Verifies the generated locales, the fully managed `/etc/locale.gen` contents, and the configured default locale state
 
 ## Variables
 
@@ -19,6 +20,9 @@ Explains how the role ensures requested locales exist and configures the system 
 | `base_locale_lc_time` | `''` | no | Optional locale assigned to `LC_TIME`; use it to control 12-hour vs 24-hour time formatting |
 | `base_locale_packages` | `['locales']` | no | Package list installed with APT before locale generation and configuration |
 | `base_locale_present` | `['{{ base_locale_lang }}']` | no | Locale names that must exist on the host before validation completes |
+
+`base_locale_present` should use Debian-style locale names with an explicit charmap such as `en_US.UTF-8`.
+This role intentionally supports built-in locales (`C`, `C.UTF-8`, `POSIX`) plus locale names in the form `ll_CC.CHARMAP`.
 
 ## Usage
 

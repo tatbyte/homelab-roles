@@ -27,3 +27,22 @@
       must be present in base_locale_present, and base_locale_packages must be a
       list of package names
     quiet: true
+
+- name: "Assert | Validate locale name format"
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          base_locale_present
+          | reject('in', ['C', 'C.UTF-8', 'POSIX'])
+          | reject(
+            'match',
+            '^[A-Za-z0-9_]+\\.[A-Za-z0-9_-]+$'
+          )
+          | list
+          | length
+        ) == 0
+    fail_msg: >-
+      base_locale_present may contain only built-in locales (C, C.UTF-8, POSIX)
+      or locale names with an explicit charmap such as en_US.UTF-8
+    quiet: true

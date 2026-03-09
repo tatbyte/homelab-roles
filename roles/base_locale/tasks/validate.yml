@@ -1,7 +1,7 @@
 ---
 # roles/base_locale/tasks/validate.yml
 # Validate phase tasks for the `base_locale` role.
-# Verifies the requested locales are available and the Debian-family locale category configuration file matches the requested state.
+# Verifies the requested locales are available and `/etc/locale.gen` plus the Debian-family locale category configuration file match the managed state.
 
 - name: "Validate | Gather available locales"
   ansible.builtin.command: locale -a
@@ -12,6 +12,45 @@
   ansible.builtin.slurp:
     path: /etc/default/locale
   register: base_locale_config_file
+
+- name: "Validate | Read /etc/locale.gen"
+  ansible.builtin.slurp:
+    path: /etc/locale.gen
+  register: base_locale_locale_gen_file
+
+- name: "Validate | Assert requested locales are enabled in /etc/locale.gen"
+  vars:
+    base_locale_generated_locales: >-
+      {{
+        base_locale_present
+        | reject('in', ['C', 'C.UTF-8', 'POSIX'])
+        | list
+      }}
+    base_locale_expected_locale_gen_lines: |-
+      {% for locale_name in base_locale_generated_locales %}
+      {{ locale_name }} {{
+        (locale_name.split('.', 1) | last)
+        | upper
+        | regex_replace('^UTF8$', 'UTF-8')
+      }}
+      {% endfor %}
+    base_locale_actual_locale_gen_lines: >-
+      {{
+        (base_locale_locale_gen_file.content | b64decode).splitlines()
+        | reject('match', '^\\s*$')
+        | list
+      }}
+  ansible.builtin.assert:
+    that:
+      - >-
+        base_locale_actual_locale_gen_lines | sort == (
+          base_locale_expected_locale_gen_lines.splitlines()
+          | reject('match', '^\\s*$')
+          | list
+          | sort
+        )
+    fail_msg: "/etc/locale.gen does not match the managed locale list"
+    quiet: true
 
 - name: "Validate | Assert locale state"
   ansible.builtin.assert:
