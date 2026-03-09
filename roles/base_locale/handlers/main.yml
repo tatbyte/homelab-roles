@@ -1,0 +1,8 @@
+---
+# roles/base_locale/handlers/main.yml
+# Handlers for the `base_locale` role.
+# Runs locale regeneration when the managed locale list changes.
+
+- name: Regenerate locales
+  ansible.builtin.command: locale-gen
+  changed_when: true

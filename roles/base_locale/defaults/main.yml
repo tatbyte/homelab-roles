@@ -10,3 +10,9 @@ base_locale_packages:
   - locales
 base_locale_present:
   - "{{ base_locale_lang }}"
+base_locale_generated_locales: >-
+  {{
+    base_locale_present
+    | reject('in', ['C', 'C.UTF-8', 'POSIX'])
+    | list
+  }}

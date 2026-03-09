@@ -11,7 +11,7 @@ The goals are:
 
 - make the repository path visible at the top of the file
 - explain the file purpose in plain language
-- keep docs, playbooks, defaults, tasks, metadata, and config files consistent
+- keep docs, playbooks, defaults, tasks, metadata, templates, and config files consistent
 - reduce ambiguity when files are opened directly in an editor tab
 
 ## Standard Format
@@ -44,6 +44,16 @@ For INI and CFG files:
 # Points Ansible at the example inventory and the repository roles directory.
 ```
 
+For Jinja templates:
+
+```jinja
+{# roles/base_locale/templates/default_locale.j2 #}
+{# Template for the managed `/etc/default/locale` file in the `base_locale` role. #}
+```
+
+Avoid a blank line after Jinja header comments when template output is whitespace-sensitive.
+This helps prevent accidental leading newlines in managed files such as `/etc/locale.gen`.
+
 For ignore or dotfiles:
 
 ```text
@@ -67,11 +77,13 @@ Prefer these patterns:
 - `Reference for ...`
 - `Guide for ...`
 - `Task entrypoint for ...`
+- `Handlers for ...`
 - `Default variables for ...`
 - `Assert phase tasks for ...`
 - `Config phase tasks for ...`
 - `Validate phase tasks for ...`
 - `Role metadata for ...`
+- `Template for ...`
 
 Prefer these shared concepts:
 
@@ -108,8 +120,10 @@ Apply this format to:
 - playbooks
 - inventory and config files
 - role defaults
+- role handlers
 - role task files
 - role metadata files
+- role templates
 - tracked dotfiles that benefit from a top-level explanation
 
 ## Review Checklist

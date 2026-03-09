@@ -18,38 +18,15 @@
     path: /etc/locale.gen
   register: base_locale_locale_gen_file
 
-- name: "Validate | Assert requested locales are enabled in /etc/locale.gen"
+- name: "Validate | Assert managed locale files"
   vars:
-    base_locale_generated_locales: >-
-      {{
-        base_locale_present
-        | reject('in', ['C', 'C.UTF-8', 'POSIX'])
-        | list
-      }}
-    base_locale_expected_locale_gen_lines: |-
-      {% for locale_name in base_locale_generated_locales %}
-      {{ locale_name }} {{
-        (locale_name.split('.', 1) | last)
-        | upper
-        | regex_replace('^UTF8$', 'UTF-8')
-      }}
-      {% endfor %}
-    base_locale_actual_locale_gen_lines: >-
-      {{
-        (base_locale_locale_gen_file.content | b64decode).splitlines()
-        | reject('match', '^\\s*$')
-        | list
-      }}
+    base_locale_expected_locale_gen: "{{ lookup('template', 'locale.gen.j2') }}"
+    base_locale_expected_default_locale: "{{ lookup('template', 'default_locale.j2') }}"
   ansible.builtin.assert:
     that:
-      - >-
-        base_locale_actual_locale_gen_lines | sort == (
-          base_locale_expected_locale_gen_lines.splitlines()
-          | reject('match', '^\\s*$')
-          | list
-          | sort
-        )
-    fail_msg: "/etc/locale.gen does not match the managed locale list"
+      - (base_locale_locale_gen_file.content | b64decode) == base_locale_expected_locale_gen
+      - (base_locale_config_file.content | b64decode) == base_locale_expected_default_locale
+    fail_msg: "Managed locale files do not match the requested base_locale values"
     quiet: true
 
 - name: "Validate | Assert locale state"
@@ -71,22 +48,5 @@
           )
           | length
         ) == 0
-      - >-
-        ('LANG=' ~ base_locale_lang) in
-        ((base_locale_config_file.content | b64decode).splitlines())
-      - >-
-        base_locale_lc_all | trim | length == 0
-        or ('LC_ALL=' ~ base_locale_lc_all) in
-        ((base_locale_config_file.content | b64decode).splitlines())
-      - >-
-        base_locale_lc_time | trim | length == 0
-        or ('LC_TIME=' ~ base_locale_lc_time) in
-        ((base_locale_config_file.content | b64decode).splitlines())
-      - >-
-        base_locale_lc_all | trim | length > 0
-        or 'LC_ALL=' not in (base_locale_config_file.content | b64decode)
-      - >-
-        base_locale_lc_time | trim | length > 0
-        or 'LC_TIME=' not in (base_locale_config_file.content | b64decode)
     fail_msg: "Configured locale state does not match the requested base_locale values"
     quiet: true

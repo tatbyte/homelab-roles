@@ -3,96 +3,21 @@
 # Config phase tasks for the `base_locale` role.
 # Ensures `/etc/locale.gen` is fully managed, requested locales are generated for Debian-family hosts, and the locale category configuration file is written.
 
-- name: "Config | Manage generated locales"
-  vars:
-    base_locale_generated_locales: >-
-      {{
-        base_locale_present
-        | reject('in', ['C', 'C.UTF-8', 'POSIX'])
-        | list
-      }}
-  when: base_locale_generated_locales | length > 0
-  block:
-    - name: "Config | Write managed /etc/locale.gen"
-      ansible.builtin.copy:
-        dest: /etc/locale.gen
-        content: |-
-          {% for locale_name in base_locale_generated_locales %}
-          {{ locale_name }} {{ (locale_name.split('.', 1) | last) | upper | regex_replace('^UTF8$', 'UTF-8') }}
-          {% endfor %}
-        owner: root
-        group: root
-        mode: "0644"
-      register: base_locale_locale_gen_entries
-
-    - name: "Config | Generate requested locales with locale-gen"  # noqa: no-handler
-      ansible.builtin.command: locale-gen
-      changed_when: true
-      when: base_locale_locale_gen_entries is changed
-
-    - name: "Config | Gather available locales after locale-gen"
-      ansible.builtin.command: locale -a
-      register: base_locale_available_locales
-      changed_when: false
-
-    - name: "Config | Generate missing locales with localedef fallback"
-      vars:
-        base_locale_input_name: "{{ item.split('.', 1) | first }}"
-        base_locale_charmap: >-
-          {{
-            (item.split('.', 1) | last)
-            | upper
-            | regex_replace('^UTF8$', 'UTF-8')
-          }}
-      ansible.builtin.command:
-        argv:
-          - localedef
-          - -i
-          - "{{ base_locale_input_name }}"
-          - -f
-          - "{{ base_locale_charmap }}"
-          - "{{ item }}"
-      changed_when: true
-      loop: "{{ base_locale_generated_locales }}"
-      when:
-        - >-
-          (
-            item
-            | lower
-            | regex_replace('\\.utf-8$', '.utf8')
-          ) not in (
-            base_locale_available_locales.stdout_lines
-            | map('lower')
-            | map('regex_replace', '\\.utf-8$', '.utf8')
-            | list
-          )
-
-- name: "Config | Write empty managed /etc/locale.gen"
-  vars:
-    base_locale_generated_locales: >-
-      {{
-        base_locale_present
-        | reject('in', ['C', 'C.UTF-8', 'POSIX'])
-        | list
-      }}
-  ansible.builtin.copy:
-    content: ""
+- name: "Config | Render locale.gen"
+  ansible.builtin.template:
+    src: locale.gen.j2
     dest: /etc/locale.gen
     owner: root
     group: root
     mode: "0644"
-  when: base_locale_generated_locales | length == 0
+  notify: Regenerate locales
 
-- name: "Config | Write /etc/default/locale"
-  ansible.builtin.copy:
-    content: |-
-      LANG={{ base_locale_lang }}
-      {% if base_locale_lc_all | trim | length > 0 %}
-      LC_ALL={{ base_locale_lc_all }}
-      {% endif %}
-      {% if base_locale_lc_time | trim | length > 0 %}
-      LC_TIME={{ base_locale_lc_time }}
-      {% endif %}
+- name: "Config | Flush locale handler"
+  ansible.builtin.meta: flush_handlers
+
+- name: "Config | Render default locale"
+  ansible.builtin.template:
+    src: default_locale.j2
     dest: /etc/default/locale
     owner: root
     group: root
