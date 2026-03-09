@@ -1,0 +1,43 @@
+---
+# roles/base_sudo/tasks/validate.yml
+# Validate phase tasks for the `base_sudo` role.
+# Verifies the managed user membership in the sudo group and the managed passwordless sudo drop-in state.
+
+- name: "Validate | Collect managed user and sudo group entries"
+  ansible.builtin.getent:
+    database: "{{ item.database }}"
+    key: "{{ item.key }}"
+  loop:
+    - database: passwd
+      key: "{{ base_sudo_user }}"
+    - database: group
+      key: "{{ base_sudo_group }}"
+  loop_control:
+    label: "{{ item.database }}"
+  register: base_sudo_lookup
+
+- name: "Validate | Read passwordless sudo drop-in"
+  ansible.builtin.slurp:
+    path: "/etc/sudoers.d/90-{{ base_sudo_user }}"
+  register: base_sudo_drop_in
+  changed_when: false
+
+- name: "Validate | Assert sudo state"
+  ansible.builtin.assert:
+    that:
+      - base_sudo_user in base_sudo_lookup.results[0].ansible_facts.getent_passwd
+      - base_sudo_group in base_sudo_lookup.results[1].ansible_facts.getent_group
+      - base_sudo_user in (
+          base_sudo_lookup.results[1].ansible_facts.getent_group[base_sudo_group]
+          | last
+          | default('')
+          | string
+          | split(',')
+          | map('trim')
+          | reject('equalto', '')
+          | list
+        )
+      - (base_sudo_drop_in.content | b64decode) ==
+        (base_sudo_user ~ ' ALL=(ALL:ALL) NOPASSWD:ALL\n')
+    fail_msg: "Configured sudo state does not match the requested base_sudo values"
+    quiet: true

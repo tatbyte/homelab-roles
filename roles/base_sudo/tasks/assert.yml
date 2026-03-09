@@ -1,0 +1,27 @@
+---
+# roles/base_sudo/tasks/assert.yml
+# Assert phase tasks for the `base_sudo` role.
+# Validates the requested sudo package, user, and group inputs before installation and configuration run.
+
+- name: "Assert | Validate base_sudo variable structure"
+  ansible.builtin.assert:
+    that:
+      - base_sudo_packages is sequence
+      - base_sudo_packages is not string
+      - base_sudo_user is string
+      - base_sudo_user | trim | length > 0
+      - base_sudo_group is string
+      - base_sudo_group | trim | length > 0
+      - (base_sudo_packages | map('string') | list | length) == (base_sudo_packages | length)
+      - (base_sudo_packages | map('trim') | reject('equalto', '') | list | length) == (base_sudo_packages | length)
+      - base_sudo_user == (base_sudo_user | trim)
+      - base_sudo_group == (base_sudo_group | trim)
+    fail_msg: >-
+      base_sudo_packages must be a list of package names, and base_sudo_user
+      and base_sudo_group must be non-empty strings
+    quiet: true
+
+- name: "Assert | Require managed user to exist"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ base_sudo_user }}"
