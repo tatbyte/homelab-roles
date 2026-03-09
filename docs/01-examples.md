@@ -51,7 +51,7 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/base.yml
 
 - The lab content is intentionally simple and meant as an example baseline.
 - The example inventory and variables assume Debian-family hosts and the repository's APT-based role behavior.
-- `group_vars/all/` is split by role prefix so example variables stay readable as the base stack grows.
+- `group_vars/all/` is split by role prefix so example variables such as `base_packages.yml`, `base_locale.yml`, `base_ntp.yml`, and `base_timezone.yml` stay readable as the base stack grows.
 - `hosts.ini` keeps default `ansible_user=ansible` in `[all:vars]`, while `[bootstrap:vars]` holds initial login values used only during bootstrap.
 - `playbooks/bootstrap.yml` prompts once for the bootstrap password and reuses it for both SSH login and sudo.
 - Extend the inventory, vars, and playbooks to fit your own infrastructure and test scope.

@@ -8,11 +8,12 @@ dependencies:
     tags: [base, base_packages]
   - role: base_locale
     tags: [base, base_locale]
+  - role: base_ntp
+    tags: [base, base_ntp]
   - role: base_timezone
     tags: [base, base_timezone]
 
 # Future base dependencies:
-# - role: base_ntp
 # - role: base_hostname
 # - role: base_sudo
 # - role: base_sshd

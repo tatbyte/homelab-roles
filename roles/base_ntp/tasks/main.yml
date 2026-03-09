@@ -1,0 +1,20 @@
+---
+# roles/base_ntp/tasks/main.yml
+# Task entrypoint for the `base_ntp` role.
+# Imports the assert, install, config, and validate phase files in order.
+
+- name: Assert
+  ansible.builtin.import_tasks: assert.yml
+  tags: [assert, base_ntp_assert]
+
+- name: Install
+  ansible.builtin.import_tasks: install.yml
+  tags: [install, base_ntp_install]
+
+- name: Config
+  ansible.builtin.import_tasks: config.yml
+  tags: [config, base_ntp_config]
+
+- name: Validate
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate, base_ntp_validate]

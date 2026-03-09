@@ -1,0 +1,22 @@
+---
+# roles/base_ntp/tasks/config.yml
+# Config phase tasks for the `base_ntp` role.
+# Manages the systemd-timesyncd configuration file and ensures the NTP service is enabled and running.
+
+- name: "Config | Render timesyncd configuration"
+  ansible.builtin.template:
+    src: timesyncd.conf.j2
+    dest: /etc/systemd/timesyncd.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart NTP service
+
+- name: "Config | Ensure NTP service is enabled and running"
+  ansible.builtin.service:
+    name: "{{ base_ntp_service_name }}"
+    enabled: true
+    state: started
+
+- name: "Config | Flush NTP handler"
+  ansible.builtin.meta: flush_handlers

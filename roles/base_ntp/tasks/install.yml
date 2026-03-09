@@ -1,0 +1,12 @@
+---
+# roles/base_ntp/tasks/install.yml
+# Install phase tasks for the `base_ntp` role.
+# Ensures the NTP client package is present with APT before time synchronization configuration.
+
+- name: "Install | Ensure NTP packages are present"
+  ansible.builtin.apt:
+    name: "{{ base_ntp_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: base_ntp_packages | length > 0

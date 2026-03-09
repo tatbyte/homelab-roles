@@ -1,0 +1,30 @@
+---
+# roles/base_ntp/tasks/validate.yml
+# Validate phase tasks for the `base_ntp` role.
+# Verifies the managed timesyncd configuration file and the enabled, running service state.
+
+- name: "Validate | Read timesyncd configuration"
+  ansible.builtin.slurp:
+    path: /etc/systemd/timesyncd.conf
+  register: base_ntp_config_file
+
+- name: "Validate | Gather service facts"
+  ansible.builtin.service_facts:
+
+- name: "Validate | Assert NTP state"
+  vars:
+    base_ntp_expected_config: "{{ lookup('template', 'timesyncd.conf.j2') }}"
+    base_ntp_service_unit: >-
+      {{
+        base_ntp_service_name
+        if base_ntp_service_name.endswith('.service')
+        else (base_ntp_service_name ~ '.service')
+      }}
+  ansible.builtin.assert:
+    that:
+      - (base_ntp_config_file.content | b64decode) == base_ntp_expected_config
+      - base_ntp_service_unit in ansible_facts.services
+      - ansible_facts.services[base_ntp_service_unit].status == 'enabled'
+      - ansible_facts.services[base_ntp_service_unit].state == 'running'
+    fail_msg: "Configured NTP state does not match the requested base_ntp values"
+    quiet: true

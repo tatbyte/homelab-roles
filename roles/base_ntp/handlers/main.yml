@@ -1,0 +1,9 @@
+---
+# roles/base_ntp/handlers/main.yml
+# Handlers for the `base_ntp` role.
+# Restarts the NTP service when the managed timesyncd configuration changes.
+
+- name: Restart NTP service
+  ansible.builtin.service:
+    name: "{{ base_ntp_service_name }}"
+    state: restarted

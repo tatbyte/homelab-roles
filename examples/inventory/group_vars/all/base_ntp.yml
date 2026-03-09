@@ -1,0 +1,21 @@
+---
+# examples/inventory/group_vars/all/base_ntp.yml
+# Shared NTP variables for the example lab.
+# Defines the NTP package, service, and server lists enforced during the base phase.
+
+# Package list installed with APT to provide the NTP client on the host.
+base_ntp_packages:
+  - systemd-timesyncd  # systemd NTP client used by the base_ntp role on Debian-family hosts
+
+# Service name enabled and validated during the base phase.
+base_ntp_service_name: systemd-timesyncd
+
+# Primary NTP servers written to /etc/systemd/timesyncd.conf.
+base_ntp_servers:
+  - time.cloudflare.com  # low-latency public NTP service
+  - time.google.com      # simple public NTP service for example hosts
+
+# Optional fallback NTP servers used if the primary servers are unavailable.
+base_ntp_fallback_servers:
+  - 0.pool.ntp.org
+  - 1.pool.ntp.org

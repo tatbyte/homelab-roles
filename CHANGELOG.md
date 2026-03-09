@@ -3,6 +3,22 @@
 Release history for `ansible-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v0.11.0]
+### Added
+- `roles/base_ntp/`: New role for configuring time synchronization through `systemd-timesyncd` during the base phase.
+- `roles/base_ntp/defaults/main.yml`: Added `base_ntp_packages`, `base_ntp_service_name`, `base_ntp_servers`, and `base_ntp_fallback_servers` defaults.
+- `roles/base_ntp/tasks/`: Added assert, install, config, and validate phase task files for Debian-family NTP management, including managed timesyncd configuration and service-state validation.
+- `roles/base_ntp/handlers/main.yml`: Added a handler that restarts the managed NTP service after configuration changes.
+- `roles/base_ntp/templates/timesyncd.conf.j2`: Added a template for the managed `/etc/systemd/timesyncd.conf` file.
+- `roles/base_ntp/README.md`: Added role documentation for NTP configuration and direct usage.
+- `examples/inventory/group_vars/all/base_ntp.yml`: Added example NTP variables for the Debian-family example lab.
+
+### Changed
+- `roles/base/meta/main.yml`: Added `base_ntp` as a dependency of the `base` role with `base` and `base_ntp` tags.
+- `roles/base/README.md`: Updated base role documentation to reflect the `base_ntp` dependency and inputs.
+- `README.md`: Added `base_ntp` to the available roles list and aligned the `base` role description.
+- `examples/README.md` and `docs/01-examples.md`: Updated the example documentation to include the new `base_ntp.yml` role-scoped variables file.
+
 ## [v0.10.0]
 ### Added
 - `roles/base_locale/handlers/main.yml`: Added a locale regeneration handler for managed `/etc/locale.gen` changes.

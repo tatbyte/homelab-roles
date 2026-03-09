@@ -1,0 +1,28 @@
+---
+# roles/base_ntp/tasks/assert.yml
+# Assert phase tasks for the `base_ntp` role.
+# Validates the requested NTP package, service, and server list inputs before installation and configuration run.
+
+- name: "Assert | Validate base_ntp variable structure"
+  ansible.builtin.assert:
+    that:
+      - base_ntp_packages is sequence
+      - base_ntp_packages is not string
+      - base_ntp_service_name is string
+      - base_ntp_service_name | trim | length > 0
+      - base_ntp_servers is sequence
+      - base_ntp_servers is not string
+      - base_ntp_fallback_servers is sequence
+      - base_ntp_fallback_servers is not string
+      - (base_ntp_packages | map('string') | list | length) == (base_ntp_packages | length)
+      - (base_ntp_servers | map('string') | list | length) == (base_ntp_servers | length)
+      - (base_ntp_fallback_servers | map('string') | list | length) == (base_ntp_fallback_servers | length)
+      - (base_ntp_packages | map('trim') | reject('equalto', '') | list | length) == (base_ntp_packages | length)
+      - (base_ntp_servers | map('trim') | reject('equalto', '') | list | length) == (base_ntp_servers | length)
+      - (base_ntp_fallback_servers | map('trim') | reject('equalto', '') | list | length) == (base_ntp_fallback_servers | length)
+      - (base_ntp_servers | length) > 0
+    fail_msg: >-
+      base_ntp_packages must be a list of package names, base_ntp_service_name
+      must be a non-empty service name, and base_ntp_servers plus
+      base_ntp_fallback_servers must be lists of non-empty NTP host names
+    quiet: true
