@@ -1,0 +1,9 @@
+---
+# examples/inventory/group_vars/all/base_hostname.yml
+# Shared hostname variables for the example lab.
+# Defines the hostname enforced during the base phase.
+
+# Hostname enforced during the base phase.
+# Use the final host name or FQDN you want written to /etc/hostname.
+# The current short hostname is expected to match the first label.
+base_hostname_name: lab.example.internal  # full hostname written to /etc/hostname for the example host

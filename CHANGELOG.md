@@ -3,6 +3,27 @@
 Release history for `ansible-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v0.12.0]
+### Added
+- `roles/base_hostname/`: New role for enforcing the system hostname during the base phase.
+- `roles/base_hostname/defaults/main.yml`: Added `base_hostname_name` defaults for hostname management.
+- `roles/base_hostname/tasks/`: Added assert, config, and validate phase task files for Debian-family hostname management.
+- `roles/base_hostname/README.md`: Added role documentation for hostname management and direct usage.
+- `examples/inventory/group_vars/all/base_hostname.yml`: Added example hostname variables for the Debian-family example lab.
+
+### Changed
+- `roles/base/meta/main.yml`: Added `base_hostname` as a dependency of the `base` role with `base` and `base_hostname` tags.
+- `roles/base/README.md`: Updated base role documentation to reflect the `base_hostname` dependency and inputs.
+- `README.md`: Added `base_hostname` to the available roles list and aligned the `base` role description.
+- `examples/README.md` and `docs/01-examples.md`: Updated the example documentation to include the new `base_hostname.yml` role-scoped variables file.
+
+### Fixed
+- `roles/base_hostname/tasks/assert.yml`: Tightened hostname validation to require real DNS-style hostname labels instead of only rejecting whitespace and edge punctuation.
+- `roles/base_hostname/tasks/validate.yml`: Validates the managed `/etc/hostname` value separately from the current short hostname so FQDN inputs such as `lab.example.internal` align with hosts that report `lab`.
+
+### Documentation
+- `roles/base_hostname/README.md` and `examples/inventory/group_vars/all/base_hostname.yml`: Clarified that the role writes the full hostname or FQDN to `/etc/hostname` while validating the current short hostname against the first label.
+
 ## [v0.11.0]
 ### Added
 - `roles/base_ntp/`: New role for configuring time synchronization through `systemd-timesyncd` during the base phase.

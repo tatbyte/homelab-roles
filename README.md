@@ -29,7 +29,8 @@ ansible-roles/
 
 ## Available Roles
 - `bootstrap`: Creates and validates the automation account used after the bootstrap phase.
-- `base`: Aggregates recurring base-phase configuration for Debian-family hosts through dependency roles such as `base_packages`, `base_ntp`, and `base_timezone`.
+- `base`: Aggregates recurring base-phase configuration for Debian-family hosts through dependency roles such as `base_packages`, `base_hostname`, `base_ntp`, and `base_timezone`.
+- `base_hostname`: Enforces the system hostname on Debian-family hosts during the base phase.
 - `base_locale`: Ensures requested locales exist and configures the system default locale on Debian-family hosts during the base phase.
 - `base_ntp`: Configures system time synchronization through `systemd-timesyncd` on Debian-family hosts during the base phase.
 - `base_timezone`: Enforces the system timezone on Debian-family hosts during the base phase.

@@ -1,0 +1,16 @@
+---
+# roles/base_hostname/tasks/config.yml
+# Config phase tasks for the `base_hostname` role.
+# Sets the system hostname and writes the managed `/etc/hostname` file.
+
+- name: "Config | Set system hostname"
+  ansible.builtin.hostname:
+    name: "{{ base_hostname_name }}"
+
+- name: "Config | Write /etc/hostname"
+  ansible.builtin.copy:
+    content: "{{ base_hostname_name }}\n"
+    dest: /etc/hostname
+    owner: root
+    group: root
+    mode: "0644"

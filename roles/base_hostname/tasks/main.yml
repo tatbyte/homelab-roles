@@ -1,0 +1,16 @@
+---
+# roles/base_hostname/tasks/main.yml
+# Task entrypoint for the `base_hostname` role.
+# Imports the assert, config, and validate phase files in order.
+
+- name: Assert
+  ansible.builtin.import_tasks: assert.yml
+  tags: [assert, base_hostname_assert]
+
+- name: Config
+  ansible.builtin.import_tasks: config.yml
+  tags: [config, base_hostname_config]
+
+- name: Validate
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate, base_hostname_validate]

@@ -10,7 +10,7 @@ The inventory variables and role inputs assume the repository's Debian-family de
 ## Structure
 - `ansible.cfg`: Test-specific Ansible configuration.
 - `inventory/hosts.ini`: Test inventory.
-- `inventory/group_vars/all/`: Shared variables for test hosts, split into per-role files such as `bootstrap.yml`, `base_packages.yml`, `base_locale.yml`, `base_ntp.yml`, and `base_timezone.yml`.
+- `inventory/group_vars/all/`: Shared variables for test hosts, split into per-role files such as `bootstrap.yml`, `base_packages.yml`, `base_hostname.yml`, `base_locale.yml`, `base_ntp.yml`, and `base_timezone.yml`.
 - `playbooks/bootstrap.yml`: Bootstrap phase playbook that connects with the initial admin account and applies the standalone `bootstrap` role.
 - `playbooks/base.yml`: Base phase playbook that connects as the automation account and applies the `base` role.
 - `playbooks/site.yml`: Base-phase entry playbook that imports `base.yml`.

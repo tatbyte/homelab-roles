@@ -1,0 +1,24 @@
+---
+# roles/base_hostname/tasks/validate.yml
+# Validate phase tasks for the `base_hostname` role.
+# Verifies the current short hostname and the managed `/etc/hostname` contents.
+
+- name: "Validate | Read /etc/hostname"
+  ansible.builtin.slurp:
+    path: /etc/hostname
+  register: base_hostname_file
+
+- name: "Validate | Read current short hostname"
+  ansible.builtin.command: hostname --short
+  register: base_hostname_current_short
+  changed_when: false
+
+- name: "Validate | Assert hostname state"
+  vars:
+    base_hostname_short_name: "{{ base_hostname_name.split('.', 1) | first }}"
+  ansible.builtin.assert:
+    that:
+      - (base_hostname_file.content | b64decode | trim) == base_hostname_name
+      - (base_hostname_current_short.stdout | trim) == base_hostname_short_name
+    fail_msg: "Configured hostname state does not match {{ base_hostname_name }}"
+    quiet: true
