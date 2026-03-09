@@ -6,9 +6,9 @@ Explains how the role ensures requested locales exist and configures the system 
 ## Features
 - Installs locale support packages with APT when needed
 - Validates the requested locale variables before changes are made
-- Fully manages `/etc/locale.gen` from the requested locale list
-- Generates requested locales with `locale-gen` and backfills them with `localedef` only when needed
-- Writes `/etc/default/locale` for Debian-family hosts
+- Fully manages `/etc/locale.gen` from the requested locale list through a template
+- Generates requested locales with `locale-gen` when the managed locale list changes
+- Writes `/etc/default/locale` for Debian-family hosts through a template
 - Verifies the generated locales, the fully managed `/etc/locale.gen` contents, and the configured default locale state
 
 ## Variables

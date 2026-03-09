@@ -3,6 +3,26 @@
 Release history for `ansible-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v0.10.0]
+### Added
+- `roles/base_locale/handlers/main.yml`: Added a locale regeneration handler for managed `/etc/locale.gen` changes.
+- `roles/base_locale/templates/`: Added `locale.gen.j2` and `default_locale.j2` so locale files are rendered from shared templates instead of inline task content.
+
+### Changed
+- `roles/base_locale/tasks/main.yml`: Derives `base_locale_generated_locales` once at runtime so generated locale state stays internal to the role.
+- `roles/base_locale/tasks/config.yml`: Simplified the config flow to render `/etc/locale.gen` and `/etc/default/locale` from templates, notify a handler for `locale-gen`, and flush that handler before validation-relevant follow-up work.
+- `roles/base_locale/tasks/validate.yml`: Reused the same templates for managed file assertions so config and validate stay aligned with one rendering path.
+
+### Fixed
+- `.pre-commit-config.yaml`: Excluded `roles/base_locale/templates/locale.gen.j2` from `end-of-file-fixer` so the empty `/etc/locale.gen` case keeps rendering as a truly empty file.
+- `roles/base_locale/defaults/main.yml` and `roles/base_locale/tasks/main.yml`: Moved `base_locale_generated_locales` back to runtime-derived role state so inventory cannot override the generated locale list independently of `base_locale_present`.
+
+### Removed
+- `roles/base_locale/tasks/config.yml`: Removed the `localedef` fallback path to keep locale generation behavior minimal and centered on `locale-gen`.
+
+### Documentation
+- `roles/base_locale/README.md`: Updated locale generation wording to reflect the template-based flow and removal of the `localedef` fallback.
+
 ## [v0.9.0]
 ### Added
 - `roles/base_locale/`: New role for managing generated locales and system locale categories during the base phase on Debian-family hosts.

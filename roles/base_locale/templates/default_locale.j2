@@ -1,0 +1,18 @@
+{#- roles/base_locale/templates/default_locale.j2 -#}
+{#- Template for the managed `/etc/default/locale` file in the `base_locale` role. -#}
+{#- Renders the Debian-family locale category configuration. -#}
+{{
+  (
+    ['LANG=' ~ base_locale_lang]
+    + (
+      ['LC_ALL=' ~ base_locale_lc_all]
+      if base_locale_lc_all | trim | length > 0
+      else []
+    )
+    + (
+      ['LC_TIME=' ~ base_locale_lc_time]
+      if base_locale_lc_time | trim | length > 0
+      else []
+    )
+  ) | join('\n')
+}}

@@ -1,0 +1,14 @@
+{#- roles/base_locale/templates/locale.gen.j2 -#}
+{#- Template for the managed `/etc/locale.gen` file in the `base_locale` role. -#}
+{#- Renders generated locale entries from `base_locale_generated_locales`. -#}
+{%- set base_locale_locale_gen_lines = [] -%}
+{%- for locale_name in base_locale_generated_locales -%}
+{%- set _ = base_locale_locale_gen_lines.append(
+  locale_name ~ ' ' ~ (
+    (locale_name.split('.', 1) | last)
+    | upper
+    | regex_replace('^UTF8$', 'UTF-8')
+  )
+) -%}
+{%- endfor -%}
+{{- base_locale_locale_gen_lines | join('\n') -}}{{- '\n' if base_locale_locale_gen_lines | length > 0 else '' -}}{#- Keep empty renders free of trailing newlines. -#}
