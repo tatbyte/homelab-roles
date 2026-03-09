@@ -1,0 +1,20 @@
+---
+# roles/base_timezone/tasks/config.yml
+# Config phase tasks for the `base_timezone` role.
+# Links `/etc/localtime` to the requested zoneinfo file and writes `/etc/timezone` where appropriate.
+
+- name: "Config | Link /etc/localtime to requested timezone"
+  ansible.builtin.file:
+    src: "/usr/share/zoneinfo/{{ base_timezone_name }}"
+    dest: /etc/localtime
+    state: link
+    force: true
+
+- name: "Config | Write /etc/timezone on Debian-family systems"
+  ansible.builtin.copy:
+    content: "{{ base_timezone_name }}\n"
+    dest: /etc/timezone
+    owner: root
+    group: root
+    mode: "0644"
+  when: ansible_os_family == 'Debian'

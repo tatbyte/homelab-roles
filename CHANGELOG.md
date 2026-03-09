@@ -3,6 +3,34 @@
 Release history for `ansible-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v0.8.0]
+### Added
+- `roles/base_timezone/`: New role for enforcing the system timezone during the base phase.
+- `roles/base_timezone/defaults/main.yml`: Added `base_timezone_name` with `Etc/UTC` as the default timezone.
+- `roles/base_timezone/tasks/`: Added assert, config, and validate phase task files for timezone management.
+- `roles/base_timezone/README.md`: Added role documentation for timezone management and direct usage.
+- `examples/inventory/group_vars/all/`: Split example shared variables into role-scoped files:
+  - `bootstrap.yml`
+  - `base_packages.yml`
+  - `base_timezone.yml`
+
+### Changed
+- `roles/base/meta/main.yml`: Added `base_timezone` as a dependency of the `base` role with `base` and `base_timezone` tags.
+- `roles/base/README.md`: Updated base role documentation to reflect the `base_timezone` dependency and inputs.
+- `README.md`: Added `base_timezone` to the available roles list and aligned role descriptions.
+- `examples/inventory/group_vars/`: Replaced the single `all.yml` file with a role-scoped `all/` directory for better readability.
+- `roles/base_packages/tasks/validate.yml`: Consolidated package validation into one assertion for installed packages and one assertion for removed packages to reduce noisy per-item output.
+- `roles/base_timezone/tasks/assert.yml`: Compact assert phase now validates timezone input and zoneinfo presence with fewer tasks.
+- `roles/base_timezone/tasks/validate.yml`: Compact validate phase now checks final timezone state with fewer tasks and avoids Jinja delimiters in assert conditions.
+
+### Fixed
+- Resolved `base_timezone` validation warning caused by Jinja templating delimiters inside `assert` conditions.
+- Resolved example `base_timezone` prerequisite gap by documenting and including `tzdata` in the example base package list.
+
+### Documentation
+- Updated `docs/02-role-workflow.md` with guidance for compact, low-noise roles that still keep the phase-based structure.
+- Updated `examples/README.md` and `docs/01-examples.md` to document the split `group_vars/all/` directory layout.
+
 ## [v0.7.1]
 ### Changed
 - Normalized file headers across tracked repository files to use a consistent path-first format followed by a short purpose description.

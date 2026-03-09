@@ -24,10 +24,11 @@ ansible-roles/
 ```
 
 ## Available Roles
-- `base`: Aggregate role for recurring base configuration (currently `base_packages`).
-- `bootstrap`: Creates and validates the automation account used by later plays (for example `ansible`).
-- `monitoring`: Aggregate role that currently depends on `monitoring_authorized_key`.
-- `monitoring_authorized_key`: Installs an SSH authorized key for monitoring-style access.
+- `bootstrap`: Creates and validates the automation account used after the bootstrap phase.
+- `base`: Aggregates recurring base-phase configuration through dependency roles such as `base_packages` and `base_timezone`.
+- `base_timezone`: Enforces the system timezone during the base phase.
+- `monitoring`: Aggregates monitoring-related configuration through dependency roles such as `monitoring_authorized_key`.
+- `monitoring_authorized_key`: Installs an SSH authorized key for monitoring-style inter-host access.
 
 ## Consume From Another Repo
 Recommended pattern: add this repository to your infra repository (submodule or vendored checkout), then point `roles_path` to `ansible-roles/roles`.

@@ -1,0 +1,20 @@
+---
+# roles/base_timezone/tasks/assert.yml
+# Assert phase tasks for the `base_timezone` role.
+# Validates the requested timezone name and confirms the matching zoneinfo file exists.
+
+- name: "Assert | Collect requested zoneinfo file state"
+  ansible.builtin.stat:
+    path: "/usr/share/zoneinfo/{{ base_timezone_name }}"
+  register: base_timezone_zoneinfo
+
+- name: "Assert | Validate timezone input and zoneinfo file"
+  ansible.builtin.assert:
+    that:
+      - base_timezone_name is string
+      - base_timezone_name | trim | length > 0
+      - not base_timezone_name.startswith('/')
+      - base_timezone_zoneinfo.stat.exists
+      - not base_timezone_zoneinfo.stat.isdir
+    fail_msg: "base_timezone_name must be a valid IANA timezone such as 'Etc/UTC' or 'America/Toronto'"
+    quiet: true

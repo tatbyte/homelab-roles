@@ -6,7 +6,9 @@
 dependencies:
   - role: base_packages
     tags: [base, base_packages]
-  # - role: base_timezone
+  - role: base_timezone
+    tags: [base, base_timezone]
+  # - role: base_locale
   # - role: base_ntp
   # - role: base_hostname
   # - role: base_sudo
@@ -14,4 +16,4 @@ dependencies:
   # - role: base_firewall
   # - role: base_logging
   # - role: base_updates
-  # - role: base_security
+  # - role: base_apparmor

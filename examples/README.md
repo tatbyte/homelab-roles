@@ -6,7 +6,7 @@ Explains the example file layout, the explicit bootstrap phase, and the follow-u
 ## Structure
 - `ansible.cfg`: Test-specific Ansible configuration.
 - `inventory/hosts.ini`: Test inventory.
-- `inventory/group_vars/all.yml`: Shared variables for test hosts.
+- `inventory/group_vars/all/`: Shared variables for test hosts, split into per-role files such as `bootstrap.yml`, `base_packages.yml`, and `base_timezone.yml`.
 - `playbooks/bootstrap.yml`: Bootstrap phase playbook that connects with the initial admin account and applies the standalone `bootstrap` role.
 - `playbooks/base.yml`: Base phase playbook that connects as the automation account and applies the `base` role.
 - `playbooks/site.yml`: Base-phase entry playbook that imports `base.yml`.
@@ -46,5 +46,5 @@ The example inventory stores only the bootstrap login user:
 
 ## Extending
 - Add playbooks under `examples/playbooks/`.
-- Update `examples/inventory/hosts.ini` and `examples/inventory/group_vars/` as needed.
+- Update `examples/inventory/hosts.ini` and the role-scoped files under `examples/inventory/group_vars/all/` as needed.
 - Keep this README aligned with any new test scenarios.

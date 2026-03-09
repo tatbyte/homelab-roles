@@ -1,0 +1,30 @@
+---
+# roles/base_timezone/tasks/validate.yml
+# Validate phase tasks for the `base_timezone` role.
+# Verifies the `/etc/localtime` link target and the `/etc/timezone` contents where applicable.
+
+- name: "Validate | Resolve /etc/localtime target"
+  ansible.builtin.command: readlink -f /etc/localtime
+  register: base_timezone_localtime_target
+  changed_when: false
+
+- name: "Validate | Assert /etc/localtime target matches requested timezone"
+  ansible.builtin.assert:
+    that:
+      - base_timezone_localtime_target.stdout == ('/usr/share/zoneinfo/' ~ base_timezone_name)
+    fail_msg: "/etc/localtime does not point to /usr/share/zoneinfo/{{ base_timezone_name }}"
+    quiet: true
+
+- name: "Validate | Read /etc/timezone on Debian-family systems"
+  ansible.builtin.slurp:
+    path: /etc/timezone
+  register: base_timezone_timezone_file
+  when: ansible_os_family == 'Debian'
+
+- name: "Validate | Assert timezone state"
+  ansible.builtin.assert:
+    that:
+      - base_timezone_localtime_target.stdout == ('/usr/share/zoneinfo/' ~ base_timezone_name)
+      - ansible_os_family != 'Debian' or (base_timezone_timezone_file.content | b64decode | trim) == base_timezone_name
+    fail_msg: "Configured timezone state does not match {{ base_timezone_name }}"
+    quiet: true

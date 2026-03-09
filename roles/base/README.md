@@ -6,6 +6,7 @@ Explains how the aggregate base role delegates recurring host configuration thro
 ## Features
 - Runs the recurring base configuration on every `base` execution
 - Keeps orchestration in `roles/base/meta/main.yml`
+- Includes `base_packages` and `base_timezone` through role dependencies
 
 ## Usage
 Use `base` after the bootstrap phase has already created the automation account:
@@ -18,7 +19,7 @@ Use `base` after the bootstrap phase has already created the automation account:
 ```
 
 Bootstrap is handled separately by the standalone `bootstrap` role/playbook.
-Role-specific inputs for `base` currently come from `base_packages_*`.
+Role-specific inputs for `base` currently come from `base_packages_*` and `base_timezone_*`.
 
 ## License
 MIT
