@@ -1,0 +1,57 @@
+---
+# Bootstrap role: validation and verification tasks
+
+- name: "Validate | Collect Admin and Sudo Group Entries"
+  ansible.builtin.getent:
+    database: "{{ item.database }}"
+    key: "{{ item.key }}"
+  loop:
+    - database: passwd
+      key: "{{ bootstrap_user }}"
+    - database: group
+      key: "{{ bootstrap_sudo_group }}"
+  loop_control:
+    label: "{{ item.database }}"
+  register: bootstrap_lookup
+
+- name: "Validate | Read Admin Authorized_keys Only When Key Is Configured"
+  ansible.builtin.slurp:
+    path: "{{ bootstrap_lookup.results[0].ansible_facts.getent_passwd[bootstrap_user][4] }}/.ssh/authorized_keys"
+  register: bootstrap_authorized_key_file
+  changed_when: false
+  failed_when: false
+  when: bootstrap_authorized_key is defined and bootstrap_authorized_key | length > 0
+
+- name: "Validate | Verify Admin Account Matches Configured Bootstrap Settings"
+  ansible.builtin.assert:
+    that:
+      - bootstrap_user in bootstrap_lookup.results[0].ansible_facts.getent_passwd
+      - bootstrap_lookup.results[0].ansible_facts.getent_passwd[bootstrap_user][1] | int == bootstrap_puid
+      - bootstrap_lookup.results[0].ansible_facts.getent_passwd[bootstrap_user][2] | int == bootstrap_pgid
+      - bootstrap_lookup.results[0].ansible_facts.getent_passwd[bootstrap_user][5] == bootstrap_user_shell
+      - bootstrap_user in (
+          bootstrap_lookup.results[1].ansible_facts.getent_group[bootstrap_sudo_group]
+          | last
+          | default('')
+          | string
+          | split(',')
+          | map('trim')
+          | reject('equalto', '')
+          | list
+        )
+      - (
+          bootstrap_authorized_key in (
+            bootstrap_authorized_key_file.content
+            | default('')
+            | b64decode
+            | split('\n')
+            | map('trim')
+            | reject('equalto', '')
+            | list
+          )
+          if bootstrap_authorized_key is defined and bootstrap_authorized_key | length > 0
+          else true
+        )
+    fail_msg: >-
+      Validate | Admin account is not in the expected final state (uid/gid/shell/sudo group/authorized key)
+    quiet: true

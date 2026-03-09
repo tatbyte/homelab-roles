@@ -1,0 +1,4 @@
+---
+# file: roles/base/tasks/main.yml
+# Main task file for the base role.
+# This aggregate role currently delegates work through meta dependencies.

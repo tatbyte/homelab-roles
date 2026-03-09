@@ -10,10 +10,10 @@ This repository is a roles source repository. It is intended to be consumed by a
 ansible-roles/
 ├── roles/
 │   ├── base/
-│   ├── base_bootstrap/
+│   ├── bootstrap/
 │   ├── monitoring/
 │   └── monitoring_authorized_key/
-├── tests/
+├── examples/
 │   ├── ansible.cfg
 │   ├── inventory/
 │   └── playbooks/
@@ -23,8 +23,8 @@ ansible-roles/
 ```
 
 ## Available Roles
-- `base`: Aggregate role that currently depends on `base_bootstrap`.
-- `base_bootstrap`: Creates and validates a bootstrap/admin user and SSH access.
+- `base`: Aggregate role for recurring base configuration (currently `base_packages`).
+- `bootstrap`: Creates and validates the automation account used by later plays (for example `ansible`).
 - `monitoring`: Aggregate role that currently depends on `monitoring_authorized_key`.
 - `monitoring_authorized_key`: Installs an SSH authorized key for monitoring-style access.
 
@@ -43,6 +43,12 @@ Example infra playbook:
 
 ```yaml
 ---
+- name: Bootstrap hosts using initial admin access
+  hosts: bootstrap
+  become: true
+  roles:
+    - role: bootstrap
+
 - name: Apply base setup
   hosts: all
   become: true
@@ -57,15 +63,28 @@ Example infra playbook:
 ```
 
 ## Local Role Testing
-This repository keeps a local test harness in `tests/`.
+This repository keeps a local test harness in `examples/`.
 
-Run tests from repo root:
+Run bootstrap first from repo root:
 
 ```sh
-ANSIBLE_CONFIG=tests/ansible.cfg ansible-playbook tests/playbooks/base.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/bootstrap.yml
 ```
 
-See [tests/README.md](tests/README.md) and [docs/01-test-lab.md](docs/01-test-lab.md) for test-lab details.
+Then run the base phase:
+
+```sh
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/site.yml
+```
+
+Or from the `examples/` directory:
+
+```sh
+ansible-playbook playbooks/bootstrap.yml
+ansible-playbook playbooks/site.yml
+```
+
+See [examples/README.md](examples/README.md) and [docs/01-examples.md](docs/01-examples.md) for lab details.
 
 ## Linting
 Pre-commit and linting are configured in this repository.

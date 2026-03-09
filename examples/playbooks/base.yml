@@ -1,6 +1,11 @@
 ---
-- name: Test base_bootstrap role
+# file: examples/playbooks/base.yml
+# Base playbook that applies the base role after bootstrapping.
+# This playbook is run after the initial bootstrap playbook to apply the base configuration to all hosts.
+
+- name: Apply base role after bootstrap
   hosts: all
   become: true
   roles:
     - role: base
+      tags: [base]

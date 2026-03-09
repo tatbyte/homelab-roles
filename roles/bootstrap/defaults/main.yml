@@ -1,0 +1,22 @@
+---
+# file: roles/bootstrap/defaults/main.yml
+# Default variables for bootstrap role
+
+# Automation account created during bootstrap and used by later Ansible runs.
+bootstrap_user: admin
+
+# Fixed UID/GID keep ownership predictable across hosts and restores.
+bootstrap_puid: 1000
+bootstrap_pgid: 1000
+
+# Sudo-capable group to attach the automation account to.
+bootstrap_sudo_group: sudo
+
+# If true, write a sudoers drop-in so the automation user can sudo without a password.
+bootstrap_passwordless_sudo: false
+
+# Default login shell for the automation account.
+bootstrap_user_shell: /bin/bash
+
+# Public SSH key installed into the automation user's authorized_keys file.
+bootstrap_authorized_key: ""

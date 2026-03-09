@@ -2,6 +2,45 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v0.7.0]
+### Added
+- `examples/playbooks/bootstrap.yml`: New bootstrap phase playbook to run initial provisioning with bootstrap inventory credentials.
+- `examples/inventory/hosts.ini`: Added `[bootstrap:vars]` with dedicated bootstrap login/become variables used only by bootstrap phase.
+- `roles/bootstrap/`: New standalone bootstrap role replacing the old `base_bootstrap` role path.
+- `roles/bootstrap/defaults/main.yml`: Added `bootstrap_passwordless_sudo` (default `false`) and the new `bootstrap_*` defaults.
+- `roles/bootstrap/tasks/config.yml`: Added task to optionally manage `/etc/sudoers.d/90-<user>` with `NOPASSWD` for the bootstrap-managed automation account.
+
+### Changed
+- `roles/base/meta/main.yml`: Removed the bootstrap dependency; `base` now only orchestrates recurring base roles such as `base_packages`.
+- `roles/base/tasks/main.yml`: Kept as a placeholder task file while orchestration stays in meta dependencies.
+- `examples/playbooks/bootstrap.yml`: Now runs the standalone `bootstrap` role with the `bootstrap` phase tag and prompts once for the bootstrap admin password, reusing it for both SSH login and sudo.
+- `examples/playbooks/base.yml`: Simplified to run `base` only, with the `base` phase tag and no phase-switch variable.
+- `examples/playbooks/site.yml`: Now imports only `base.yml`, leaving bootstrap as an explicit separate step instead of part of the default site flow.
+- `examples/inventory/group_vars/all.yml`: Renamed bootstrap example variables from `base_bootstrap_*` to `bootstrap_*`.
+- `examples/inventory/hosts.ini`: Removed example bootstrap password values so the inventory keeps only the bootstrap login user and relies on the playbook prompt for the shared password.
+- `roles/bootstrap/tasks/config.yml`: User primary group assignment targets the ensured group by name.
+
+### Fixed
+- Corrected bootstrap connection precedence by using dedicated bootstrap variables from inventory in `examples/playbooks/bootstrap.yml` instead of relying on `remote_user` against `ansible_user` from `[all:vars]`.
+- Resolved bootstrap failure path where `Group <gid> does not exist` by ensuring the primary group before user creation.
+- Resolved example `Missing sudo password` follow-up by enabling optional passwordless sudo in bootstrap-managed account for the example flow.
+- `roles/bootstrap/tasks/main.yml`: Phase tags are now `bootstrap`, `bootstrap_assert`, `bootstrap_config`, and `bootstrap_validate`.
+- `examples/playbooks/bootstrap.yml`: Removed the duplicate SSH and sudo password prompts from the example bootstrap flow by using one shared prompted value.
+
+### Documentation
+- Updated docs and READMEs to match current example topology and execution flow:
+  - `README.md`
+  - `examples/README.md`
+  - `docs/01-examples.md`
+  - `roles/base/README.md`
+  - `roles/bootstrap/README.md`
+- Documented the example run order as an explicit two-step flow: run `examples/playbooks/bootstrap.yml` first, then run `examples/playbooks/site.yml` or `examples/playbooks/base.yml`.
+- Updated example credential documentation to reflect that `examples/playbooks/bootstrap.yml` prompts once for the bootstrap password and reuses it for both SSH login and sudo.
+
+### Removed
+- `roles/base_bootstrap/`: Removed the old bootstrap role path after renaming it to the standalone `bootstrap` role.
+- `base_run_bootstrap`: Removed the phase-switch variable from the example playbooks and bootstrap-related vars.
+
 ## [v0.6.0]
 ### Added
 - `roles/base_packages/`: New role for managing common packages. Includes assert, install, config, and validate phase tasks.

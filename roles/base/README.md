@@ -1,23 +1,23 @@
 # base Role
 
-This role provides foundational tasks and configurations for all hosts in the Ansible environment.
+Aggregate foundation role for all hosts.
 
 ## Features
-- Essential system setup
-- Common configuration tasks
-- Can be extended by other roles
+- Runs the recurring base configuration on every `base` execution
+- Keeps orchestration in `roles/base/meta/main.yml`
 
 ## Usage
-Include the `base` role in your playbook:
+Use `base` after the bootstrap phase has already created the automation account:
 
 ```yaml
 - hosts: all
+  become: true
   roles:
     - base
 ```
 
-## Variables
-Define any required variables in your inventory or playbook. See `meta/main.yml` and `tasks/main.yml` for details.
+Bootstrap is handled separately by the standalone `bootstrap` role/playbook.
+Role-specific inputs for `base` currently come from `base_packages_*`.
 
 ## License
 MIT

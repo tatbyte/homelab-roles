@@ -2,8 +2,6 @@
 ## Dependencies: List roles required before executing this role, in order of execution
 
 dependencies:
-  - role: base_bootstrap
-    tags: [base, base_bootstrap]
   - role: base_packages
     tags: [base, base_packages]
   # - role: base_timezone
