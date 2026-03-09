@@ -1,0 +1,12 @@
+---
+# examples/inventory/group_vars/all/base_timezone.yml
+# Shared timezone variables for the example lab.
+# Defines the timezone package and timezone enforced during the base phase.
+
+# Package list required to provide timezone data on the host.
+base_timezone_packages:
+  - tzdata            # timezone database package used by the base_timezone role
+
+# Timezone enforced during the base phase.
+# Use an IANA timezone name that exists under /usr/share/zoneinfo.
+base_timezone_name: America/New_York        # system timezone to enforce on example hosts

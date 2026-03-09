@@ -51,6 +51,19 @@ Use one `tasks/main.yml` entrypoint that imports phase files in order.
   tags: [validate]
 ```
 
+## Compact Roles
+
+Simple roles do not need many tasks per phase.
+
+If a role manages one narrow piece of state, keep the phase structure but reduce output noise by:
+
+- omitting unused phases such as `install`
+- collecting facts in one task, then asserting them in one follow-up task
+- combining related validation checks into a single `ansible.builtin.assert`
+- keeping `tasks/main.yml` as the stable phase entrypoint
+
+Use this compact style when it improves readability and reduces task noise without hiding important state changes.
+
 ## Tag Usage
 
 Run specific phases during development or troubleshooting:

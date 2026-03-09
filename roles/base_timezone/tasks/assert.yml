@@ -1,0 +1,17 @@
+---
+# roles/base_timezone/tasks/assert.yml
+# Assert phase tasks for the `base_timezone` role.
+# Validates the requested timezone name before package installation and configuration run.
+
+- name: "Assert | Validate timezone input and zoneinfo file"
+  ansible.builtin.assert:
+    that:
+      - base_timezone_name is string
+      - base_timezone_name | trim | length > 0
+      - not base_timezone_name.startswith('/')
+      - base_timezone_packages is sequence
+      - base_timezone_packages is not string
+      - (base_timezone_packages | map('string') | list | length) == (base_timezone_packages | length)
+      - (base_timezone_packages | map('trim') | reject('equalto', '') | list | length) == (base_timezone_packages | length)
+    fail_msg: "base_timezone_name must be a non-empty IANA timezone name and base_timezone_packages must be a list of package names"
+    quiet: true

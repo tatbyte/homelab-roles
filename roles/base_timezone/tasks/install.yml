@@ -1,0 +1,10 @@
+---
+# roles/base_timezone/tasks/install.yml
+# Install phase tasks for the `base_timezone` role.
+# Ensures the timezone database package is present before timezone validation and configuration.
+
+- name: "Install | Ensure timezone packages are present"
+  ansible.builtin.package:
+    name: "{{ base_timezone_packages }}"
+    state: present
+  when: base_timezone_packages | length > 0
