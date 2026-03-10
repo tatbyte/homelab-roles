@@ -3,6 +3,24 @@
 Release history for `ansible-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v0.15.0]
+### Added
+- `roles/base_firewall/`: New role for enforcing a UFW baseline during the base phase.
+- `roles/base_firewall/defaults/main.yml`: Added `base_firewall_packages`, `base_firewall_enabled`, `base_firewall_logging`, `base_firewall_default_incoming_policy`, `base_firewall_default_outgoing_policy`, `base_firewall_state_checksum_path`, and `base_firewall_rules` defaults.
+- `roles/base_firewall/tasks/`: Added assert, install, config, and validate phase task files for Debian-family UFW management.
+- `roles/base_firewall/README.md`: Added role documentation for firewall management and direct usage.
+- `examples/inventory/group_vars/all/base_firewall.yml`: Added example firewall variables for the Debian-family example lab.
+- `roles/base/defaults/main.yml`: Added `base_include_firewall` so the aggregate base role can opt in to firewall management without changing existing hosts by default.
+
+### Changed
+- `roles/base/tasks/main.yml`: Optionally includes `base_firewall` only when `base_include_firewall` is true, so existing aggregate base runs do not start enforcing a firewall unexpectedly.
+- `roles/base/meta/main.yml` and `roles/base/README.md`: Restored the aggregate base dependency order to the existing always-on roles and documented `base_firewall` as an explicit opt-in follow-up role.
+- `roles/base_firewall/tasks/assert.yml`: Added a safety check that refuses to enable a deny-or-reject incoming firewall policy unless the managed rules still allow SSH or Ansible access on the management port.
+- `roles/base_firewall/tasks/config.yml` and `roles/base_firewall/tasks/validate.yml`: Added checksum-based convergent reapply behavior so managed rule or comment changes reset and rebuild the stored UFW state instead of leaving stale rules behind.
+- `README.md`: Added `base_firewall` to the available roles list and clarified that the aggregate `base` role includes it only as an explicit opt-in follow-up.
+- `examples/README.md`, `docs/01-examples.md`, and `examples/inventory/group_vars/all/base_firewall.yml`: Updated the example documentation and variables to include the new firewall role file plus the aggregate opt-in variable.
+- `docs/02-role-workflow.md`: Updated the documented aggregate base-role order so `base_firewall` is described as an optional current follow-up instead of a default dependency.
+
 ## [v0.14.0]
 ### Added
 - `roles/base_sshd/`: New role for enforcing an SSH daemon baseline during the base phase.

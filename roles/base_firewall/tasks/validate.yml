@@ -1,0 +1,124 @@
+---
+# roles/base_firewall/tasks/validate.yml
+# Validate phase tasks for the `base_firewall` role.
+# Verifies the effective UFW status and the stored managed rule commands after configuration.
+
+- name: "Validate | Read firewall status"
+  ansible.builtin.command: ufw status verbose
+  register: base_firewall_status
+  changed_when: false
+
+- name: "Validate | Read added firewall rules"
+  ansible.builtin.command: ufw show added
+  register: base_firewall_added_rules
+  changed_when: false
+
+- name: "Validate | Read stored firewall state checksum"
+  ansible.builtin.slurp:
+    path: "{{ base_firewall_state_checksum_path }}"
+  register: base_firewall_state_checksum_file
+  changed_when: false
+
+- name: "Validate | Assert firewall status"
+  vars:
+    base_firewall_expected_status: "{{ 'active' if base_firewall_enabled else 'inactive' }}"
+    base_firewall_expected_logging: >-
+      {{
+        'off'
+        if base_firewall_logging == 'off'
+        else 'on (' ~ ('low' if base_firewall_logging == 'on' else base_firewall_logging) ~ ')'
+      }}
+    base_firewall_expected_state_checksum: >-
+      {{
+        {
+          'enabled': base_firewall_enabled,
+          'logging': base_firewall_logging,
+          'default_incoming_policy': base_firewall_default_incoming_policy,
+          'default_outgoing_policy': base_firewall_default_outgoing_policy,
+          'rules': base_firewall_rules
+        }
+        | to_json
+        | hash('sha256')
+      }}
+    base_firewall_expected_default_prefix: >-
+      Default: {{ base_firewall_default_incoming_policy }} (incoming),
+      {{ base_firewall_default_outgoing_policy }} (outgoing)
+  ansible.builtin.assert:
+    that:
+      - "('Status: ' ~ base_firewall_expected_status) in base_firewall_status.stdout"
+      - >-
+        not base_firewall_enabled or
+        ('Logging: ' ~ base_firewall_expected_logging) in
+        base_firewall_status.stdout
+      - >-
+        not base_firewall_enabled or
+        base_firewall_expected_default_prefix in base_firewall_status.stdout
+      - >-
+        (base_firewall_state_checksum_file.content | b64decode | trim) ==
+        base_firewall_expected_state_checksum
+    fail_msg: >-
+      Configured firewall status does not match the requested base_firewall
+      values
+    quiet: true
+
+- name: "Validate | Assert requested firewall rules are recorded"
+  vars:
+    base_firewall_expected_rule_command_long: >-
+      {{
+        'ufw '
+        ~ item.rule
+        ~ ' '
+        ~ (item.direction | default('in'))
+        ~ (' log' if (item.log | default(false)) else '')
+        ~ ' from '
+        ~ (item.from_ip | default('any'))
+        ~ ' to '
+        ~ (item.to_ip | default('any'))
+        ~ (' port ' ~ (item.port | string) if (item.port is defined) else '')
+        ~ (' proto ' ~ item.proto if (item.proto is defined) else '')
+        ~ (" comment '" ~ item.comment ~ "'" if (item.comment is defined and item.comment | length > 0) else '')
+      }}
+    base_firewall_expected_rule_command_short: >-
+      {{
+        (
+          'ufw '
+          ~ item.rule
+          ~ ' '
+          ~ ((item.direction | default('in')) ~ ' ' if (item.direction | default('in')) == 'out' else '')
+          ~ ('log ' if (item.log | default(false)) else '')
+          ~ (item.port | string)
+          ~ ('/' ~ item.proto if (item.proto is defined and item.proto != 'any') else '')
+          ~ (" comment '" ~ item.comment ~ "'" if (item.comment is defined and item.comment | length > 0) else '')
+        )
+        if (
+          item.port is defined and
+          (item.from_ip | default('any')) == 'any' and
+          (item.to_ip | default('any')) == 'any'
+        )
+        else ''
+      }}
+    base_firewall_expected_rule_commands: >-
+      {{
+        [
+          base_firewall_expected_rule_command_long,
+          base_firewall_expected_rule_command_short
+        ]
+        | reject('equalto', '')
+        | unique
+        | list
+      }}
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          base_firewall_expected_rule_commands
+          | intersect(base_firewall_added_rules.stdout_lines)
+          | length
+        ) > 0
+    fail_msg: >-
+      Requested firewall rule is missing from ufw show added.
+      Expected one of {{ base_firewall_expected_rule_commands | join(' || ') }}
+    quiet: true
+  loop: "{{ base_firewall_rules }}"
+  loop_control:
+    label: "{{ base_firewall_expected_rule_commands | first }}"

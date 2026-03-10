@@ -1,0 +1,142 @@
+---
+# roles/base_firewall/tasks/assert.yml
+# Assert phase tasks for the `base_firewall` role.
+# Validates the requested UFW package, state, default-policy, and rule inputs before installation and configuration run.
+
+- name: "Assert | Validate base_firewall variable structure"
+  ansible.builtin.assert:
+    that:
+      - base_firewall_packages is sequence
+      - base_firewall_packages is not string
+      - base_firewall_enabled is boolean
+      - base_firewall_logging is string
+      - base_firewall_logging in ['off', 'on', 'low', 'medium', 'high', 'full']
+      - base_firewall_default_incoming_policy is string
+      - base_firewall_default_incoming_policy in ['allow', 'deny', 'reject']
+      - base_firewall_default_outgoing_policy is string
+      - base_firewall_default_outgoing_policy in ['allow', 'deny', 'reject']
+      - base_firewall_state_checksum_path is string
+      - base_firewall_state_checksum_path | trim | length > 0
+      - base_firewall_rules is sequence
+      - base_firewall_rules is not string
+      - (base_firewall_packages | map('string') | list | length) == (base_firewall_packages | length)
+      - (base_firewall_packages | map('trim') | reject('equalto', '') | list | length) == (base_firewall_packages | length)
+    fail_msg: >-
+      base_firewall_packages must be a list of package names,
+      base_firewall_enabled must be a boolean, base_firewall_logging must use
+      a supported UFW logging level, base_firewall_default_incoming_policy and
+      base_firewall_default_outgoing_policy must use supported UFW policy
+      values, base_firewall_state_checksum_path must be a non-empty path, and
+      base_firewall_rules must be a list
+    quiet: true
+
+- name: "Assert | Validate base_firewall rule structure"
+  ansible.builtin.assert:
+    that:
+      - item is mapping
+      - (item.keys() | difference(['rule', 'direction', 'port', 'proto', 'from_ip', 'to_ip', 'comment', 'log']) | length) == 0
+      - item.rule is defined
+      - item.rule is string
+      - item.rule in ['allow', 'deny', 'reject', 'limit']
+      - item.direction is not defined or (item.direction is string and item.direction in ['in', 'out'])
+      - item.port is not defined or ((item.port | string) | trim | length > 0)
+      - item.proto is not defined or (item.proto is string and item.proto in ['any', 'tcp', 'udp', 'ipv6', 'esp', 'ah', 'gre', 'igmp'])
+      - item.from_ip is not defined or (item.from_ip is string and item.from_ip | trim | length > 0 and item.from_ip == (item.from_ip | trim))
+      - item.to_ip is not defined or (item.to_ip is string and item.to_ip | trim | length > 0 and item.to_ip == (item.to_ip | trim))
+      - >-
+        item.comment is not defined or
+        (item.comment is string and ("'" not in item.comment))
+      - item.log is not defined or item.log is boolean
+    fail_msg: >-
+      Each base_firewall_rules item must be a mapping that uses only the
+      supported keys rule, direction, port, proto, from_ip, to_ip, comment,
+      and log. rule must use a supported UFW action, direction must be in or
+      out, address values must be non-empty, comment cannot contain single
+      quotes, and log must be a boolean when set
+    quiet: true
+  loop: "{{ base_firewall_rules }}"
+  loop_control:
+    label: >-
+      {{
+        item.comment
+        | default(item.rule ~ ' ' ~ (item.port | default(item.to_ip | default('any')) | string))
+      }}
+
+- name: "Assert | Require SSH management rule when firewall would block incoming access"
+  vars:
+    base_firewall_management_port: >-
+      {{
+        ansible_port
+        | default(base_sshd_port | default(22), true)
+        | string
+      }}
+    base_firewall_management_rule_count: >-
+      {{
+        (
+          base_firewall_rules
+          | selectattr('rule', 'in', ['allow', 'limit'])
+          | selectattr('direction', 'undefined')
+          | selectattr('port', 'defined')
+          | selectattr('proto', 'undefined')
+          | map(attribute='port')
+          | map('string')
+          | select('equalto', base_firewall_management_port)
+          | list
+          | length
+        )
+        +
+        (
+          base_firewall_rules
+          | selectattr('rule', 'in', ['allow', 'limit'])
+          | selectattr('direction', 'defined')
+          | selectattr('direction', 'equalto', 'in')
+          | selectattr('port', 'defined')
+          | selectattr('proto', 'undefined')
+          | map(attribute='port')
+          | map('string')
+          | select('equalto', base_firewall_management_port)
+          | list
+          | length
+        )
+        +
+        (
+          base_firewall_rules
+          | selectattr('rule', 'in', ['allow', 'limit'])
+          | selectattr('direction', 'undefined')
+          | selectattr('port', 'defined')
+          | selectattr('proto', 'defined')
+          | selectattr('proto', 'in', ['tcp', 'any'])
+          | map(attribute='port')
+          | map('string')
+          | select('equalto', base_firewall_management_port)
+          | list
+          | length
+        )
+        +
+        (
+          base_firewall_rules
+          | selectattr('rule', 'in', ['allow', 'limit'])
+          | selectattr('direction', 'defined')
+          | selectattr('direction', 'equalto', 'in')
+          | selectattr('port', 'defined')
+          | selectattr('proto', 'defined')
+          | selectattr('proto', 'in', ['tcp', 'any'])
+          | map(attribute='port')
+          | map('string')
+          | select('equalto', base_firewall_management_port)
+          | list
+          | length
+        )
+      }}
+  ansible.builtin.assert:
+    that:
+      - (base_firewall_management_rule_count | int) > 0
+    fail_msg: >-
+      base_firewall_rules must include at least one incoming allow or limit
+      rule for the SSH or Ansible management port
+      ({{ base_firewall_management_port }}) before enabling a deny or reject
+      incoming firewall policy
+    quiet: true
+  when:
+    - base_firewall_enabled
+    - base_firewall_default_incoming_policy in ['deny', 'reject']

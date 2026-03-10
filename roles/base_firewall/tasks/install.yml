@@ -1,0 +1,12 @@
+---
+# roles/base_firewall/tasks/install.yml
+# Install phase tasks for the `base_firewall` role.
+# Ensures the UFW package is present with APT before firewall configuration.
+
+- name: "Install | Ensure firewall packages are present"
+  ansible.builtin.apt:
+    name: "{{ base_firewall_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: base_firewall_packages | length > 0

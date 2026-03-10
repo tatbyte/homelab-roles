@@ -1,4 +1,12 @@
 ---
 # roles/base/tasks/main.yml
-# Main task file for the `base` role.
-# Remains intentionally minimal because the role delegates work through meta dependencies.
+# Task entrypoint for the `base` role.
+# Keeps core orchestration in meta dependencies and includes optional follow-up roles when explicitly enabled.
+
+- name: "Base | Include optional firewall role"
+  ansible.builtin.include_role:
+    name: base_firewall
+    apply:
+      tags: [base, base_firewall]
+  when: base_include_firewall | default(false)
+  tags: [base, base_firewall]

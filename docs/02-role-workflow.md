@@ -81,12 +81,15 @@ Current order:
 
 Use this sequence to keep foundational packages and environment settings first, then time synchronization, then final host identity, sudo policy, and SSH daemon policy.
 
+Optional current follow-up:
+
+1. `base_firewall` when `base_include_firewall: true`
+
 Planned future additions should follow after the current foundational roles:
 
-1. `base_firewall`
-2. `base_logging`
-3. `base_updates`
-4. `base_apparmor`
+1. `base_logging`
+2. `base_updates`
+3. `base_apparmor`
 
 ## Tag Usage
 

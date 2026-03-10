@@ -26,5 +26,6 @@ base_sshd_pubkey_authentication: true
 # Optional login allow-list for the example lab. The role validates that these
 # users are present in the effective AllowUsers result after SSH config merge.
 base_sshd_allow_users:
+  - vagrant      # Used by Vagrant for VM lifecycle (halt/up) and testing automation
   - ansible
   - admin

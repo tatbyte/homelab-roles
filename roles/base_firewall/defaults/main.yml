@@ -1,0 +1,18 @@
+---
+# roles/base_firewall/defaults/main.yml
+# Default variables for the `base_firewall` role.
+# Defines the UFW package, enabled state, default policies, and managed rule list enforced during the base phase.
+
+base_firewall_packages:
+  - ufw
+base_firewall_enabled: true
+base_firewall_logging: low
+base_firewall_default_incoming_policy: deny
+base_firewall_default_outgoing_policy: allow
+base_firewall_state_checksum_path: /etc/ufw/.base_firewall_state.sha256
+base_firewall_rules:
+  - rule: limit
+    direction: in
+    port: "{{ base_sshd_port | default(22) | string }}"
+    proto: tcp
+    comment: Limit SSH access

@@ -1,0 +1,85 @@
+---
+# roles/base_firewall/tasks/config.yml
+# Config phase tasks for the `base_firewall` role.
+# Resets and reapplies the managed UFW state when requested firewall inputs change.
+# Then enforces logging, default policies, rules, and the final enabled state.
+
+- name: "Config | Read stored firewall state checksum"
+  ansible.builtin.slurp:
+    path: "{{ base_firewall_state_checksum_path }}"
+  register: base_firewall_state_checksum_file
+  failed_when: false
+  changed_when: false
+
+- name: "Config | Derive desired firewall state checksum"
+  ansible.builtin.set_fact:
+    base_firewall_desired_state_checksum: >-
+      {{
+        {
+          'enabled': base_firewall_enabled,
+          'logging': base_firewall_logging,
+          'default_incoming_policy': base_firewall_default_incoming_policy,
+          'default_outgoing_policy': base_firewall_default_outgoing_policy,
+          'rules': base_firewall_rules
+        }
+        | to_json
+        | hash('sha256')
+      }}
+    base_firewall_current_state_checksum: >-
+      {{
+        (
+          base_firewall_state_checksum_file.content
+          | default('', true)
+          | b64decode
+          | trim
+        )
+      }}
+
+- name: "Config | Reset firewall before reapplying changed managed state"
+  community.general.ufw:
+    state: reset
+  when: base_firewall_current_state_checksum != base_firewall_desired_state_checksum
+
+- name: "Config | Set firewall logging level"
+  community.general.ufw:
+    logging: "{{ base_firewall_logging }}"
+
+- name: "Config | Set default incoming firewall policy"
+  community.general.ufw:
+    default: "{{ base_firewall_default_incoming_policy }}"
+    direction: incoming
+
+- name: "Config | Set default outgoing firewall policy"
+  community.general.ufw:
+    default: "{{ base_firewall_default_outgoing_policy }}"
+    direction: outgoing
+
+- name: "Config | Ensure requested firewall rules are present"
+  community.general.ufw:
+    rule: "{{ item.rule }}"
+    direction: "{{ item.direction | default('in') }}"
+    from_ip: "{{ item.from_ip | default('any') }}"
+    to_ip: "{{ item.to_ip | default('any') }}"
+    to_port: "{{ item.port | default(omit) }}"
+    proto: "{{ item.proto | default(omit) }}"
+    comment: "{{ item.comment if item.comment is defined else omit }}"
+    log: "{{ item.log | default(omit) }}"
+  loop: "{{ base_firewall_rules }}"
+  loop_control:
+    label: >-
+      {{
+        item.comment
+        | default(item.rule ~ ' ' ~ (item.port | default(item.to_ip | default('any')) | string))
+      }}
+
+- name: "Config | Ensure firewall enabled state"
+  community.general.ufw:
+    state: "{{ 'enabled' if base_firewall_enabled else 'disabled' }}"
+
+- name: "Config | Store firewall state checksum"
+  ansible.builtin.copy:
+    dest: "{{ base_firewall_state_checksum_path }}"
+    content: "{{ base_firewall_desired_state_checksum }}\n"
+    owner: root
+    group: root
+    mode: "0600"
