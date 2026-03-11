@@ -3,6 +3,19 @@
 Release history for `ansible-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v0.17.0]
+### Changed
+- Reworked `base_firewall` to enforce an additive UFW baseline by default instead of resetting the firewall whenever the desired managed state changes.
+- Split firewall rule inputs into `base_firewall_base_rules` and `base_firewall_additional_rules`, while keeping `base_firewall_rules` as the effective merged ruleset used by the role.
+- Added the optional `base_firewall_purge_unmanaged_rules` path so exact rebuilds are explicit instead of automatic.
+- Updated the example Ansible configuration to hide skipped-host output for quieter local role runs.
+
+### Fixed
+- Fixed `base_firewall` purge mode so an empty managed ruleset no longer fails on undefined purge-comparison facts and now converges cleanly.
+
+### Documentation
+- Updated repository, role, and example documentation to describe the additive `base_firewall` behavior, the split firewall rule variables, and the quieter example output defaults.
+
 ## [v0.16.0]
 ### Changed
 - Moved aggregate `base` orchestration from meta dependencies to explicit `ansible.builtin.include_role` ordering, making `roles/base/tasks/main.yml` the single source of truth for the base stack.

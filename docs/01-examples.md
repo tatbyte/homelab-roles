@@ -17,7 +17,7 @@ The example content assumes Debian-family targets such as Debian and Ubuntu.
 
 ## Example Files
 
-- `examples/ansible.cfg`: Example Ansible configuration for local test runs.
+- `examples/ansible.cfg`: Example Ansible configuration for local test runs that also hides skipped-host output for quieter example runs.
 - `examples/inventory/hosts.ini`: Example hosts and groups.
 - `examples/inventory/group_vars/all/`: Example variables for all hosts, split into role-scoped files.
 - `examples/playbooks/bootstrap.yml`: Bootstrap phase playbook that uses initial host credentials and applies the standalone `bootstrap` role.
@@ -60,6 +60,7 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/test_bas
 - The example inventory and variables assume Debian-family hosts and the repository's APT-based role behavior.
 - `group_vars/all/` is split by role prefix so example variables such as `base_packages.yml`, `base_hostname.yml`, `base_locale.yml`, `base_ntp.yml`, `base_sudo.yml`, `base_sshd.yml`, `base_firewall.yml`, and `base_timezone.yml` stay readable as the base stack grows.
 - `base_firewall.yml` sets `base_include_firewall: true`, which opts the example base run into the optional `base_firewall` role.
+- `ansible.cfg` sets `display_skipped_hosts = False`, so routine conditional skips from optional roles or gated tasks do not dominate the example output.
 - `hosts.ini` keeps default `ansible_user=ansible` in `[all:vars]`, while `[bootstrap:vars]` holds initial login values used only during bootstrap.
 - `playbooks/bootstrap.yml` prompts once for the bootstrap password and reuses it for both SSH login and sudo.
 - `playbooks/test_base_sshd.yml` removes its temporary SSH fixture files in an `always` block after the integration run, so the example host is returned to the normal post-test state.

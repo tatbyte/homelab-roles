@@ -35,6 +35,7 @@
           'logging': base_firewall_logging,
           'default_incoming_policy': base_firewall_default_incoming_policy,
           'default_outgoing_policy': base_firewall_default_outgoing_policy,
+          'purge_unmanaged_rules': base_firewall_purge_unmanaged_rules,
           'rules': base_firewall_rules
         }
         | to_json
@@ -122,3 +123,89 @@
   loop: "{{ base_firewall_rules }}"
   loop_control:
     label: "{{ base_firewall_expected_rule_commands | first }}"
+
+- name: "Validate | Initialize expected firewall rule variants for purge validation"
+  ansible.builtin.set_fact:
+    base_firewall_validate_expected_rule_command_variants: []
+  when: base_firewall_purge_unmanaged_rules
+
+- name: "Validate | Collect expected firewall rule variants for purge validation"
+  vars:
+    base_firewall_expected_rule_command_long: >-
+      {{
+        'ufw '
+        ~ item.rule
+        ~ ' '
+        ~ (item.direction | default('in'))
+        ~ (' log' if (item.log | default(false)) else '')
+        ~ ' from '
+        ~ (item.from_ip | default('any'))
+        ~ ' to '
+        ~ (item.to_ip | default('any'))
+        ~ (' port ' ~ (item.port | string) if (item.port is defined) else '')
+        ~ (' proto ' ~ item.proto if (item.proto is defined) else '')
+        ~ (" comment '" ~ item.comment ~ "'" if (item.comment is defined and item.comment | length > 0) else '')
+      }}
+    base_firewall_expected_rule_command_short: >-
+      {{
+        (
+          'ufw '
+          ~ item.rule
+          ~ ' '
+          ~ ((item.direction | default('in')) ~ ' ' if (item.direction | default('in')) == 'out' else '')
+          ~ ('log ' if (item.log | default(false)) else '')
+          ~ (item.port | string)
+          ~ ('/' ~ item.proto if (item.proto is defined and item.proto != 'any') else '')
+          ~ (" comment '" ~ item.comment ~ "'" if (item.comment is defined and item.comment | length > 0) else '')
+        )
+        if (
+          item.port is defined and
+          (item.from_ip | default('any')) == 'any' and
+          (item.to_ip | default('any')) == 'any'
+        )
+        else ''
+      }}
+  ansible.builtin.set_fact:
+    base_firewall_validate_expected_rule_command_variants: >-
+      {{
+        (base_firewall_validate_expected_rule_command_variants | default([]))
+        +
+        [
+          [
+            base_firewall_expected_rule_command_long,
+            base_firewall_expected_rule_command_short
+          ]
+          | reject('equalto', '')
+          | unique
+          | list
+        ]
+      }}
+  loop: "{{ base_firewall_rules }}"
+  loop_control:
+    label: >-
+      {{
+        item.comment
+        | default(item.rule ~ ' ' ~ (item.port | default(item.to_ip | default('any')) | string))
+      }}
+  when: base_firewall_purge_unmanaged_rules
+
+- name: "Validate | Assert purge mode rebuilt only managed firewall rules"
+  vars:
+    base_firewall_missing_purge_rule_count: >-
+      {{
+        base_firewall_validate_expected_rule_command_variants
+        | map('intersect', base_firewall_added_rules.stdout_lines)
+        | map('length')
+        | select('equalto', 0)
+        | list
+        | length
+      }}
+  ansible.builtin.assert:
+    that:
+      - (base_firewall_added_rules.stdout_lines | length) == (base_firewall_validate_expected_rule_command_variants | length)
+      - (base_firewall_missing_purge_rule_count | int) == 0
+    fail_msg: >-
+      base_firewall_purge_unmanaged_rules expects ufw show added to contain
+      only the managed firewall rules requested by base_firewall_rules
+    quiet: true
+  when: base_firewall_purge_unmanaged_rules
