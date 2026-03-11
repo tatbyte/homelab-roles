@@ -1,7 +1,7 @@
 ---
 # examples/inventory/group_vars/all/base_firewall.yml
 # Shared firewall variables for the example lab.
-# Defines the aggregate-role opt-in, UFW package, enabled state, default policies, and managed rule list enforced during the base phase.
+# Defines the aggregate-role opt-in, UFW package, enabled state, default policies, baseline rules, and optional host additions enforced during the base phase.
 
 # Opt in to the optional base_firewall role from the aggregate base role.
 base_include_firewall: true
@@ -22,27 +22,38 @@ base_firewall_default_incoming_policy: deny
 # Default outbound policy for traffic leaving the host.
 base_firewall_default_outgoing_policy: allow
 
+# Keep unmanaged or manual UFW rules by default.
+# Set this to true only when you want the role to reset UFW and rebuild
+# the firewall from base_firewall_rules.
+base_firewall_purge_unmanaged_rules: false
+
 # Path used by the role to store the checksum of the requested managed
-# firewall state. Keep the default unless you have a host-specific reason
-# to place this state file somewhere else under /etc.
+# firewall state after configuration. Keep the default unless you have a
+# host-specific reason to place this state file somewhere else under /etc.
 base_firewall_state_checksum_path: /etc/ufw/.base_firewall_state.sha256
 
-# Firewall rules that must exist in UFW.
+# Firewall baseline rules that must exist in UFW on every host.
 # When the default incoming policy is deny or reject, keep at least one
 # incoming allow or limit rule for the SSH or Ansible management port.
 # This example follows the SSH port managed by base_sshd and rate-limits
 # new connections.
-base_firewall_rules:
+base_firewall_base_rules:
   - rule: limit
     direction: in
     port: "{{ base_sshd_port | string }}"
     proto: tcp
     comment: Limit SSH access
 
-  # Optional service example:
-  # - rule: allow
-  #   direction: in
-  #   port: "8080"
-  #   proto: tcp
-  #   from_ip: 192.168.1.0/24
-  #   comment: Allow Traefik dashboard from LAN
+# Extra rules can be added per host or per group without replacing the
+# shared baseline. For example, a host that runs the Traefik dashboard can
+# set base_firewall_additional_rules in host_vars.
+base_firewall_additional_rules: []
+
+# Example host-specific addition:
+# base_firewall_additional_rules:
+#   - rule: allow
+#     direction: in
+#     port: "8080"
+#     proto: tcp
+#     from_ip: 192.168.1.0/24
+#     comment: Allow Traefik dashboard from LAN

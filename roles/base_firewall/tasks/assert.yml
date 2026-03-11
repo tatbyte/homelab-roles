@@ -15,8 +15,13 @@
       - base_firewall_default_incoming_policy in ['allow', 'deny', 'reject']
       - base_firewall_default_outgoing_policy is string
       - base_firewall_default_outgoing_policy in ['allow', 'deny', 'reject']
+      - base_firewall_purge_unmanaged_rules is boolean
       - base_firewall_state_checksum_path is string
       - base_firewall_state_checksum_path | trim | length > 0
+      - base_firewall_base_rules is sequence
+      - base_firewall_base_rules is not string
+      - base_firewall_additional_rules is sequence
+      - base_firewall_additional_rules is not string
       - base_firewall_rules is sequence
       - base_firewall_rules is not string
       - (base_firewall_packages | map('string') | list | length) == (base_firewall_packages | length)
@@ -26,8 +31,10 @@
       base_firewall_enabled must be a boolean, base_firewall_logging must use
       a supported UFW logging level, base_firewall_default_incoming_policy and
       base_firewall_default_outgoing_policy must use supported UFW policy
-      values, base_firewall_state_checksum_path must be a non-empty path, and
-      base_firewall_rules must be a list
+      values, base_firewall_purge_unmanaged_rules must be a boolean,
+      base_firewall_state_checksum_path must be a non-empty path,
+      base_firewall_base_rules and base_firewall_additional_rules must be
+      lists, and base_firewall_rules must be a list
     quiet: true
 
 - name: "Assert | Validate base_firewall rule structure"
