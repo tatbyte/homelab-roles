@@ -1,0 +1,13 @@
+---
+# examples/inventory/group_vars/all/base_logging.yml
+# Shared logging variables for the example lab.
+# Defines the aggregate-role opt-in and optional journald overrides used during the base phase.
+
+# Keep the optional base_logging role disabled in the example lab by default.
+base_include_logging: true
+
+# Optional site overrides for the base_logging role.
+# Uncomment these values when you want the example base run to manage
+# persistent journald storage explicitly.
+base_logging_storage: persistent
+base_logging_system_max_use: 256M

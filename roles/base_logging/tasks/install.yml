@@ -1,0 +1,12 @@
+---
+# roles/base_logging/tasks/install.yml
+# Install phase tasks for the `base_logging` role.
+# Ensures any requested journald-related packages are present before configuration.
+
+- name: "Install | Ensure logging packages are present"
+  ansible.builtin.apt:
+    name: "{{ base_logging_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: base_logging_packages | length > 0

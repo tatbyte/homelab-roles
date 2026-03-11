@@ -1,0 +1,9 @@
+---
+# roles/base_logging/handlers/main.yml
+# Handlers for the `base_logging` role.
+# Restarts the journald service when the managed journald configuration or storage state changes.
+
+- name: Restart journald service
+  ansible.builtin.service:
+    name: "{{ base_logging_service_name }}"
+    state: restarted

@@ -59,3 +59,11 @@
       tags: [base, base_firewall]
   when: base_include_firewall | default(false)
   tags: [base, base_firewall, assert, install, config, validate, base_firewall_assert, base_firewall_install, base_firewall_config, base_firewall_validate]
+
+- name: "Base | Include optional base_logging role"
+  ansible.builtin.include_role:
+    name: base_logging
+    apply:
+      tags: [base, base_logging]
+  when: base_include_logging | default(false)
+  tags: [base, base_logging, assert, install, config, validate, base_logging_assert, base_logging_install, base_logging_config, base_logging_validate]

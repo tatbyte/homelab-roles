@@ -1,0 +1,6 @@
+{# roles/base_logging/templates/journald.conf.j2 #}
+{# Template for the managed `/etc/systemd/journald.conf` file in the `base_logging` role. #}
+[Journal]
+Storage={{ base_logging_storage }}
+Compress={{ 'yes' if base_logging_compress else 'no' }}
+SystemMaxUse={{ base_logging_system_max_use }}

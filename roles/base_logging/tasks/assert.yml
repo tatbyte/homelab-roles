@@ -1,0 +1,26 @@
+---
+# roles/base_logging/tasks/assert.yml
+# Assert phase tasks for the `base_logging` role.
+# Validates the requested journald package, service, storage mode, and core logging limits before installation and configuration run.
+
+- name: "Assert | Validate base_logging variable structure"
+  ansible.builtin.assert:
+    that:
+      - base_logging_packages is sequence
+      - base_logging_packages is not string
+      - base_logging_service_name is string
+      - base_logging_service_name | trim | length > 0
+      - base_logging_storage is string
+      - base_logging_storage in ['persistent', 'volatile']
+      - base_logging_compress is boolean
+      - base_logging_system_max_use is string
+      - base_logging_system_max_use | trim | length > 0
+      - (base_logging_packages | map('string') | list | length) == (base_logging_packages | length)
+      - (base_logging_packages | map('trim') | reject('equalto', '') | list | length) == (base_logging_packages | length)
+    fail_msg: >-
+      base_logging_packages must be a list of package names,
+      base_logging_service_name must be a non-empty service name,
+      base_logging_storage must be persistent or volatile,
+      base_logging_compress must be a boolean, and
+      base_logging_system_max_use must be a non-empty size string
+    quiet: true

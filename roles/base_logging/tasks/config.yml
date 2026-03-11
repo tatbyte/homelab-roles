@@ -1,0 +1,30 @@
+---
+# roles/base_logging/tasks/config.yml
+# Config phase tasks for the `base_logging` role.
+# Manages journald persistence, renders the journald configuration file, and keeps the journald service running.
+
+- name: "Config | Ensure journald storage directory state"
+  ansible.builtin.file:
+    path: /var/log/journal
+    state: "{{ 'directory' if base_logging_storage == 'persistent' else 'absent' }}"
+    owner: root
+    group: systemd-journal
+    mode: "2755"
+  notify: Restart journald service
+
+- name: "Config | Render journald configuration"
+  ansible.builtin.template:
+    src: journald.conf.j2
+    dest: /etc/systemd/journald.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart journald service
+
+- name: "Config | Ensure journald service is running"
+  ansible.builtin.service:
+    name: "{{ base_logging_service_name }}"
+    state: started
+
+- name: "Config | Flush journald handler"
+  ansible.builtin.meta: flush_handlers

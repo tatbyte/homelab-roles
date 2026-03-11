@@ -1,0 +1,10 @@
+---
+# roles/base_logging/defaults/main.yml
+# Default variables for the `base_logging` role.
+# Defines the journald package list, service, storage mode, and core limits enforced during the base phase.
+
+base_logging_packages: []
+base_logging_service_name: systemd-journald
+base_logging_storage: persistent
+base_logging_compress: true
+base_logging_system_max_use: 512M

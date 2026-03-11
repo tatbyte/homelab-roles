@@ -3,6 +3,14 @@
 Release history for `ansible-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v0.18.0]
+### Added
+- Added the `base_logging` role for persistent local journald management on Debian-family hosts, including defaults, handlers, full phase tasks, template, role documentation, and example variables.
+
+### Changed
+- Added `base_logging` to the aggregate `base` role as an explicit opt-in follow-up role gated by `base_include_logging`.
+- Updated repository, aggregate-role, and example documentation to describe the new optional logging role and its example variable file.
+
 ## [v0.17.0]
 ### Changed
 - Reworked `base_firewall` to enforce an additive UFW baseline by default instead of resetting the firewall whenever the desired managed state changes.

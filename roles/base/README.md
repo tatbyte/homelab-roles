@@ -9,7 +9,8 @@ Explains how the aggregate base role delegates recurring Debian-family host conf
 - Includes `base_packages`, `base_locale`, `base_timezone`, `base_ntp`, `base_hostname`, `base_sudo`, and `base_sshd` through explicit `ansible.builtin.include_role` entries
 - Keeps aggregate include-task tags aligned with each child role's phase tags and role-specific tags so targeted runs such as `--tags validate` or `--tags base_packages_validate` stay predictable
 - Can include `base_firewall` as an explicit opt-in follow-up role when `base_include_firewall: true`
-- Reserves `base_include_logging`, `base_include_updates`, and `base_include_apparmor` as future optional aggregate toggles
+- Can include `base_logging` as an explicit opt-in follow-up role when `base_include_logging: true`
+- Reserves `base_include_updates` and `base_include_apparmor` as future optional aggregate toggles
 
 ## Usage
 Use `base` on Debian-family hosts after the bootstrap phase has already created the automation account:
@@ -24,7 +25,7 @@ Use `base` on Debian-family hosts after the bootstrap phase has already created 
 ```
 
 Bootstrap is handled separately by the standalone `bootstrap` role/playbook.
-Role-specific inputs for `base` currently come from `base_packages_*`, `base_hostname_*`, `base_locale_*`, `base_ntp_*`, `base_sudo_*`, `base_sshd_*`, `base_timezone_*`, optional `base_include_firewall` plus `base_firewall_*`, and the future aggregate toggles `base_include_logging`, `base_include_updates`, and `base_include_apparmor`.
+Role-specific inputs for `base` currently come from `base_packages_*`, `base_hostname_*`, `base_locale_*`, `base_ntp_*`, `base_sudo_*`, `base_sshd_*`, `base_timezone_*`, optional `base_include_firewall` plus `base_firewall_*`, optional `base_include_logging` plus `base_logging_*`, and the future aggregate toggles `base_include_updates` and `base_include_apparmor`.
 
 Current include order in `base` is:
 
@@ -45,12 +46,12 @@ This keeps broad phase runs such as `--tags validate` working across the full ba
 Optional follow-up role:
 
 1. `base_firewall` when `base_include_firewall: true`
+2. `base_logging` when `base_include_logging: true`
 
 Planned future optional follow-up roles after the current roles are:
 
-1. `base_logging` when `base_include_logging: true`
-2. `base_updates` when `base_include_updates: true`
-3. `base_apparmor` when `base_include_apparmor: true`
+1. `base_updates` when `base_include_updates: true`
+2. `base_apparmor` when `base_include_apparmor: true`
 
 ## License
 MIT

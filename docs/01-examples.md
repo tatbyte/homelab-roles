@@ -58,8 +58,9 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/test_bas
 
 - The lab content is intentionally simple and meant as an example baseline.
 - The example inventory and variables assume Debian-family hosts and the repository's APT-based role behavior.
-- `group_vars/all/` is split by role prefix so example variables such as `base_packages.yml`, `base_hostname.yml`, `base_locale.yml`, `base_ntp.yml`, `base_sudo.yml`, `base_sshd.yml`, `base_firewall.yml`, and `base_timezone.yml` stay readable as the base stack grows.
+- `group_vars/all/` is split by role prefix so example variables such as `base_packages.yml`, `base_hostname.yml`, `base_locale.yml`, `base_ntp.yml`, `base_sudo.yml`, `base_sshd.yml`, `base_firewall.yml`, `base_logging.yml`, and `base_timezone.yml` stay readable as the base stack grows.
 - `base_firewall.yml` sets `base_include_firewall: true`, which opts the example base run into the optional `base_firewall` role.
+- `base_logging.yml` keeps `base_include_logging: false` by default, while documenting the logging-role overrides you can enable for a site that wants persistent journald management.
 - `ansible.cfg` sets `display_skipped_hosts = False`, so routine conditional skips from optional roles or gated tasks do not dominate the example output.
 - `hosts.ini` keeps default `ansible_user=ansible` in `[all:vars]`, while `[bootstrap:vars]` holds initial login values used only during bootstrap.
 - `playbooks/bootstrap.yml` prompts once for the bootstrap password and reuses it for both SSH login and sudo.

@@ -1,0 +1,50 @@
+---
+# roles/base_logging/tasks/validate.yml
+# Validate phase tasks for the `base_logging` role.
+# Verifies the managed journald configuration file, storage directory state, and running service state.
+
+- name: "Validate | Read journald configuration"
+  ansible.builtin.slurp:
+    path: /etc/systemd/journald.conf
+  register: base_logging_config_file
+
+- name: "Validate | Read journald storage directory state"
+  ansible.builtin.stat:
+    path: /var/log/journal
+  register: base_logging_journal_directory
+
+- name: "Validate | Gather service facts"
+  ansible.builtin.service_facts:
+
+- name: "Validate | Assert journald state"
+  vars:
+    base_logging_expected_config: "{{ lookup('template', 'journald.conf.j2') }}"
+    base_logging_service_unit: >-
+      {{
+        base_logging_service_name
+        if base_logging_service_name.endswith('.service')
+        else (base_logging_service_name ~ '.service')
+      }}
+  ansible.builtin.assert:
+    that:
+      - (base_logging_config_file.content | b64decode) == base_logging_expected_config
+      - >-
+        (
+          base_logging_storage == 'persistent' and
+          base_logging_journal_directory.stat.exists and
+          base_logging_journal_directory.stat.isdir and
+          base_logging_journal_directory.stat.pw_name == 'root' and
+          base_logging_journal_directory.stat.gr_name == 'systemd-journal' and
+          base_logging_journal_directory.stat.mode == '2755'
+        )
+        or
+        (
+          base_logging_storage == 'volatile' and
+          not base_logging_journal_directory.stat.exists
+        )
+      - base_logging_service_unit in ansible_facts.services
+      - ansible_facts.services[base_logging_service_unit].state == 'running'
+    fail_msg: >-
+      Configured logging state does not match the requested base_logging
+      values
+    quiet: true

@@ -1,0 +1,20 @@
+---
+# roles/base_logging/tasks/main.yml
+# Task entrypoint for the `base_logging` role.
+# Imports the assert, install, config, and validate phase files in order.
+
+- name: Assert
+  ansible.builtin.import_tasks: assert.yml
+  tags: [assert, base_logging, base_logging_assert]
+
+- name: Install
+  ansible.builtin.import_tasks: install.yml
+  tags: [install, base_logging, base_logging_install]
+
+- name: Config
+  ansible.builtin.import_tasks: config.yml
+  tags: [config, base_logging, base_logging_config]
+
+- name: Validate
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate, base_logging, base_logging_validate]
