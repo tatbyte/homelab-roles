@@ -1,12 +1,61 @@
 ---
 # roles/base/tasks/main.yml
 # Task entrypoint for the `base` role.
-# Keeps core orchestration in meta dependencies and includes optional follow-up roles when explicitly enabled.
+# Defines the aggregate base-role execution order through explicit role includes.
 
-- name: "Base | Include optional firewall role"
+- name: "Base | Include base_packages role"
+  ansible.builtin.include_role:
+    name: base_packages
+    apply:
+      tags: [base, base_packages]
+  tags: [base, base_packages, assert, install, config, validate, base_packages_assert, base_packages_install, base_packages_config, base_packages_validate]
+
+- name: "Base | Include base_locale role"
+  ansible.builtin.include_role:
+    name: base_locale
+    apply:
+      tags: [base, base_locale]
+  tags: [base, base_locale, assert, install, config, validate, base_locale_assert, base_locale_install, base_locale_config, base_locale_validate]
+
+- name: "Base | Include base_timezone role"
+  ansible.builtin.include_role:
+    name: base_timezone
+    apply:
+      tags: [base, base_timezone]
+  tags: [base, base_timezone, assert, install, config, validate, base_timezone_assert, base_timezone_install, base_timezone_config, base_timezone_validate]
+
+- name: "Base | Include base_ntp role"
+  ansible.builtin.include_role:
+    name: base_ntp
+    apply:
+      tags: [base, base_ntp]
+  tags: [base, base_ntp, assert, install, config, validate, base_ntp_assert, base_ntp_install, base_ntp_config, base_ntp_validate]
+
+- name: "Base | Include base_hostname role"
+  ansible.builtin.include_role:
+    name: base_hostname
+    apply:
+      tags: [base, base_hostname]
+  tags: [base, base_hostname, assert, config, validate, base_hostname_assert, base_hostname_config, base_hostname_validate]
+
+- name: "Base | Include base_sudo role"
+  ansible.builtin.include_role:
+    name: base_sudo
+    apply:
+      tags: [base, base_sudo]
+  tags: [base, base_sudo, assert, install, config, validate, base_sudo_assert, base_sudo_install, base_sudo_config, base_sudo_validate]
+
+- name: "Base | Include base_sshd role"
+  ansible.builtin.include_role:
+    name: base_sshd
+    apply:
+      tags: [base, base_sshd]
+  tags: [base, base_sshd, assert, install, config, validate, base_sshd_assert, base_sshd_install, base_sshd_config, base_sshd_validate]
+
+- name: "Base | Include optional base_firewall role"
   ansible.builtin.include_role:
     name: base_firewall
     apply:
       tags: [base, base_firewall]
   when: base_include_firewall | default(false)
-  tags: [base, base_firewall]
+  tags: [base, base_firewall, assert, install, config, validate, base_firewall_assert, base_firewall_install, base_firewall_config, base_firewall_validate]

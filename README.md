@@ -29,7 +29,7 @@ ansible-roles/
 
 ## Available Roles
 - `bootstrap`: Creates and validates the automation account used after the bootstrap phase.
-- `base`: Aggregates recurring base-phase configuration for Debian-family hosts through dependency roles such as `base_packages`, `base_locale`, `base_hostname`, `base_ntp`, `base_sudo`, `base_sshd`, and `base_timezone`, with optional follow-up inclusion for `base_firewall`.
+- `base`: Aggregates recurring base-phase configuration for Debian-family hosts through explicit `include_role` ordering in `roles/base/tasks/main.yml` for `base_packages`, `base_locale`, `base_timezone`, `base_ntp`, `base_hostname`, `base_sudo`, and `base_sshd`, with optional follow-up inclusion for `base_firewall`.
 - `base_firewall`: Enforces a UFW baseline with managed default policies and requested allow or limit rules on Debian-family hosts during the base phase.
 - `base_hostname`: Enforces the system hostname on Debian-family hosts during the base phase.
 - `base_locale`: Ensures requested locales exist and configures the system default locale on Debian-family hosts during the base phase.
@@ -120,7 +120,7 @@ See [docs/00-pre-commit.mb](docs/00-pre-commit.mb) for full setup details.
 Core repository docs:
 
 - [docs/01-examples.md](docs/01-examples.md): Example lab layout and execution flow
-- [docs/02-role-workflow.md](docs/02-role-workflow.md): Shared role phase structure
+- [docs/02-role-workflow.md](docs/02-role-workflow.md): Shared role phase structure and aggregate base-role ordering
 - [docs/03-file-consistency.md](docs/03-file-consistency.md): File header and wording consistency rules
 
 ## License

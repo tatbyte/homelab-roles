@@ -20,6 +20,12 @@
 
 - name: "Validate | Assert managed locale files"
   vars:
+    base_locale_generated_locales: >-
+      {{
+        base_locale_present
+        | reject('in', ['C', 'C.UTF-8', 'POSIX'])
+        | list
+      }}
     base_locale_expected_locale_gen: "{{ lookup('template', 'locale.gen.j2') }}"
     base_locale_expected_default_locale: "{{ lookup('template', 'default_locale.j2') }}"
   ansible.builtin.assert:

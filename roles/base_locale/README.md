@@ -26,7 +26,7 @@ This role intentionally supports built-in locales (`C`, `C.UTF-8`, `POSIX`) plus
 
 ## Usage
 
-The `base` role includes `base_locale` through meta dependencies.
+The `base` role includes `base_locale` through explicit aggregate ordering in `roles/base/tasks/main.yml`.
 
 Direct usage:
 

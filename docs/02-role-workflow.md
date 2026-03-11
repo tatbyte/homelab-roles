@@ -67,7 +67,9 @@ Use this compact style when it improves readability and reduces task noise witho
 
 ## Aggregate Base Order
 
-The aggregate `base` role in this repository applies its dependency roles in a stable order.
+The aggregate `base` role in this repository applies its component roles in a stable order.
+`roles/base/tasks/main.yml` is the single source of truth and uses explicit `ansible.builtin.include_role` entries for the aggregate sequence.
+Its include-task tags should mirror the generic phase tags plus the child role's role-specific tags so both broad and narrow tagged runs behave predictably.
 
 Current order:
 
@@ -85,11 +87,11 @@ Optional current follow-up:
 
 1. `base_firewall` when `base_include_firewall: true`
 
-Planned future additions should follow after the current foundational roles:
+Future optional follow-up roles should also be included explicitly from `roles/base/tasks/main.yml` and gated only by aggregate include flags:
 
-1. `base_logging`
-2. `base_updates`
-3. `base_apparmor`
+1. `base_logging` when `base_include_logging: true`
+2. `base_updates` when `base_include_updates: true`
+3. `base_apparmor` when `base_include_apparmor: true`
 
 ## Tag Usage
 
@@ -101,5 +103,9 @@ ansible-playbook ... --tags install
 ansible-playbook ... --tags config
 ansible-playbook ... --tags validate
 ```
+
+For aggregate roles that use explicit `include_role` orchestration, tag the include tasks with the same generic phase tags and role-specific tags exposed by the child roles.
+This keeps `--tags validate` working across the aggregate stack and also allows targeted runs such as `--tags base_packages_validate` without entering unrelated roles.
+When you add a new aggregate child role or change a child role's tags, update the parent include-task tags to match so targeted execution keeps working as documented.
 
 Run the full workflow by running the playbook with no tag filter.

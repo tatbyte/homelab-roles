@@ -1,17 +1,7 @@
 ---
 # roles/base_locale/tasks/main.yml
 # Task entrypoint for the `base_locale` role.
-# Derives shared locale state, then imports the assert, install, config, and validate phase files in order.
-
-- name: Prepare
-  ansible.builtin.set_fact:
-    base_locale_generated_locales: >-
-      {{
-        base_locale_present
-        | reject('in', ['C', 'C.UTF-8', 'POSIX'])
-        | list
-      }}
-  tags: [always]
+# Imports the assert, install, config, and validate phase files in order.
 
 - name: Assert
   ansible.builtin.import_tasks: assert.yml

@@ -4,6 +4,13 @@
 # Ensures `/etc/locale.gen` is fully managed, requested locales are generated for Debian-family hosts, and the locale category configuration file is written.
 
 - name: "Config | Render locale.gen"
+  vars:
+    base_locale_generated_locales: >-
+      {{
+        base_locale_present
+        | reject('in', ['C', 'C.UTF-8', 'POSIX'])
+        | list
+      }}
   ansible.builtin.template:
     src: locale.gen.j2
     dest: /etc/locale.gen

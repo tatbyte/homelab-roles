@@ -1,26 +1,6 @@
 ---
 # roles/base/meta/main.yml
 # Role metadata for `base`.
-# Declares dependency roles that are applied when the base phase runs.
+# Leaves dependencies empty because aggregate base-role ordering is defined in `roles/base/tasks/main.yml`.
 
-dependencies:
-  - role: base_packages
-    tags: [base, base_packages]
-  - role: base_locale
-    tags: [base, base_locale]
-  - role: base_timezone
-    tags: [base, base_timezone]
-  - role: base_ntp
-    tags: [base, base_ntp]
-  - role: base_hostname
-    tags: [base, base_hostname]
-  - role: base_sudo
-    tags: [base, base_sudo]
-  - role: base_sshd
-    tags: [base, base_sshd]
-
-# Future base dependencies:
-# - role: base_firewall
-# - role: base_logging
-# - role: base_updates
-# - role: base_apparmor
+dependencies: []
