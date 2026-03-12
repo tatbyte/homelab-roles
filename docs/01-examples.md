@@ -58,10 +58,11 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/test_bas
 
 - The lab content is intentionally simple and meant as an example baseline.
 - The example inventory and variables assume Debian-family hosts and the repository's APT-based role behavior.
-- `group_vars/all/` is split by role prefix so example variables such as `base_packages.yml`, `base_hostname.yml`, `base_locale.yml`, `base_ntp.yml`, `base_sudo.yml`, `base_sshd.yml`, `base_firewall.yml`, `base_logging.yml`, `base_updates.yml`, `base_timezone.yml`, and `monitoring_authorized_key.yml` stay readable as the stack grows.
+- `group_vars/all/` is split by role prefix so example variables such as `base_packages.yml`, `base_hostname.yml`, `base_locale.yml`, `base_ntp.yml`, `base_sudo.yml`, `base_sshd.yml`, `base_firewall.yml`, `base_logging.yml`, `base_updates.yml`, `base_apparmor.yml`, `base_timezone.yml`, and `monitoring_authorized_key.yml` stay readable as the stack grows.
 - `base_firewall.yml` sets `base_include_firewall: true`, which opts the example base run into the optional `base_firewall` role.
 - `base_logging.yml` sets `base_include_logging: true`, which opts the example base run into the optional `base_logging` role with persistent journald storage enabled.
 - `base_updates.yml` sets `base_include_updates: true`, which opts the example base run into the optional `base_updates` role with unattended-upgrades enabled.
+- `base_apparmor.yml` sets `base_include_apparmor: true`, which opts the example base run into the optional `base_apparmor` role with the AppArmor service enabled.
 - `ansible.cfg` sets `display_skipped_hosts = False`, so routine conditional skips from optional roles or gated tasks do not dominate the example output.
 - `hosts.ini` keeps default `ansible_user=ansible` in `[all:vars]`, while `[bootstrap:vars]` holds initial login values used only during bootstrap.
 - `playbooks/bootstrap.yml` prompts once for the bootstrap password and reuses it for both SSH login and sudo.

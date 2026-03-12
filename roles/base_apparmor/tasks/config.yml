@@ -1,0 +1,10 @@
+---
+# roles/base_apparmor/tasks/config.yml
+# Config phase tasks for the `base_apparmor` role.
+# Manages the requested AppArmor service enabled state and triggers profile loading during the base phase.
+
+- name: "Config | Ensure AppArmor service enabled state and load path"
+  ansible.builtin.service:
+    name: "{{ base_apparmor_service_name }}"
+    enabled: "{{ base_apparmor_enabled }}"
+    state: "{{ 'started' if base_apparmor_enabled else 'stopped' }}"

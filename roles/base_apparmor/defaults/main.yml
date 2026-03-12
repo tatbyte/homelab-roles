@@ -1,0 +1,10 @@
+---
+# roles/base_apparmor/defaults/main.yml
+# Default variables for the `base_apparmor` role.
+# Defines the AppArmor package list, service, and enabled state enforced during the base phase.
+
+base_apparmor_packages:
+  - apparmor
+  - apparmor-utils
+base_apparmor_service_name: apparmor
+base_apparmor_enabled: true

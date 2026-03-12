@@ -1,0 +1,21 @@
+---
+# examples/inventory/group_vars/all/base_apparmor.yml
+# Shared AppArmor variables for the example lab.
+# Defines the aggregate-role opt-in plus the AppArmor package, service, and enabled-state baseline enforced during the base phase.
+
+# Opt in to the optional base_apparmor role from the aggregate base role.
+base_include_apparmor: true
+
+# Package list installed with APT to provide the AppArmor baseline and
+# validation tooling used by the role.
+base_apparmor_packages:
+  - apparmor
+  - apparmor-utils
+
+# AppArmor service name managed and validated during the base phase.
+base_apparmor_service_name: apparmor
+
+# Keep AppArmor enabled and running in the example lab.
+# Set this to false only on hosts where you explicitly want the package
+# baseline installed without the service being active.
+base_apparmor_enabled: true

@@ -11,7 +11,7 @@ Explains how the aggregate base role delegates recurring Debian-family host conf
 - Can include `base_firewall` as an explicit opt-in follow-up role when `base_include_firewall: true`
 - Can include `base_logging` as an explicit opt-in follow-up role when `base_include_logging: true`
 - Can include `base_updates` as an explicit opt-in follow-up role when `base_include_updates: true`
-- Reserves `base_include_apparmor` as a future optional aggregate toggle
+- Can include `base_apparmor` as an explicit opt-in follow-up role when `base_include_apparmor: true`
 
 ## Usage
 Use `base` on Debian-family hosts after the bootstrap phase has already created the automation account:
@@ -26,7 +26,7 @@ Use `base` on Debian-family hosts after the bootstrap phase has already created 
 ```
 
 Bootstrap is handled separately by the standalone `bootstrap` role/playbook.
-Role-specific inputs for `base` currently come from `base_packages_*`, `base_hostname_*`, `base_locale_*`, `base_ntp_*`, `base_sudo_*`, `base_sshd_*`, `base_timezone_*`, optional `base_include_firewall` plus `base_firewall_*`, optional `base_include_logging` plus `base_logging_*`, optional `base_include_updates` plus `base_updates_*`, and the future aggregate toggle `base_include_apparmor`.
+Role-specific inputs for `base` currently come from `base_packages_*`, `base_hostname_*`, `base_locale_*`, `base_ntp_*`, `base_sudo_*`, `base_sshd_*`, `base_timezone_*`, optional `base_include_firewall` plus `base_firewall_*`, optional `base_include_logging` plus `base_logging_*`, optional `base_include_updates` plus `base_updates_*`, and optional `base_include_apparmor` plus `base_apparmor_*`.
 
 Current include order in `base` is:
 
@@ -49,10 +49,7 @@ Optional follow-up role:
 1. `base_firewall` when `base_include_firewall: true`
 2. `base_logging` when `base_include_logging: true`
 3. `base_updates` when `base_include_updates: true`
-
-Planned future optional follow-up roles after the current roles are:
-
-1. `base_apparmor` when `base_include_apparmor: true`
+4. `base_apparmor` when `base_include_apparmor: true`
 
 ## License
 MIT

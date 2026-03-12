@@ -1,0 +1,133 @@
+---
+# roles/base_apparmor/tasks/validate.yml
+# Validate phase tasks for the `base_apparmor` role.
+# Verifies the requested package state, service enabled state, parser path, and active AppArmor kernel interface after configuration.
+
+- name: "Validate | Gather package facts"
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: "Validate | Gather service facts"
+  ansible.builtin.service_facts:
+
+- name: "Validate | Read AppArmor profile directory state"
+  ansible.builtin.stat:
+    path: /etc/apparmor.d
+  register: base_apparmor_profile_directory
+
+- name: "Validate | Read AppArmor profile file list"
+  ansible.builtin.find:
+    paths: /etc/apparmor.d
+    file_type: file
+    recurse: false
+  register: base_apparmor_profile_files
+  when: base_apparmor_profile_directory.stat.exists
+
+- name: "Validate | Read AppArmor parser path at /sbin"
+  ansible.builtin.stat:
+    path: /sbin/apparmor_parser
+  register: base_apparmor_parser_binary_sbin
+
+- name: "Validate | Read AppArmor parser path at /usr/sbin"
+  ansible.builtin.stat:
+    path: /usr/sbin/apparmor_parser
+  register: base_apparmor_parser_binary_usr_sbin
+
+- name: "Validate | Read AppArmor kernel module state"
+  ansible.builtin.stat:
+    path: /sys/module/apparmor
+  register: base_apparmor_kernel_module
+
+- name: "Validate | Read AppArmor kernel enabled flag"
+  ansible.builtin.slurp:
+    path: /sys/module/apparmor/parameters/enabled
+  register: base_apparmor_kernel_enabled_file
+  when: base_apparmor_kernel_module.stat.exists
+
+- name: "Validate | Read AppArmor loaded-profiles interface state"
+  ansible.builtin.stat:
+    path: /sys/kernel/security/apparmor/profiles
+  register: base_apparmor_loaded_profiles_interface
+
+- name: "Validate | Read loaded AppArmor profiles"
+  ansible.builtin.slurp:
+    path: /sys/kernel/security/apparmor/profiles
+  register: base_apparmor_loaded_profiles_file
+  when:
+    - base_apparmor_enabled
+    - base_apparmor_loaded_profiles_interface.stat.exists
+
+- name: "Validate | Assert AppArmor state"
+  vars:
+    base_apparmor_service_unit: >-
+      {{
+        base_apparmor_service_name
+        if base_apparmor_service_name.endswith('.service')
+        else (base_apparmor_service_name ~ '.service')
+      }}
+    base_apparmor_expected_service_statuses: >-
+      {{
+        ['enabled', 'enabled-runtime']
+        if base_apparmor_enabled
+        else ['disabled']
+      }}
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          base_apparmor_packages
+          | difference(ansible_facts.packages.keys() | list)
+          | length
+        ) == 0
+      - base_apparmor_service_unit in ansible_facts.services
+      - ansible_facts.services[base_apparmor_service_unit].status in base_apparmor_expected_service_statuses
+      - base_apparmor_profile_directory.stat.exists
+      - base_apparmor_profile_directory.stat.isdir
+      - (base_apparmor_profile_files.matched | default(0) | int) > 0
+      - >-
+        (
+          base_apparmor_parser_binary_sbin.stat.exists
+          | default(false)
+        )
+        or
+        (
+          base_apparmor_parser_binary_usr_sbin.stat.exists
+          | default(false)
+        )
+      - base_apparmor_kernel_module.stat.exists
+      - >-
+        (
+          not base_apparmor_enabled
+        ) or (
+          base_apparmor_kernel_enabled_file is defined
+          and
+          (
+            base_apparmor_kernel_enabled_file.content
+            | b64decode
+            | trim
+            | lower
+          ) in ['y', 'yes', '1']
+        )
+      - >-
+        (
+          not base_apparmor_enabled
+        ) or (
+          base_apparmor_loaded_profiles_interface.stat.exists
+        )
+      - >-
+        (
+          not base_apparmor_enabled
+        ) or (
+          base_apparmor_loaded_profiles_file is defined
+          and
+          (
+            base_apparmor_loaded_profiles_file.content
+            | b64decode
+            | trim
+            | length
+          ) > 0
+        )
+    fail_msg: >-
+      Configured AppArmor state does not match the requested base_apparmor
+      values
+    quiet: true

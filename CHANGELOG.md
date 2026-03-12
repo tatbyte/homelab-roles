@@ -3,6 +3,16 @@
 Release history for `ansible-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v0.20.0]
+### Added
+- Added the `base_apparmor` role for Debian-family AppArmor baseline management, including defaults, full phase tasks, role documentation, and example variables.
+
+### Changed
+- Added `base_apparmor` to the aggregate `base` role as an explicit opt-in follow-up role gated by `base_include_apparmor`.
+
+### Documentation
+- Updated repository, aggregate-role, and example documentation to describe the new optional AppArmor role and its example variable file.
+
 ## [v0.19.0]
 ### Added
 - Added the `base_updates` role for minimal unattended-upgrades management on Debian-family hosts, including defaults, full phase tasks, templates, role documentation, and example variables.

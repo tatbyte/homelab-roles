@@ -4,7 +4,21 @@ Repository overview for `ansible-roles`.
 Explains the role collection layout, the intended consumption pattern from another repository, and the local example workflow.
 
 ## Overview
-This repository is a roles source repository. It is intended to be consumed by a separate infra repository that contains your environment-specific inventory and playbooks.
+This repository is a personal Ansible role collection for managing a homelab across multiple hosts.
+It is intended to be consumed by a separate infra repository that contains your environment-specific inventory and playbooks, while `examples/` provides a local validation harness for the roles themselves.
+
+It is being built to learn Ansible and Linux at the same time through repeatable, real-world automation instead of one-off host changes.
+The goal is to keep host setup explicit, rebuildable, and easy to evolve over time so it can serve as a solid baseline for backup, monitoring, recovery, and host recreation workflows in a small self-hosted environment.
+
+## Current Focus
+The current role set is centered on:
+
+- bootstrap access for the automation account
+- recurring base host configuration and hardening
+- monitoring-related access primitives
+
+This is a roles repository, not the full infrastructure repository.
+Inventory, host grouping, secrets, and environment-specific playbooks are expected to live in a separate consumer repo.
 
 ## Supported Platforms
 This repository currently targets Debian-family hosts such as Debian and Ubuntu.
@@ -29,7 +43,8 @@ ansible-roles/
 
 ## Available Roles
 - `bootstrap`: Creates and validates the automation account used after the bootstrap phase.
-- `base`: Aggregates recurring base-phase configuration for Debian-family hosts through explicit `include_role` ordering in `roles/base/tasks/main.yml` for `base_packages`, `base_locale`, `base_timezone`, `base_ntp`, `base_hostname`, `base_sudo`, and `base_sshd`, with optional follow-up inclusion for `base_firewall`, `base_logging`, and `base_updates`.
+- `base`: Aggregates recurring base-phase configuration for Debian-family hosts through explicit `include_role` ordering in `roles/base/tasks/main.yml` for `base_packages`, `base_locale`, `base_timezone`, `base_ntp`, `base_hostname`, `base_sudo`, and `base_sshd`, with optional follow-up inclusion for `base_firewall`, `base_logging`, `base_updates`, and `base_apparmor`.
+- `base_apparmor`: Enforces a minimal AppArmor package and service baseline on Debian-family hosts during the base phase.
 - `base_firewall`: Enforces an additive UFW baseline with managed default policies and requested allow or limit rules on Debian-family hosts during the base phase, with an optional purge mode for exact rebuilds.
 - `base_logging`: Enforces a persistent local journald baseline on Debian-family hosts during the base phase, with an optional volatile mode for non-persistent logs.
 - `base_updates`: Enforces a minimal unattended-upgrades baseline on Debian-family hosts during the base phase through managed APT periodic policy files.

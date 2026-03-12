@@ -1,0 +1,11 @@
+---
+# roles/base_apparmor/tasks/install.yml
+# Install phase tasks for the `base_apparmor` role.
+# Ensures the requested AppArmor packages are present before service configuration and validation.
+
+- name: "Install | Ensure AppArmor packages are present"
+  ansible.builtin.apt:
+    name: "{{ base_apparmor_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600

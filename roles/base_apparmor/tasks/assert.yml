@@ -1,0 +1,21 @@
+---
+# roles/base_apparmor/tasks/assert.yml
+# Assert phase tasks for the `base_apparmor` role.
+# Validates the requested AppArmor package, service, and enabled-state inputs before installation and configuration run.
+
+- name: "Assert | Validate base_apparmor variable structure"
+  ansible.builtin.assert:
+    that:
+      - base_apparmor_packages is sequence
+      - base_apparmor_packages is not string
+      - base_apparmor_service_name is string
+      - base_apparmor_service_name | trim | length > 0
+      - base_apparmor_enabled is boolean
+      - (base_apparmor_packages | map('string') | list | length) == (base_apparmor_packages | length)
+      - (base_apparmor_packages | map('trim') | reject('equalto', '') | list | length) == (base_apparmor_packages | length)
+      - "'apparmor' in base_apparmor_packages"
+    fail_msg: >-
+      base_apparmor_packages must be a list of non-empty package names that
+      includes apparmor, base_apparmor_service_name must be a non-empty
+      service name, and base_apparmor_enabled must be a boolean
+    quiet: true
