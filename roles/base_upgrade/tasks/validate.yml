@@ -1,0 +1,109 @@
+---
+# roles/base_upgrade/tasks/validate.yml
+# Validate phase tasks for the `base_upgrade` role.
+# Verifies the requested APT upgrade convergence and the resulting reboot-required state after package maintenance.
+
+- name: "Validate | Simulate safe APT upgrade state"
+  ansible.builtin.command:
+    argv:
+      - apt-get
+      - -s
+      - upgrade
+  register: base_upgrade_safe_simulation
+  changed_when: false
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+    LC_ALL: C
+
+- name: "Validate | Simulate full APT upgrade state"
+  ansible.builtin.command:
+    argv:
+      - apt-get
+      - -s
+      - full-upgrade
+  register: base_upgrade_full_simulation
+  changed_when: false
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+    LC_ALL: C
+
+- name: "Validate | Read reboot-required state"
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: base_upgrade_validate_reboot_required_file
+
+- name: "Validate | Read reboot-required package list state"
+  ansible.builtin.stat:
+    path: /var/run/reboot-required.pkgs
+  register: base_upgrade_validate_reboot_required_packages_file_state
+
+- name: "Validate | Read reboot-required package list"
+  ansible.builtin.slurp:
+    path: /var/run/reboot-required.pkgs
+  register: base_upgrade_validate_reboot_required_packages_file
+  when: base_upgrade_validate_reboot_required_packages_file_state.stat.exists
+
+- name: "Validate | Expose final reboot-required state"
+  ansible.builtin.set_fact:
+    base_upgrade_reboot_required: "{{ base_upgrade_validate_reboot_required_file.stat.exists }}"
+    base_upgrade_reboot_required_packages: >-
+      {{
+        (
+          base_upgrade_validate_reboot_required_packages_file.content
+          | b64decode
+          | regex_findall('(?m)^.+$')
+        )
+        if base_upgrade_validate_reboot_required_packages_file_state.stat.exists
+        else []
+      }}
+  changed_when: false
+
+- name: "Validate | Report reboot-required state"
+  ansible.builtin.debug:
+    msg: >-
+      Reboot is required after package upgrades.
+      Packages: {{ base_upgrade_reboot_required_packages | join(', ') | default('(none)', true) }}
+  when:
+    - base_upgrade_reboot_required
+    - not base_upgrade_fail_if_reboot_required
+
+- name: "Validate | Assert upgrade state"
+  vars:
+    base_upgrade_expected_safe_summary_pattern: >-
+      0 upgraded, 0 newly installed, 0 to remove(?: and [0-9]+ not upgraded)?\.
+    base_upgrade_expected_full_summary: >-
+      0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          base_upgrade_mode == 'safe'
+          and
+          (
+            base_upgrade_safe_simulation.stdout
+            | regex_search(base_upgrade_expected_safe_summary_pattern)
+          ) is not none
+        )
+        or
+        (
+          base_upgrade_mode == 'full'
+          and
+          base_upgrade_expected_full_summary in base_upgrade_full_simulation.stdout
+        )
+      - >-
+        (
+          not base_upgrade_allow_reboot
+        ) or (
+          not base_upgrade_reboot_required
+        )
+      - >-
+        (
+          not base_upgrade_fail_if_reboot_required
+        ) or (
+          not base_upgrade_reboot_required
+        )
+    fail_msg: >-
+      Configured upgrade state does not match the requested base_upgrade
+      values. reboot_required={{ base_upgrade_reboot_required | bool }};
+      reboot_required_packages={{ base_upgrade_reboot_required_packages | join(', ') | default('(none)', true) }}
+    quiet: true

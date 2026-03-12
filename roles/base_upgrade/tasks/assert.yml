@@ -1,0 +1,21 @@
+---
+# roles/base_upgrade/tasks/assert.yml
+# Assert phase tasks for the `base_upgrade` role.
+# Validates the requested APT cache, upgrade mode, autoremove, and reboot-handling inputs before package maintenance runs.
+
+- name: "Assert | Validate base_upgrade variable structure"
+  ansible.builtin.assert:
+    that:
+      - base_upgrade_cache_valid_time is integer
+      - (base_upgrade_cache_valid_time | int) >= 0
+      - base_upgrade_mode is string
+      - base_upgrade_mode in ['safe', 'full']
+      - base_upgrade_autoremove is boolean
+      - base_upgrade_allow_reboot is boolean
+      - base_upgrade_fail_if_reboot_required is boolean
+    fail_msg: >-
+      base_upgrade_cache_valid_time must be a non-negative integer,
+      base_upgrade_mode must be safe or full, and
+      base_upgrade_autoremove, base_upgrade_allow_reboot, and
+      base_upgrade_fail_if_reboot_required must be booleans
+    quiet: true

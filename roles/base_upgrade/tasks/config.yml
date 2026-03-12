@@ -1,0 +1,62 @@
+---
+# roles/base_upgrade/tasks/config.yml
+# Config phase tasks for the `base_upgrade` role.
+# Refreshes APT metadata, applies the requested upgrade mode, optionally removes unused packages, and handles reboot detection.
+
+- name: "Config | Refresh APT package metadata"
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: "{{ base_upgrade_cache_valid_time }}"
+
+- name: "Config | Apply requested package upgrades"
+  ansible.builtin.apt:
+    upgrade: "{{ base_upgrade_mode }}"
+    force_apt_get: true
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+
+- name: "Config | Remove unused packages after upgrade"
+  ansible.builtin.apt:
+    autoremove: true
+    purge: false
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+  when: base_upgrade_autoremove
+
+- name: "Config | Read reboot-required state after package maintenance"
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: base_upgrade_reboot_required_file
+
+- name: "Config | Read reboot-required package list state"
+  ansible.builtin.stat:
+    path: /var/run/reboot-required.pkgs
+  register: base_upgrade_reboot_required_packages_file_state
+
+- name: "Config | Read reboot-required package list"
+  ansible.builtin.slurp:
+    path: /var/run/reboot-required.pkgs
+  register: base_upgrade_reboot_required_packages_file
+  when: base_upgrade_reboot_required_packages_file_state.stat.exists
+
+- name: "Config | Expose reboot-required state"
+  ansible.builtin.set_fact:
+    base_upgrade_reboot_required: "{{ base_upgrade_reboot_required_file.stat.exists }}"
+    base_upgrade_reboot_required_packages: >-
+      {{
+        (
+          base_upgrade_reboot_required_packages_file.content
+          | b64decode
+          | regex_findall('(?m)^.+$')
+        )
+        if base_upgrade_reboot_required_packages_file_state.stat.exists
+        else []
+      }}
+  changed_when: false
+
+- name: "Config | Reboot after upgrade when requested"
+  ansible.builtin.reboot:
+    msg: Reboot initiated by the base_upgrade role after package upgrades.
+  when:
+    - base_upgrade_allow_reboot
+    - base_upgrade_reboot_required

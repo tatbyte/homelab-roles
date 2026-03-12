@@ -83,3 +83,11 @@
       tags: [base, base_apparmor]
   when: base_include_apparmor | default(false)
   tags: [base, base_apparmor, assert, install, config, validate, base_apparmor_assert, base_apparmor_install, base_apparmor_config, base_apparmor_validate]
+
+- name: "Base | Include optional base_upgrade role"
+  ansible.builtin.include_role:
+    name: base_upgrade
+    apply:
+      tags: [base, base_upgrade]
+  when: base_include_upgrade | default(false)
+  tags: [base, base_upgrade, assert, config, validate, base_upgrade_assert, base_upgrade_config, base_upgrade_validate]

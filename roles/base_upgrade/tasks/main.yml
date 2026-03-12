@@ -1,0 +1,16 @@
+---
+# roles/base_upgrade/tasks/main.yml
+# Task entrypoint for the `base_upgrade` role.
+# Imports the assert, config, and validate phase files in order.
+
+- name: Assert
+  ansible.builtin.import_tasks: assert.yml
+  tags: [assert, base_upgrade, base_upgrade_assert]
+
+- name: Config
+  ansible.builtin.import_tasks: config.yml
+  tags: [config, base_upgrade, base_upgrade_config]
+
+- name: Validate
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate, base_upgrade, base_upgrade_validate]

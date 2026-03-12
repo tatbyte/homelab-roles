@@ -1,0 +1,33 @@
+---
+# examples/inventory/group_vars/all/base_upgrade.yml
+# Shared upgrade variables for the example lab.
+# Defines the aggregate-role opt-in plus the immediate APT upgrade behavior available during the base phase.
+
+# Keep the optional base_upgrade role disabled by default in the example lab.
+# This role performs immediate package maintenance, so `false` is the safer
+# normal value when you do not want every base run to apply upgrades, restart
+# services indirectly, or leave the host waiting for reboot.
+# It is set to `true` here only while actively testing the role behavior.
+# The example base playbook uses `serial: 1` so reboot-capable runs can
+# process one host at a time instead of upgrading and rebooting everything
+# in parallel.
+base_include_upgrade: true
+
+# Refresh package metadata on every explicit upgrade run in the example lab.
+base_upgrade_cache_valid_time: 0
+
+# Use the safer upgrade mode by default so packages that require broader
+# dependency changes stay reviewable.
+base_upgrade_mode: safe
+
+# Keep autoremove disabled by default for explicit example runs.
+base_upgrade_autoremove: false
+
+# Never reboot automatically during the example base run unless you
+# explicitly opt into that behavior. If you do enable automatic reboot,
+# keep the example playbook's `serial: 1` behavior so hosts are handled
+# one at a time.
+base_upgrade_allow_reboot: false
+
+# Expose reboot-required state without failing the example run by default.
+base_upgrade_fail_if_reboot_required: false

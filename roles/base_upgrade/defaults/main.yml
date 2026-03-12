@@ -1,0 +1,10 @@
+---
+# roles/base_upgrade/defaults/main.yml
+# Default variables for the `base_upgrade` role.
+# Defines the APT cache policy, upgrade mode, autoremove behavior, and reboot handling enforced during the base phase.
+
+base_upgrade_cache_valid_time: 0
+base_upgrade_mode: safe
+base_upgrade_autoremove: false
+base_upgrade_allow_reboot: false
+base_upgrade_fail_if_reboot_required: false

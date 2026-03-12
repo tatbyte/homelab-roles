@@ -45,6 +45,7 @@ base_updates_autoclean_interval: 3
 ```
 
 Set `base_updates_unattended_upgrade: false` when you want automatic package-list refreshes without automatic unattended package installation; this role still manages the same APT policy files in that mode for explicit, reviewable state.
+Use `base_upgrade` separately when you want the current Ansible run to apply upgrades immediately instead of only managing future automatic-update policy.
 
 ## Dependencies
 None

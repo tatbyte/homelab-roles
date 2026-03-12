@@ -3,6 +3,16 @@
 Release history for `ansible-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v0.21.0]
+### Added
+- Added the `base_upgrade` role for explicit Debian-family package upgrades, including defaults, full phase tasks, role documentation, and example variables.
+
+### Changed
+- Added `base_upgrade` to the aggregate `base` role as an explicit opt-in follow-up role gated by `base_include_upgrade`.
+
+### Documentation
+- Updated repository, aggregate-role, and example documentation to describe the new optional upgrade role, its example variable file, and the `serial: 1` example base-playbook behavior for safer reboot-capable runs.
+
 ## [v0.20.0]
 ### Added
 - Added the `base_apparmor` role for Debian-family AppArmor baseline management, including defaults, full phase tasks, role documentation, and example variables.
