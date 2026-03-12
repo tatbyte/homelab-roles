@@ -1,0 +1,12 @@
+---
+# roles/base_updates/tasks/install.yml
+# Install phase tasks for the `base_updates` role.
+# Ensures the unattended-upgrades package baseline is present before configuration.
+
+- name: "Install | Ensure update packages are present"
+  ansible.builtin.apt:
+    name: "{{ base_updates_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: base_updates_packages | length > 0

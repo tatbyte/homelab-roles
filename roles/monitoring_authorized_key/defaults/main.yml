@@ -3,5 +3,5 @@
 # Default variables for the `monitoring_authorized_key` role.
 # Defines the target user and the SSH public key managed by this role.
 
-monitoring_authorized_key_user: "{{ monitoring_authorized_key_user | default('root') }}"
+monitoring_authorized_key_user: root
 monitoring_authorized_key_key: ""

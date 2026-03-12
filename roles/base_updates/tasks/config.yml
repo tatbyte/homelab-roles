@@ -1,0 +1,20 @@
+---
+# roles/base_updates/tasks/config.yml
+# Config phase tasks for the `base_updates` role.
+# Manages the minimal APT automatic-update and unattended-upgrades policy files during the base phase.
+
+- name: "Config | Render APT automatic updates policy"
+  ansible.builtin.template:
+    src: 20auto-upgrades.j2
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: "Config | Render unattended-upgrades policy"
+  ansible.builtin.template:
+    src: 50unattended-upgrades.j2
+    dest: /etc/apt/apt.conf.d/50unattended-upgrades
+    owner: root
+    group: root
+    mode: "0644"

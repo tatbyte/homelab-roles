@@ -49,6 +49,11 @@ base_firewall_base_rules:
 # set base_firewall_additional_rules in host_vars.
 base_firewall_additional_rules: []
 
+# Effective managed firewall rules used by the role.
+# Keep this derived from the shared baseline plus host or group additions
+# unless you have a strong reason to replace the merge behavior directly.
+# base_firewall_rules: "{{ base_firewall_base_rules + base_firewall_additional_rules }}"
+
 # Example host-specific addition:
 # base_firewall_additional_rules:
 #   - rule: allow

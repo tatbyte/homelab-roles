@@ -1,0 +1,8 @@
+{# roles/base_updates/templates/50unattended-upgrades.j2 #}
+{# Template for the managed `/etc/apt/apt.conf.d/50unattended-upgrades` file in the `base_updates` role. #}
+Unattended-Upgrade::Allowed-Origins {
+        "${distro_id}:${distro_codename}";
+        "${distro_id}:${distro_codename}-security";
+};
+
+Unattended-Upgrade::Remove-Unused-Dependencies "{{ 'true' if base_updates_autoremove else 'false' }}";

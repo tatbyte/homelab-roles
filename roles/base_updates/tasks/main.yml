@@ -1,0 +1,20 @@
+---
+# roles/base_updates/tasks/main.yml
+# Task entrypoint for the `base_updates` role.
+# Imports the assert, install, config, and validate phase files in order.
+
+- name: Assert
+  ansible.builtin.import_tasks: assert.yml
+  tags: [assert, base_updates, base_updates_assert]
+
+- name: Install
+  ansible.builtin.import_tasks: install.yml
+  tags: [install, base_updates, base_updates_install]
+
+- name: Config
+  ansible.builtin.import_tasks: config.yml
+  tags: [config, base_updates, base_updates_config]
+
+- name: Validate
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate, base_updates, base_updates_validate]

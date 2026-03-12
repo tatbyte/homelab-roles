@@ -1,0 +1,11 @@
+---
+# roles/base_updates/defaults/main.yml
+# Default variables for the `base_updates` role.
+# Defines the unattended-upgrades package list and minimal automatic-update policy enforced during the base phase.
+
+base_updates_packages:
+  - unattended-upgrades
+base_updates_auto_update_package_lists: true
+base_updates_unattended_upgrade: true
+base_updates_autoclean_interval: 7
+base_updates_autoremove: true

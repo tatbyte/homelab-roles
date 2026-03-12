@@ -87,11 +87,11 @@ Optional current follow-up:
 
 1. `base_firewall` when `base_include_firewall: true`
 2. `base_logging` when `base_include_logging: true`
+3. `base_updates` when `base_include_updates: true`
 
 Future optional follow-up roles should also be included explicitly from `roles/base/tasks/main.yml` and gated only by aggregate include flags:
 
-1. `base_updates` when `base_include_updates: true`
-2. `base_apparmor` when `base_include_apparmor: true`
+1. `base_apparmor` when `base_include_apparmor: true`
 
 ## Tag Usage
 
