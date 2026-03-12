@@ -1,0 +1,25 @@
+---
+# examples/inventory/group_vars/all/base_updates.yml
+# Shared update variables for the example lab.
+# Defines the aggregate-role opt-in plus the unattended-upgrades package and automatic-update policy used during the base phase.
+
+# Opt in to the optional base_updates role from the aggregate base role.
+base_include_updates: true
+
+# Package list installed with APT to provide unattended-upgrades support.
+# Keep `unattended-upgrades` in this list whenever automatic upgrades stay
+# enabled so the backend package exists for the managed APT policy.
+base_updates_packages:
+  - unattended-upgrades  # automatic APT update package used by the base_updates role
+
+# Refresh package lists automatically before unattended-upgrades runs.
+base_updates_auto_update_package_lists: true
+
+# Keep unattended-upgrades enabled in the example lab.
+base_updates_unattended_upgrade: true
+
+# Clean old APT package archives every 3 days in the example lab.
+base_updates_autoclean_interval: 3
+
+# Remove unused dependencies automatically after unattended upgrades.
+base_updates_autoremove: true

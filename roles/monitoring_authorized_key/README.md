@@ -11,22 +11,23 @@ Explains how the role installs an SSH authorized key for monitoring-style inter-
 
 | Variable | Default | Required | Description |
 |----------|---------|----------|-------------|
-| `monitoring_authorized_user` | `bootstrap_user` or `root` | no | User to add the key to |
-| `monitoring_authorized_key` | `""` | yes | SSH public key to authorize |
+| `monitoring_authorized_key_user` | `root` | no | User account that receives the SSH public key |
+| `monitoring_authorized_key_key` | `""` | yes | SSH public key to authorize |
 
 ## Usage
 
 ```yaml
 - hosts: dns
   roles:
-    - monitoring/authorized_key
+    - role: monitoring_authorized_key
 ```
 
-Set `monitoring_authorized_key` in group_vars for the target hosts:
+Set the role inputs in group or host variables for the target hosts:
 
 ```yaml
-# group_vars/dns/vars.yml
-monitoring_authorized_key: "ssh-ed25519 AAAA... user@control"
+# group_vars/dns/monitoring_authorized_key.yml
+monitoring_authorized_key_user: root
+monitoring_authorized_key_key: "ssh-ed25519 AAAA... user@control"
 ```
 
 ## Dependencies

@@ -38,6 +38,8 @@ Example variables:
 
 ```yaml
 base_include_logging: true
+base_logging_packages:
+  - systemd
 base_logging_storage: persistent
 base_logging_system_max_use: 256M
 ```

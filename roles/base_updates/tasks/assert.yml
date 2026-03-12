@@ -1,0 +1,33 @@
+---
+# roles/base_updates/tasks/assert.yml
+# Assert phase tasks for the `base_updates` role.
+# Validates the unattended-upgrades package list and minimal automatic-update policy inputs before installation and configuration run.
+
+- name: "Assert | Validate base_updates variable structure"
+  ansible.builtin.assert:
+    that:
+      - base_updates_packages is sequence
+      - base_updates_packages is not string
+      - base_updates_auto_update_package_lists is boolean
+      - base_updates_unattended_upgrade is boolean
+      - base_updates_autoremove is boolean
+      - base_updates_autoclean_interval is integer
+      - (base_updates_autoclean_interval | int) >= 0
+      - (base_updates_packages | map('string') | list | length) == (base_updates_packages | length)
+      - (base_updates_packages | map('trim') | reject('equalto', '') | list | length) == (base_updates_packages | length)
+    fail_msg: >-
+      base_updates_packages must be a list of package names,
+      base_updates_auto_update_package_lists, base_updates_unattended_upgrade,
+      and base_updates_autoremove must be booleans, and
+      base_updates_autoclean_interval must be a non-negative integer
+    quiet: true
+
+- name: "Assert | Require unattended-upgrades package when automatic upgrades are enabled"
+  ansible.builtin.assert:
+    that:
+      - "'unattended-upgrades' in base_updates_packages"
+    fail_msg: >-
+      base_updates_packages must include unattended-upgrades when
+      base_updates_unattended_upgrade is true
+    quiet: true
+  when: base_updates_unattended_upgrade

@@ -3,6 +3,16 @@
 Release history for `ansible-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v0.19.0]
+### Added
+- Added the `base_updates` role for minimal unattended-upgrades management on Debian-family hosts, including defaults, full phase tasks, templates, role documentation, and example variables.
+- Added an example `monitoring_authorized_key.yml` inventory file so the example lab now shows the public variables for every current role with defaults.
+
+### Changed
+- Added `base_updates` to the aggregate `base` role as an explicit opt-in follow-up role gated by `base_include_updates`.
+- Updated repository, aggregate-role, and example documentation to describe the new optional updates role and its example variable file.
+- Aligned `monitoring_authorized_key` with the shared phase naming and its canonical `monitoring_authorized_key_*` variable names.
+
 ## [v0.18.0]
 ### Added
 - Added the `base_logging` role for persistent local journald management on Debian-family hosts, including defaults, handlers, full phase tasks, template, role documentation, and example variables.

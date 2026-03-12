@@ -1,10 +1,10 @@
 ---
-# roles/monitoring_authorized_key/tasks/configure.yml
+# roles/monitoring_authorized_key/tasks/config.yml
 # Config phase tasks for the `monitoring_authorized_key` role.
 # Installs the requested public key into the target user's authorized_keys file.
 
-- name: Add monitoring authorized key
+- name: Config | Add monitoring authorized key
   ansible.posix.authorized_key:
-    user: "{{ monitoring_authorized_user }}"
+    user: "{{ monitoring_authorized_key_user }}"
     state: present
-    key: "{{ monitoring_authorized_key }}"
+    key: "{{ monitoring_authorized_key_key }}"

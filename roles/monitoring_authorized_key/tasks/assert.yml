@@ -3,17 +3,17 @@
 # Assert phase tasks for the `monitoring_authorized_key` role.
 # Validates the managed user and SSH public key inputs before configuration.
 
-- name: Validate monitoring_authorized_key is defined and non-empty
+- name: Assert | Validate monitoring authorized key input
   ansible.builtin.assert:
     that:
-      - monitoring_authorized_key is defined
-      - monitoring_authorized_key | length > 0
-      - monitoring_authorized_key.startswith('ssh-')
-    fail_msg: "monitoring_authorized_key must be a valid SSH public key"
+      - monitoring_authorized_key_key is string
+      - monitoring_authorized_key_key | length > 0
+      - monitoring_authorized_key_key.startswith('ssh-')
+    fail_msg: "monitoring_authorized_key_key must be a valid SSH public key"
 
-- name: Validate monitoring_authorized_user is defined
+- name: Assert | Validate monitoring authorized key target user
   ansible.builtin.assert:
     that:
-      - monitoring_authorized_user is defined
-      - monitoring_authorized_user | length > 0
-    fail_msg: "monitoring_authorized_user must be defined"
+      - monitoring_authorized_key_user is string
+      - monitoring_authorized_key_user | length > 0
+    fail_msg: "monitoring_authorized_key_user must be defined"

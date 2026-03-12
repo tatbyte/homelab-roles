@@ -67,3 +67,11 @@
       tags: [base, base_logging]
   when: base_include_logging | default(false)
   tags: [base, base_logging, assert, install, config, validate, base_logging_assert, base_logging_install, base_logging_config, base_logging_validate]
+
+- name: "Base | Include optional base_updates role"
+  ansible.builtin.include_role:
+    name: base_updates
+    apply:
+      tags: [base, base_updates]
+  when: base_include_updates | default(false)
+  tags: [base, base_updates, assert, install, config, validate, base_updates_assert, base_updates_install, base_updates_config, base_updates_validate]

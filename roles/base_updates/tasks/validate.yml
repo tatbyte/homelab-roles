@@ -1,0 +1,47 @@
+---
+# roles/base_updates/tasks/validate.yml
+# Validate phase tasks for the `base_updates` role.
+# Verifies the managed APT update policy files and the requested unattended-upgrades package state after configuration.
+
+- name: "Validate | Read APT automatic updates policy"
+  ansible.builtin.slurp:
+    path: /etc/apt/apt.conf.d/20auto-upgrades
+  register: base_updates_auto_updates_file
+
+- name: "Validate | Read unattended-upgrades policy"
+  ansible.builtin.slurp:
+    path: /etc/apt/apt.conf.d/50unattended-upgrades
+  register: base_updates_unattended_upgrades_file
+
+- name: "Validate | Gather package facts"
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: "Validate | Assert update state"
+  vars:
+    base_updates_expected_auto_updates: "{{ lookup('template', '20auto-upgrades.j2') }}"
+    base_updates_expected_unattended_upgrades: "{{ lookup('template', '50unattended-upgrades.j2') }}"
+  ansible.builtin.assert:
+    that:
+      - (base_updates_auto_updates_file.content | b64decode) == base_updates_expected_auto_updates
+      - >-
+        (
+          base_updates_unattended_upgrades_file.content
+          | b64decode
+        ) == base_updates_expected_unattended_upgrades
+      - >-
+        (
+          base_updates_packages
+          | difference(ansible_facts.packages.keys() | list)
+          | length
+        ) == 0
+      - >-
+        (
+          not base_updates_unattended_upgrade
+        ) or (
+          'unattended-upgrades' in (ansible_facts.packages.keys() | list)
+        )
+    fail_msg: >-
+      Configured update state does not match the requested base_updates
+      values
+    quiet: true
