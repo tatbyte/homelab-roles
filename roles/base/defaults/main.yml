@@ -7,5 +7,6 @@ base_include_firewall: false
 base_include_logging: false
 base_include_updates: false
 base_include_hosts: false
+base_include_dns: false
 base_include_apparmor: false
 base_include_upgrade: false

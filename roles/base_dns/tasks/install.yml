@@ -1,0 +1,25 @@
+---
+# roles/base_dns/tasks/install.yml
+# Install phase tasks for the `base_dns` role.
+# Installs the resolver package only when the requested resolver service is not already present on the host.
+
+- name: "Install | Gather service facts before optional resolver package install"
+  ansible.builtin.service_facts:
+
+- name: "Install | Ensure resolver packages are present when the service is absent"
+  vars:
+    base_dns_service_unit: >-
+      {{
+        base_dns_service_name
+        if base_dns_service_name.endswith('.service')
+        else (base_dns_service_name ~ '.service')
+      }}
+  ansible.builtin.apt:
+    name: "{{ base_dns_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when:
+    - base_dns_resolver_mode == 'systemd_resolved'
+    - base_dns_packages | length > 0
+    - base_dns_service_unit not in ansible_facts.services

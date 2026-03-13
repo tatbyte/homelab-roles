@@ -1,0 +1,29 @@
+---
+# examples/inventory/group_vars/all/base_dns.yml
+# Shared DNS variables for the example lab.
+# Defines the aggregate-role opt-in plus the resolver mode, DNS servers, and optional search domains enforced during the base phase.
+
+# Opt in to the optional base_dns role from the aggregate base role.
+base_include_dns: true
+
+# Resolver backend managed during the base phase.
+# Keep the default `systemd_resolved` mode in the example lab so DNS state
+# stays explicit through /etc/systemd/resolved.conf on Debian-family hosts.
+base_dns_resolver_mode: systemd_resolved
+
+# Resolver service name enabled and validated during the base phase.
+base_dns_service_name: systemd-resolved
+
+# Global DNS servers written to /etc/systemd/resolved.conf.
+# Replace these with your router, Pi-hole, AdGuard Home, or other local
+# resolvers when adapting the example lab to a real homelab environment.
+base_dns_servers:
+  - 1.1.1.1
+  - 1.0.0.1
+
+# Optional search domains written to /etc/systemd/resolved.conf.
+# Keep this empty unless you want short-name lookups such as `nas` to expand
+# through a shared homelab suffix like `lab.home.arpa`.
+base_dns_search_domains: []
+# base_dns_search_domains:
+#   - lab.home.arpa
