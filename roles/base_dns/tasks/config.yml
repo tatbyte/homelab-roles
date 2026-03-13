@@ -1,0 +1,34 @@
+---
+# roles/base_dns/tasks/config.yml
+# Config phase tasks for the `base_dns` role.
+# Manages the systemd-resolved configuration, ensures the standard stub resolver symlink, and keeps the resolver service enabled and running.
+
+- name: "Config | Render resolver configuration"
+  ansible.builtin.template:
+    src: resolved.conf.j2
+    dest: /etc/systemd/resolved.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart DNS resolver service
+  when: base_dns_resolver_mode == 'systemd_resolved'
+
+- name: "Config | Ensure /etc/resolv.conf uses the systemd-resolved stub"
+  ansible.builtin.file:
+    path: /etc/resolv.conf
+    state: link
+    src: /run/systemd/resolve/stub-resolv.conf
+    force: true
+    follow: false
+  when: base_dns_resolver_mode == 'systemd_resolved'
+
+- name: "Config | Ensure resolver service is enabled and running"
+  ansible.builtin.service:
+    name: "{{ base_dns_service_name }}"
+    enabled: true
+    state: started
+  when: base_dns_resolver_mode == 'systemd_resolved'
+
+- name: "Config | Flush DNS resolver handler"
+  ansible.builtin.meta: flush_handlers
+  when: base_dns_resolver_mode == 'systemd_resolved'

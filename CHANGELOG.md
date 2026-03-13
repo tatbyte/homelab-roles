@@ -3,6 +3,16 @@
 Release history for `ansible-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v0.23.0]
+### Added
+- Added the `base_dns` role for Debian-family DNS resolver management through `systemd-resolved`, including defaults, handlers, full phase tasks, template, role documentation, and example variables.
+
+### Changed
+- Added `base_dns` to the aggregate `base` role as an explicit opt-in resolver baseline gated by `base_include_dns`.
+
+### Documentation
+- Updated repository, aggregate-role, and example documentation to describe the new optional DNS role and its example variable file.
+
 ## [v0.22.0]
 ### Added
 - Added the `base_hosts` role for inventory-driven `/etc/hosts` management on Debian-family hosts, including defaults, compact phase tasks, template, role documentation, and example variables.

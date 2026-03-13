@@ -1,0 +1,89 @@
+---
+# roles/base_dns/tasks/validate.yml
+# Validate phase tasks for the `base_dns` role.
+# Verifies the managed resolver configuration file, stub-resolver symlink, resolver service state, and active resolver values after configuration.
+
+- name: "Validate | Read resolver configuration"
+  ansible.builtin.slurp:
+    path: /etc/systemd/resolved.conf
+  register: base_dns_config_file
+  when: base_dns_resolver_mode == 'systemd_resolved'
+
+- name: "Validate | Read /etc/resolv.conf link state"
+  ansible.builtin.stat:
+    path: /etc/resolv.conf
+  register: base_dns_resolv_conf
+  when: base_dns_resolver_mode == 'systemd_resolved'
+
+- name: "Validate | Gather service facts"
+  ansible.builtin.service_facts:
+  when: base_dns_resolver_mode == 'systemd_resolved'
+
+- name: "Validate | Read active DNS server state"
+  ansible.builtin.command: resolvectl dns
+  register: base_dns_resolvectl_dns
+  changed_when: false
+  when: base_dns_resolver_mode == 'systemd_resolved'
+
+- name: "Validate | Read active DNS search-domain state"
+  ansible.builtin.command: resolvectl domain
+  register: base_dns_resolvectl_domain
+  changed_when: false
+  when: base_dns_resolver_mode == 'systemd_resolved'
+
+- name: "Validate | Assert resolver configuration state"
+  vars:
+    base_dns_expected_config: "{{ lookup('template', 'resolved.conf.j2') }}"
+    base_dns_service_unit: >-
+      {{
+        base_dns_service_name
+        if base_dns_service_name.endswith('.service')
+        else (base_dns_service_name ~ '.service')
+      }}
+  ansible.builtin.assert:
+    that:
+      - (base_dns_config_file.content | b64decode) == base_dns_expected_config
+      - base_dns_resolv_conf.stat.exists
+      - base_dns_resolv_conf.stat.islnk
+      - base_dns_resolv_conf.stat.lnk_source == '/run/systemd/resolve/stub-resolv.conf'
+      - base_dns_service_unit in ansible_facts.services
+      - ansible_facts.services[base_dns_service_unit].status == 'enabled'
+      - ansible_facts.services[base_dns_service_unit].state == 'running'
+    fail_msg: >-
+      Configured resolver state does not match the requested base_dns values
+    quiet: true
+  when: base_dns_resolver_mode == 'systemd_resolved'
+
+- name: "Validate | Assert active DNS servers"
+  ansible.builtin.assert:
+    that:
+      - >-
+        base_dns_resolvectl_dns.stdout is search(
+          '(?m)^Global:\\s+(?:.*\\s)?' ~ (item | regex_escape) ~ '(\\s|$)'
+        )
+    fail_msg: >-
+      Active global resolver DNS servers do not include the requested
+      base_dns server {{ item }}
+    quiet: true
+  loop: "{{ base_dns_servers }}"
+  loop_control:
+    label: "{{ item }}"
+  when: base_dns_resolver_mode == 'systemd_resolved'
+
+- name: "Validate | Assert active DNS search domains"
+  ansible.builtin.assert:
+    that:
+      - >-
+        base_dns_resolvectl_domain.stdout is search(
+          '(?m)^Global:\\s+(?:.*\\s)?' ~ (item | regex_escape) ~ '(\\s|$)'
+        )
+    fail_msg: >-
+      Active global resolver search domains do not include the requested
+      base_dns domain {{ item }}
+    quiet: true
+  loop: "{{ base_dns_search_domains }}"
+  loop_control:
+    label: "{{ item }}"
+  when:
+    - base_dns_resolver_mode == 'systemd_resolved'
+    - base_dns_search_domains | length > 0

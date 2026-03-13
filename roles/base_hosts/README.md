@@ -45,7 +45,7 @@ base_hosts_manual_entries:
 base_hosts_block_marker: "# {mark} ANSIBLE HOSTS"
 ```
 
-This role is intentionally separate from `base_hostname` and any future `base_dns` role.
+This role is intentionally separate from `base_hostname` and `base_dns`.
 Use `base_hostname` to manage the local system hostname, and use `base_hosts` when you want inventory-driven peer mappings plus optional manual entries in `/etc/hosts`.
 
 ## Dependencies

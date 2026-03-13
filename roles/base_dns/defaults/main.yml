@@ -1,0 +1,11 @@
+---
+# roles/base_dns/defaults/main.yml
+# Default variables for the `base_dns` role.
+# Defines the resolver package selection, service, mode, DNS servers, and optional search domains enforced during the base phase.
+
+base_dns_packages:
+  - systemd-resolved
+base_dns_service_name: systemd-resolved
+base_dns_resolver_mode: systemd_resolved
+base_dns_servers: []
+base_dns_search_domains: []

@@ -1,0 +1,13 @@
+{# roles/base_dns/templates/resolved.conf.j2 #}
+{# Template for the managed `/etc/systemd/resolved.conf` file in the `base_dns` role. #}
+{# Renders the Debian-family DNS baseline for systemd-resolved. #}
+{{
+  (
+    ['[Resolve]', 'DNS=' ~ (base_dns_servers | join(' '))]
+    + (
+      ['Domains=' ~ (base_dns_search_domains | join(' '))]
+      if base_dns_search_domains | length > 0
+      else []
+    )
+  ) | join('\n')
+}}

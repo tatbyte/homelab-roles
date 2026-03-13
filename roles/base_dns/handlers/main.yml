@@ -1,0 +1,9 @@
+---
+# roles/base_dns/handlers/main.yml
+# Handlers for the `base_dns` role.
+# Restarts the resolver service when the managed resolver configuration changes.
+
+- name: Restart DNS resolver service
+  ansible.builtin.service:
+    name: "{{ base_dns_service_name }}"
+    state: restarted
