@@ -24,21 +24,33 @@ Pre-commit is a framework for managing and maintaining multi-language pre-commit
   sudo apt-get install pre-commit
   ```
 
-2. **Install pipx (recommended for ansible-lint):**
+2. **Install the local CLI dependencies used by this repository:**
   ```sh
   pip install pipx
   pipx install ansible-lint
+  pipx install ggshield
   ```
 
 ## Setup
 
-1. **Initialize pre-commit in your repo:**
+1. **Authenticate GitGuardian before installing hooks:**
+   ```sh
+   ggshield auth login
+   ```
+   Or set a personal access token directly:
+   ```sh
+   export GITGUARDIAN_API_KEY=<your_key>
+   ```
+   GitGuardian's official `ggshield` hooks require authentication, so commits and pushes will fail until this step is complete.
+   In other words, this repository's full hook workflow now depends on GitGuardian access in addition to the local CLI installs.
+
+2. **Initialize pre-commit in your repo:**
    ```sh
    pre-commit install
    ```
    This repository config installs both `pre-commit` and `pre-push` hooks by default.
 
-2. **Run pre-commit manually:**
+3. **Run pre-commit manually:**
    ```sh
    pre-commit run --all-files
    ```
@@ -54,9 +66,46 @@ Pre-commit is a framework for managing and maintaining multi-language pre-commit
   - Merge conflict check
   - Case conflict check
   - Private key detection
+  - Secret scanning with GitGuardian (`ggshield`) before commits
+  - Secret scanning with GitGuardian (`ggshield-push`) before pushes
   - YAML syntax and style (yamllint)
   - Ansible linting (ansible-lint)
 - Hooks are repository-wide by default. New files and future roles are automatically included without editing the config.
+- The `ggshield` hook scans staged changes during the `pre-commit` stage, and `ggshield-push` scans outgoing commits during the `pre-push` stage.
+- Both GitGuardian hooks require authentication before they can run successfully.
+- This means the repository no longer has a fully self-contained offline hook path once GitGuardian scanning is installed; secret scanning depends on external GitGuardian authentication.
+
+## GitGuardian Authentication
+- Authenticate `ggshield` before running repository hooks:
+  ```sh
+  ggshield auth login
+  ```
+- Or set a personal access token directly:
+  ```sh
+  export GITGUARDIAN_API_KEY=<your_key>
+  ```
+- After authentication, install and run the hooks as usual:
+  ```sh
+  pre-commit install
+  pre-commit run --all-files
+  ```
+- This repository treats GitGuardian authentication as a setup prerequisite, not an optional extra, because the official hook exits with an authentication error when no token is available.
+
+## Validation Scope
+- `pre-commit run --all-files` is still useful for repository-wide formatting and lint checks, but it is not the clearest way to reason about the GitGuardian hook stages.
+- Use the commit-stage hook when you want to verify the staged-change scan directly:
+  ```sh
+  pre-commit run ggshield --all-files
+  ```
+- Use the push-stage hook when you want to verify the outbound-commit scan directly:
+  ```sh
+  pre-commit run ggshield-push --hook-stage pre-push
+  ```
+- For the most realistic end-to-end behavior, exercise the normal Git workflow after authenticating:
+  ```sh
+  git commit -m "test"
+  git push
+  ```
 
 ## Troubleshooting
 - If you see errors about unstaged configuration, run:
@@ -76,6 +125,28 @@ Pre-commit is a framework for managing and maintaining multi-language pre-commit
   - Fix:
     ```sh
     pipx install ansible-lint
+    ```
+
+- `ggshield: command not found`
+  - Cause: the GitGuardian CLI is not installed on your machine yet.
+  - Fix:
+    ```sh
+    pipx install ggshield
+    ```
+
+- `GitGuardian API key is missing` or authentication errors from `ggshield`
+  - Cause: the `ggshield` and `ggshield-push` hooks require GitGuardian authentication before they can scan commits or pushes.
+  - Fix:
+    ```sh
+    ggshield auth login
+    ```
+  - Or:
+    ```sh
+    export GITGUARDIAN_API_KEY=<your_key>
+    ```
+  - If you only need the non-GitGuardian hooks for a short local session, temporarily skip the GitGuardian hooks:
+    ```sh
+    SKIP=ggshield,ggshield-push pre-commit run --all-files
     ```
 
 - `yamllint: command not found` or yamllint hook install issues
@@ -110,6 +181,30 @@ Pre-commit is a framework for managing and maintaining multi-language pre-commit
 - Run on all files:
   ```sh
   pre-commit run --all-files
+  ```
+- Run the non-GitGuardian hooks only:
+  ```sh
+  SKIP=ggshield,ggshield-push pre-commit run --all-files
+  ```
+- Run only the GitGuardian commit hook:
+  ```sh
+  pre-commit run ggshield --all-files
+  ```
+- Run only the GitGuardian push hook:
+  ```sh
+  pre-commit run ggshield-push --hook-stage pre-push
+  ```
+- Skip only GitGuardian when needed for a one-off local commit:
+  ```sh
+  SKIP=ggshield git commit -m "your message"
+  ```
+- Skip GitGuardian for a one-off push:
+  ```sh
+  SKIP=ggshield-push git push
+  ```
+- Skip GitGuardian for a one-off local validation pass:
+  ```sh
+  SKIP=ggshield,ggshield-push pre-commit run --all-files
   ```
 - List available hooks:
   ```sh
