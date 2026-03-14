@@ -132,9 +132,16 @@ Pre-commit and linting are configured in this repository.
 Quick start:
 
 ```sh
+pipx install ansible-lint
+pipx install ggshield
+ggshield auth login
 pre-commit install
 pre-commit run --all-files
 ```
+
+`ggshield` authentication is required before the repository's GitGuardian hooks can run on commits and pushes.
+If you only want the local formatting and lint hooks for a short session, you can temporarily skip GitGuardian with `SKIP=ggshield,ggshield-push pre-commit run --all-files`.
+Use `pre-commit run ggshield --all-files` and `pre-commit run ggshield-push --hook-stage pre-push` when you want to validate the GitGuardian commit and push stages explicitly.
 
 See [docs/00-pre-commit.mb](docs/00-pre-commit.mb) for full setup details.
 

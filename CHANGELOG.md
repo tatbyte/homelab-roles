@@ -3,6 +3,14 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v0.26.0]
+### Changed
+- Added the GitGuardian `ggshield` secret-scanning hook to `.pre-commit-config.yaml` so staged changes are scanned for leaked credentials during the `pre-commit` stage.
+- Added the companion GitGuardian `ggshield-push` hook so outgoing commits are also scanned during the `pre-push` stage.
+
+### Documentation
+- Updated the repository README and pre-commit reference to document `ggshield` installation, the required authentication prerequisite, troubleshooting, and the expanded secret-scanning coverage across both commit and push hooks.
+
 ## [v0.25.0]
 ### Added
 - Added the `base_fail2ban` role for Debian-family intrusion-prevention baseline management, including defaults, handlers, full phase tasks, template, role documentation, and example variables.
