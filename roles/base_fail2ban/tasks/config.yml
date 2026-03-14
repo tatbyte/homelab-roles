@@ -1,0 +1,22 @@
+---
+# roles/base_fail2ban/tasks/config.yml
+# Config phase tasks for the `base_fail2ban` role.
+# Renders the managed Fail2ban jail baseline and enforces the requested service state during the base phase.
+
+- name: "Config | Render Fail2ban SSH jail configuration"
+  ansible.builtin.template:
+    src: jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart Fail2ban service
+
+- name: "Config | Ensure Fail2ban service is enabled and running"
+  ansible.builtin.service:
+    name: "{{ base_fail2ban_service_name }}"
+    enabled: true
+    state: started
+
+- name: "Config | Flush Fail2ban handler"
+  ansible.builtin.meta: flush_handlers

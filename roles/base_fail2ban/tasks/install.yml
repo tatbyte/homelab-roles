@@ -1,0 +1,11 @@
+---
+# roles/base_fail2ban/tasks/install.yml
+# Install phase tasks for the `base_fail2ban` role.
+# Ensures the requested Fail2ban packages are present before jail configuration and validation.
+
+- name: "Install | Ensure Fail2ban packages are present"
+  ansible.builtin.apt:
+    name: "{{ base_fail2ban_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600

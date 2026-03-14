@@ -43,10 +43,11 @@ homelab-roles/
 
 ## Available Roles
 - `bootstrap`: Creates and validates the automation account used after the bootstrap phase.
-- `base`: Aggregates recurring base-phase configuration for Debian-family hosts through explicit `include_role` ordering in `roles/base/tasks/main.yml` for `base_packages`, `base_locale`, `base_timezone`, `base_ntp`, `base_hostname`, optional `base_hosts`, optional `base_dns`, `base_sudo`, and `base_sshd`, with optional follow-up inclusion for `base_firewall`, `base_logging`, `base_updates`, `base_apparmor`, `base_auditd`, and `base_upgrade`.
+- `base`: Aggregates recurring base-phase configuration for Debian-family hosts through explicit `include_role` ordering in `roles/base/tasks/main.yml` for `base_packages`, `base_locale`, `base_timezone`, `base_ntp`, `base_hostname`, optional `base_hosts`, optional `base_dns`, `base_sudo`, and `base_sshd`, with optional follow-up inclusion for `base_firewall`, `base_fail2ban`, `base_logging`, `base_updates`, `base_apparmor`, `base_auditd`, and `base_upgrade`.
 - `base_apparmor`: Enforces a minimal AppArmor package and service baseline on Debian-family hosts during the base phase.
 - `base_auditd`: Enforces a minimal Linux audit daemon package, service, and baseline configuration on Debian-family hosts during the base phase.
 - `base_dns`: Enforces a minimal DNS resolver baseline through `systemd-resolved` on Debian-family hosts during the base phase.
+- `base_fail2ban`: Enforces a minimal Fail2ban package, service, and SSH jail baseline on Debian-family hosts during the base phase.
 - `base_firewall`: Enforces an additive UFW baseline with managed default policies and requested allow or limit rules on Debian-family hosts during the base phase, with an optional purge mode for exact rebuilds.
 - `base_hosts`: Enforces inventory-driven and optional manual cluster host mappings through a managed `/etc/hosts` block on Debian-family hosts during the base phase.
 - `base_logging`: Enforces a persistent local journald baseline on Debian-family hosts during the base phase, with an optional volatile mode for non-persistent logs.

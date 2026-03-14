@@ -1,0 +1,38 @@
+---
+# roles/base_fail2ban/tasks/assert.yml
+# Assert phase tasks for the `base_fail2ban` role.
+# Validates the requested Fail2ban package, service, backend, and SSH jail inputs before installation and configuration run.
+
+- name: "Assert | Validate base_fail2ban variable structure"
+  vars:
+    base_fail2ban_allowed_backends:
+      - auto
+      - polling
+      - pyinotify
+      - systemd
+  ansible.builtin.assert:
+    that:
+      - base_fail2ban_packages is sequence
+      - base_fail2ban_packages is not string
+      - base_fail2ban_service_name is string
+      - base_fail2ban_service_name | trim | length > 0
+      - base_fail2ban_backend is string
+      - base_fail2ban_backend | trim | length > 0
+      - (base_fail2ban_backend | lower) in base_fail2ban_allowed_backends
+      - (base_fail2ban_bantime is string) or (base_fail2ban_bantime is integer)
+      - (base_fail2ban_bantime | string | trim | length) > 0
+      - (base_fail2ban_findtime is string) or (base_fail2ban_findtime is integer)
+      - (base_fail2ban_findtime | string | trim | length) > 0
+      - base_fail2ban_maxretry is integer
+      - (base_fail2ban_maxretry | int) > 0
+      - (base_fail2ban_packages | map('string') | list | length) == (base_fail2ban_packages | length)
+      - (base_fail2ban_packages | map('trim') | reject('equalto', '') | list | length) == (base_fail2ban_packages | length)
+      - "'fail2ban' in base_fail2ban_packages"
+    fail_msg: >-
+      base_fail2ban_packages must be a list of non-empty package names that
+      includes fail2ban, base_fail2ban_service_name must be a non-empty
+      service name, base_fail2ban_backend must be auto, polling,
+      pyinotify, or systemd, base_fail2ban_bantime and
+      base_fail2ban_findtime must be non-empty strings or integers, and
+      base_fail2ban_maxretry must be a positive integer
+    quiet: true

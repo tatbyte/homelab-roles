@@ -19,7 +19,7 @@ The example content assumes Debian-family targets such as Debian and Ubuntu.
 
 - `examples/ansible.cfg`: Example Ansible configuration for local test runs that also hides skipped-host output for quieter example runs.
 - `examples/inventory/hosts.ini`: Example hosts and groups.
-- `examples/inventory/group_vars/all/`: Example variables for all hosts, split into role-scoped files such as `bootstrap.yml`, `base_packages.yml`, `base_hostname.yml`, `base_hosts.yml`, `base_dns.yml`, `base_locale.yml`, `base_ntp.yml`, `base_sudo.yml`, `base_sshd.yml`, `base_firewall.yml`, `base_logging.yml`, `base_updates.yml`, `base_apparmor.yml`, `base_auditd.yml`, `base_upgrade.yml`, `base_timezone.yml`, and `monitoring_authorized_key.yml`.
+- `examples/inventory/group_vars/all/`: Example variables for all hosts, split into role-scoped files such as `bootstrap.yml`, `base_packages.yml`, `base_hostname.yml`, `base_hosts.yml`, `base_dns.yml`, `base_locale.yml`, `base_ntp.yml`, `base_sudo.yml`, `base_sshd.yml`, `base_firewall.yml`, `base_fail2ban.yml`, `base_logging.yml`, `base_updates.yml`, `base_apparmor.yml`, `base_auditd.yml`, `base_upgrade.yml`, `base_timezone.yml`, and `monitoring_authorized_key.yml`.
 - `examples/playbooks/bootstrap.yml`: Bootstrap phase playbook that uses initial host credentials and applies the standalone `bootstrap` role.
 - `examples/playbooks/base.yml`: Base phase playbook for post-bootstrap role execution that applies the aggregate base role one host at a time for safer reboot-capable runs.
 - `examples/playbooks/site.yml`: Base-phase entry playbook that imports `base.yml`.
@@ -58,10 +58,11 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/te
 
 - The lab content is intentionally simple and meant as an example baseline.
 - The example inventory and variables assume Debian-family hosts and the repository's APT-based role behavior.
-- `group_vars/all/` is split by role prefix so example variables such as `base_packages.yml`, `base_hostname.yml`, `base_hosts.yml`, `base_dns.yml`, `base_locale.yml`, `base_ntp.yml`, `base_sudo.yml`, `base_sshd.yml`, `base_firewall.yml`, `base_logging.yml`, `base_updates.yml`, `base_apparmor.yml`, `base_auditd.yml`, `base_upgrade.yml`, `base_timezone.yml`, and `monitoring_authorized_key.yml` stay readable as the stack grows.
+- `group_vars/all/` is split by role prefix so example variables such as `base_packages.yml`, `base_hostname.yml`, `base_hosts.yml`, `base_dns.yml`, `base_locale.yml`, `base_ntp.yml`, `base_sudo.yml`, `base_sshd.yml`, `base_firewall.yml`, `base_fail2ban.yml`, `base_logging.yml`, `base_updates.yml`, `base_apparmor.yml`, `base_auditd.yml`, `base_upgrade.yml`, `base_timezone.yml`, and `monitoring_authorized_key.yml` stay readable as the stack grows.
 - `base_hosts.yml` sets `base_include_hosts: true`, which opts the example base run into the optional `base_hosts` role so example hosts can resolve inventory peer names through `/etc/hosts`.
 - `base_dns.yml` sets `base_include_dns: true`, which opts the example base run into the optional `base_dns` role with an explicit `systemd-resolved` baseline.
 - `base_firewall.yml` sets `base_include_firewall: true`, which opts the example base run into the optional `base_firewall` role.
+- `base_fail2ban.yml` sets `base_include_fail2ban: true`, which opts the example base run into the optional `base_fail2ban` role with a managed SSH jail baseline.
 - `base_logging.yml` sets `base_include_logging: true`, which opts the example base run into the optional `base_logging` role with persistent journald storage enabled.
 - `base_updates.yml` sets `base_include_updates: true`, which opts the example base run into the optional `base_updates` role with unattended-upgrades enabled.
 - `base_apparmor.yml` sets `base_include_apparmor: true`, which opts the example base run into the optional `base_apparmor` role with the AppArmor service enabled.

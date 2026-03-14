@@ -1,0 +1,13 @@
+{# roles/base_fail2ban/templates/jail.local.j2 #}
+{# Template for the managed `/etc/fail2ban/jail.local` file in the `base_fail2ban` role. #}
+# Managed by Ansible: base_fail2ban
+# Source: roles/base_fail2ban/templates/jail.local.j2
+[DEFAULT]
+backend = {{ base_fail2ban_backend | lower }}
+bantime = {{ base_fail2ban_bantime }}
+findtime = {{ base_fail2ban_findtime }}
+maxretry = {{ base_fail2ban_maxretry }}
+
+[sshd]
+enabled = true
+port = ssh

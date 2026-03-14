@@ -11,6 +11,7 @@ Explains how the aggregate base role delegates recurring Debian-family host conf
 - Can insert `base_dns` after `base_hosts` as an explicit opt-in resolver baseline when `base_include_dns: true`
 - Keeps aggregate include-task tags aligned with each child role's phase tags and role-specific tags so targeted runs such as `--tags validate` or `--tags base_packages_validate` stay predictable
 - Can include `base_firewall` as an explicit opt-in follow-up role when `base_include_firewall: true`
+- Can include `base_fail2ban` as an explicit opt-in follow-up role when `base_include_fail2ban: true`
 - Can include `base_logging` as an explicit opt-in follow-up role when `base_include_logging: true`
 - Can include `base_updates` as an explicit opt-in follow-up role when `base_include_updates: true`
 - Can include `base_apparmor` as an explicit opt-in follow-up role when `base_include_apparmor: true`
@@ -30,7 +31,7 @@ Use `base` on Debian-family hosts after the bootstrap phase has already created 
 ```
 
 Bootstrap is handled separately by the standalone `bootstrap` role/playbook.
-Role-specific inputs for `base` currently come from `base_packages_*`, `base_locale_*`, `base_timezone_*`, `base_ntp_*`, `base_hostname_*`, optional `base_include_hosts` plus `base_hosts_*`, optional `base_include_dns` plus `base_dns_*`, `base_sudo_*`, `base_sshd_*`, optional `base_include_firewall` plus `base_firewall_*`, optional `base_include_logging` plus `base_logging_*`, optional `base_include_updates` plus `base_updates_*`, optional `base_include_apparmor` plus `base_apparmor_*`, optional `base_include_auditd` plus `base_auditd_*`, and optional `base_include_upgrade` plus `base_upgrade_*`.
+Role-specific inputs for `base` currently come from `base_packages_*`, `base_locale_*`, `base_timezone_*`, `base_ntp_*`, `base_hostname_*`, optional `base_include_hosts` plus `base_hosts_*`, optional `base_include_dns` plus `base_dns_*`, `base_sudo_*`, `base_sshd_*`, optional `base_include_firewall` plus `base_firewall_*`, optional `base_include_fail2ban` plus `base_fail2ban_*`, optional `base_include_logging` plus `base_logging_*`, optional `base_include_updates` plus `base_updates_*`, optional `base_include_apparmor` plus `base_apparmor_*`, optional `base_include_auditd` plus `base_auditd_*`, and optional `base_include_upgrade` plus `base_upgrade_*`.
 
 Current include order in `base` is:
 
@@ -53,11 +54,12 @@ This keeps broad phase runs such as `--tags validate` working across the full ba
 Optional follow-up role:
 
 1. `base_firewall` when `base_include_firewall: true`
-2. `base_logging` when `base_include_logging: true`
-3. `base_updates` when `base_include_updates: true`
-4. `base_apparmor` when `base_include_apparmor: true`
-5. `base_auditd` when `base_include_auditd: true`
-6. `base_upgrade` when `base_include_upgrade: true`
+2. `base_fail2ban` when `base_include_fail2ban: true`
+3. `base_logging` when `base_include_logging: true`
+4. `base_updates` when `base_include_updates: true`
+5. `base_apparmor` when `base_include_apparmor: true`
+6. `base_auditd` when `base_include_auditd: true`
+7. `base_upgrade` when `base_include_upgrade: true`
 
 ## License
 MIT

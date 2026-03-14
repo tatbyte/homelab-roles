@@ -1,0 +1,54 @@
+---
+# roles/base_fail2ban/tasks/validate.yml
+# Validate phase tasks for the `base_fail2ban` role.
+# Verifies the requested package state, managed jail configuration file, running service state, and active SSH jail after configuration.
+
+- name: "Validate | Gather package facts"
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: "Validate | Gather service facts"
+  ansible.builtin.service_facts:
+
+- name: "Validate | Read managed Fail2ban jail configuration"
+  ansible.builtin.slurp:
+    path: /etc/fail2ban/jail.local
+  register: base_fail2ban_jail_file
+
+- name: "Validate | Read active Fail2ban server state"
+  ansible.builtin.command: fail2ban-client ping
+  register: base_fail2ban_ping
+  changed_when: false
+
+- name: "Validate | Read active Fail2ban jail list"
+  ansible.builtin.command: fail2ban-client status
+  register: base_fail2ban_status
+  changed_when: false
+
+- name: "Validate | Assert Fail2ban state"
+  vars:
+    base_fail2ban_expected_config: "{{ lookup('template', 'jail.local.j2') }}"
+    base_fail2ban_service_unit: >-
+      {{
+        base_fail2ban_service_name
+        if base_fail2ban_service_name.endswith('.service')
+        else (base_fail2ban_service_name ~ '.service')
+      }}
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          base_fail2ban_packages
+          | difference(ansible_facts.packages.keys() | list)
+          | length
+        ) == 0
+      - (base_fail2ban_jail_file.content | b64decode) == base_fail2ban_expected_config
+      - base_fail2ban_service_unit in ansible_facts.services
+      - ansible_facts.services[base_fail2ban_service_unit].status in ['enabled', 'enabled-runtime']
+      - ansible_facts.services[base_fail2ban_service_unit].state == 'running'
+      - base_fail2ban_ping.stdout is search('Server replied:\\s+pong')
+      - base_fail2ban_status.stdout is search('Jail list:\\s+.*\\bsshd\\b')
+    fail_msg: >-
+      Configured Fail2ban state does not match the requested
+      base_fail2ban values
+    quiet: true

@@ -76,6 +76,14 @@
   when: base_include_firewall | default(false)
   tags: [base, base_firewall, assert, install, config, validate, base_firewall_assert, base_firewall_install, base_firewall_config, base_firewall_validate]
 
+- name: "Base | Include optional base_fail2ban role"
+  ansible.builtin.include_role:
+    name: base_fail2ban
+    apply:
+      tags: [base, base_fail2ban]
+  when: base_include_fail2ban | default(false)
+  tags: [base, base_fail2ban, assert, install, config, validate, base_fail2ban_assert, base_fail2ban_install, base_fail2ban_config, base_fail2ban_validate]
+
 - name: "Base | Include optional base_logging role"
   ansible.builtin.include_role:
     name: base_logging

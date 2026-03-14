@@ -3,6 +3,16 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v0.25.0]
+### Added
+- Added the `base_fail2ban` role for Debian-family intrusion-prevention baseline management, including defaults, handlers, full phase tasks, template, role documentation, and example variables.
+
+### Changed
+- Added `base_fail2ban` to the aggregate `base` role as an explicit opt-in follow-up role gated by `base_include_fail2ban`.
+
+### Documentation
+- Updated repository, aggregate-role, and example documentation to describe the new optional Fail2ban role and its example variable file.
+
 ## [v0.24.0]
 ### Added
 - Added the `base_auditd` role for Debian-family Linux audit baseline management, including defaults, handlers, full phase tasks, template, role documentation, and example variables.

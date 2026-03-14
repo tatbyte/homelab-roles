@@ -1,0 +1,12 @@
+---
+# roles/base_fail2ban/defaults/main.yml
+# Default variables for the `base_fail2ban` role.
+# Defines the Fail2ban package list, service, backend, and SSH jail values enforced during the base phase.
+
+base_fail2ban_packages:
+  - fail2ban
+base_fail2ban_service_name: fail2ban
+base_fail2ban_backend: systemd
+base_fail2ban_bantime: 10m
+base_fail2ban_findtime: 10m
+base_fail2ban_maxretry: 5

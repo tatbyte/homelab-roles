@@ -1,0 +1,9 @@
+---
+# roles/base_fail2ban/handlers/main.yml
+# Handlers for the `base_fail2ban` role.
+# Restarts the Fail2ban service when the managed jail configuration changes.
+
+- name: Restart Fail2ban service
+  ansible.builtin.service:
+    name: "{{ base_fail2ban_service_name }}"
+    state: restarted

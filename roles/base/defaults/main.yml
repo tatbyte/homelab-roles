@@ -10,4 +10,5 @@ base_include_hosts: false
 base_include_dns: false
 base_include_apparmor: false
 base_include_auditd: false
+base_include_fail2ban: false
 base_include_upgrade: false

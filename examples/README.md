@@ -10,7 +10,7 @@ The inventory variables and role inputs assume the repository's Debian-family de
 ## Structure
 - `ansible.cfg`: Test-specific Ansible configuration that points at the example inventory and hides skipped-host output for quieter local runs.
 - `inventory/hosts.ini`: Test inventory.
-- `inventory/group_vars/all/`: Shared variables for test hosts, split into per-role files such as `bootstrap.yml`, `base_packages.yml`, `base_hostname.yml`, `base_hosts.yml`, `base_dns.yml`, `base_locale.yml`, `base_ntp.yml`, `base_sudo.yml`, `base_sshd.yml`, `base_firewall.yml`, `base_logging.yml`, `base_updates.yml`, `base_apparmor.yml`, `base_auditd.yml`, `base_upgrade.yml`, `base_timezone.yml`, and `monitoring_authorized_key.yml`.
+- `inventory/group_vars/all/`: Shared variables for test hosts, split into per-role files such as `bootstrap.yml`, `base_packages.yml`, `base_hostname.yml`, `base_hosts.yml`, `base_dns.yml`, `base_locale.yml`, `base_ntp.yml`, `base_sudo.yml`, `base_sshd.yml`, `base_firewall.yml`, `base_fail2ban.yml`, `base_logging.yml`, `base_updates.yml`, `base_apparmor.yml`, `base_auditd.yml`, `base_upgrade.yml`, `base_timezone.yml`, and `monitoring_authorized_key.yml`.
 - `playbooks/bootstrap.yml`: Bootstrap phase playbook that connects with the initial admin account and applies the standalone `bootstrap` role.
 - `playbooks/base.yml`: Base phase playbook that connects as the automation account, applies the `base` role, and uses `serial: 1` so reboot-capable base runs process one host at a time.
 - `playbooks/site.yml`: Base-phase entry playbook that imports `base.yml`.
@@ -54,6 +54,7 @@ The SSH integration test playbook cleans up its temporary `/etc/ssh/sshd_config.
 `inventory/group_vars/all/base_updates.yml` sets `base_include_updates: true`, which opts the example base run into the optional `base_updates` role with unattended-upgrades enabled.
 `inventory/group_vars/all/base_apparmor.yml` sets `base_include_apparmor: true`, which opts the example base run into the optional `base_apparmor` role with the AppArmor service enabled.
 `inventory/group_vars/all/base_auditd.yml` sets `base_include_auditd: true`, which opts the example base run into the optional `base_auditd` role with the audit daemon enabled and a minimal explicit baseline configuration.
+`inventory/group_vars/all/base_fail2ban.yml` sets `base_include_fail2ban: true`, which opts the example base run into the optional `base_fail2ban` role with a managed SSH jail baseline.
 `inventory/group_vars/all/base_hosts.yml` sets `base_include_hosts: true`, which opts the example base run into the optional `base_hosts` role so example hosts can resolve inventory peer names through `/etc/hosts`.
 `inventory/group_vars/all/base_dns.yml` sets `base_include_dns: true`, which opts the example base run into the optional `base_dns` role with an explicit `systemd-resolved` baseline.
 `inventory/group_vars/all/base_upgrade.yml` keeps `base_include_upgrade: false` by default, so the example lab documents the role inputs without making every base run apply immediate package upgrades.

@@ -88,11 +88,12 @@ Use this sequence to keep foundational packages and environment settings first, 
 Optional current follow-up:
 
 1. `base_firewall` when `base_include_firewall: true`
-2. `base_logging` when `base_include_logging: true`
-3. `base_updates` when `base_include_updates: true`
-4. `base_apparmor` when `base_include_apparmor: true`
-5. `base_auditd` when `base_include_auditd: true`
-6. `base_upgrade` when `base_include_upgrade: true`
+2. `base_fail2ban` when `base_include_fail2ban: true`
+3. `base_logging` when `base_include_logging: true`
+4. `base_updates` when `base_include_updates: true`
+5. `base_apparmor` when `base_include_apparmor: true`
+6. `base_auditd` when `base_include_auditd: true`
+7. `base_upgrade` when `base_include_upgrade: true`
 
 Future optional follow-up roles should also be included explicitly from `roles/base/tasks/main.yml` and gated only by aggregate include flags.
 
