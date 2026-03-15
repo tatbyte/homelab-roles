@@ -3,6 +3,20 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v1.3.0]
+### Added
+- Added the standalone `user_groups` role for managing supplementary group membership for existing human admin accounts with per-user append-versus-explicit behavior.
+- Added the example `user_groups.yml` inventory file plus the aggregate `user_include_groups` toggle used to exercise the new role in the local lab.
+
+### Changed
+- Updated the aggregate `user` role so `user_groups` is an explicit opt-in follow-up role that runs after `user_account` and before optional `user_password`.
+- Added optional managed-group creation support to `user_groups` through `user_groups_manage_groups`, while keeping the safer default behavior that requires requested groups to already exist.
+- Extended `user_groups` so it now aggregates `user_groups_base_memberships`, `user_groups_role_declared_memberships`, and `user_groups_additional_memberships` into the effective managed per-user group policy.
+
+### Documentation
+- Updated repository, workflow, role, example, and Vault documentation to describe the new `user_groups` role, its aggregate ordering, and the new example supplementary-group variable file.
+- Added supplementary-group integration guidance for future roles in `docs/06-user-groups-role-integration.md`, including the registration pattern, merge behavior, ordering requirement, and inventory-versus-role split.
+
 ## [v1.2.0]
 ### Added
 - Added the standalone `user_password` role for managing Vault-friendly hashed local password state and optional password locking for one existing human admin account.

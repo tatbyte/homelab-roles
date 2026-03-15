@@ -3,6 +3,14 @@
 # Shared aggregate user-role variables for the example lab.
 # Defines the optional aggregate-role toggles for the example user layer.
 
+# Keep these aggregate toggles in the same order used by
+# `roles/user/tasks/main.yml`.
+#
+# 1. `user_account` always runs first and has no aggregate toggle.
+# 2. `user_groups` runs next when enabled.
+user_include_groups: true
+
+# 3. `user_password` runs after account and group state when enabled.
 # Keep password management enabled in the example lab so the example human
 # admin account has a usable local password in addition to any SSH access.
 # The companion `user_password.yml` file uses the plaintext test password

@@ -107,9 +107,10 @@ Its include-task tags should mirror the generic phase tags plus the child role's
 Current order:
 
 1. `user_account`
-2. `user_password` when `user_include_password: true`
+2. `user_groups` when `user_include_groups: true`
+3. `user_password` when `user_include_password: true`
 
-Use this sequence to keep human-admin account creation and adoption explicit first, then optional secret-backed local password management, before any future user-environment roles such as SSH, shell, or profile management.
+Use this sequence to keep human-admin account creation and adoption explicit first, then optional supplementary-group policy, then optional secret-backed local password management, before any future user-environment roles such as SSH, shell, or profile management.
 
 ## Tag Usage
 

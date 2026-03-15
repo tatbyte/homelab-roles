@@ -10,6 +10,14 @@
       tags: [user, user_account]
   tags: [user, user_account, assert, config, validate, user_account_assert, user_account_config, user_account_validate]
 
+- name: "User | Include optional user_groups role"
+  ansible.builtin.include_role:
+    name: user_groups
+    apply:
+      tags: [user, user_groups]
+  when: user_include_groups | default(false)
+  tags: [user, user_groups, assert, config, validate, user_groups_assert, user_groups_config, user_groups_validate]
+
 - name: "User | Include optional user_password role"
   ansible.builtin.include_role:
     name: user_password

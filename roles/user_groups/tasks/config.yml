@@ -1,0 +1,42 @@
+---
+# roles/user_groups/tasks/config.yml
+# Config phase tasks for the `user_groups` role.
+# Ensures requested supplementary groups exist when needed and enforces per-user group membership policy.
+
+- name: "Config | Derive Requested Supplementary Group List"
+  ansible.builtin.import_tasks: derive_effective_memberships.yml
+
+- name: "Config | Derive Requested Supplementary Group List"
+  ansible.builtin.set_fact:
+    user_groups_desired_groups: >-
+      {{
+        user_groups_effective_memberships
+        | map(attribute='groups')
+        | flatten
+        | unique
+        | list
+      }}
+  changed_when: false
+
+- name: "Config | Ensure Requested Supplementary Groups Exist When Automatic Group Creation Is Enabled"
+  ansible.builtin.group:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ user_groups_desired_groups }}"
+  loop_control:
+    label: "{{ item }}"
+  when:
+    - user_groups_manage_groups | bool
+    - user_groups_desired_groups | length > 0
+
+- name: "Config | Enforce Human Admin Supplementary Group Membership"
+  ansible.builtin.user:
+    name: "{{ item.user }}"
+    state: present
+    groups: "{{ item.groups | join(',') }}"
+    append: "{{ item.append | default(true) }}"
+  loop: "{{ user_groups_effective_memberships }}"
+  loop_control:
+    label: "{{ item.user }}"
+  when:
+    - (item.groups | length) > 0 or not (item.append | default(true) | bool)

@@ -3,4 +3,5 @@
 # Default variables for the `user` role.
 # Defines optional aggregate-role toggles that extend the human-admin user layer without changing existing consumers by default.
 
+user_include_groups: false
 user_include_password: false

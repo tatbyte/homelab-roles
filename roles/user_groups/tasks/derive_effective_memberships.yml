@@ -1,0 +1,33 @@
+---
+# roles/user_groups/tasks/derive_effective_memberships.yml
+# Shared derived-state tasks for the `user_groups` role.
+# Builds the effective per-user supplementary-group policy from the aggregated membership inputs.
+
+- name: "Derive | Build Effective Human Admin Supplementary-Group Memberships"
+  ansible.builtin.set_fact:
+    user_groups_effective_memberships: >-
+      {%- set merged = {} -%}
+      {%- for item in user_groups_memberships -%}
+        {%- set user_name = item.user -%}
+        {%- set current = merged.get(user_name, {'user': user_name, 'groups': [], 'append': true}) -%}
+        {%- set item_groups = item.groups | default([]) -%}
+        {%- set merged_groups = (
+          item_groups
+          if item.append | default(true) | bool == false
+          else ((current.groups | default([])) + item_groups)
+        ) | unique | list -%}
+        {%- set merged_append = (
+          item.append | default(true)
+          if item.append | default(true) | bool == false
+          else current.append | default(true)
+        ) -%}
+        {%- set _ = merged.update({
+          user_name: {
+            'user': user_name,
+            'groups': merged_groups,
+            'append': merged_append,
+          }
+        }) -%}
+      {%- endfor -%}
+      {{ merged | dict2items | map(attribute='value') | list }}
+  changed_when: false

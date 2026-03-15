@@ -13,7 +13,9 @@ user_account_uid: 1050
 user_account_gid: 1050
 
 # Primary group for the example human admin account.
-user_account_primary_group: human-user
+# Keep this named after the user so the managed home directory keeps the
+# expected user-owned group baseline.
+user_account_primary_group: "{{ user_account_name }}"
 
 # Keep the example account present after the base phase.
 user_account_state: present

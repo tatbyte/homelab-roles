@@ -19,7 +19,7 @@ The example content assumes Debian-family targets such as Debian and Ubuntu.
 
 - `examples/ansible.cfg`: Example Ansible configuration for local test runs that also hides skipped-host output for quieter example runs.
 - `examples/inventory/hosts.ini`: Example hosts and groups.
-- `examples/inventory/group_vars/all/`: Example variables for all hosts, split into aggregate-scoped files such as `base.yml` and `user.yml`, plus role-scoped files such as `bootstrap.yml`, `base_packages.yml`, `base_hostname.yml`, `base_hosts.yml`, `base_dns.yml`, `base_locale.yml`, `base_ntp.yml`, `base_sudo.yml`, `base_sshd.yml`, `base_firewall.yml`, `base_fail2ban.yml`, `base_logging.yml`, `base_updates.yml`, `base_apparmor.yml`, `base_auditd.yml`, `base_upgrade.yml`, `base_needrestart.yml`, `base_timezone.yml`, `user_account.yml`, `user_password.yml`, and `monitoring_authorized_key.yml`.
+- `examples/inventory/group_vars/all/`: Example variables for all hosts, split into aggregate-scoped files such as `base.yml` and `user.yml`, plus role-scoped files such as `bootstrap.yml`, `base_packages.yml`, `base_hostname.yml`, `base_hosts.yml`, `base_dns.yml`, `base_locale.yml`, `base_ntp.yml`, `base_sudo.yml`, `base_sshd.yml`, `base_firewall.yml`, `base_fail2ban.yml`, `base_logging.yml`, `base_updates.yml`, `base_apparmor.yml`, `base_auditd.yml`, `base_upgrade.yml`, `base_needrestart.yml`, `base_timezone.yml`, `user_account.yml`, `user_groups.yml`, `user_password.yml`, and `monitoring_authorized_key.yml`.
 - `examples/playbooks/bootstrap.yml`: Bootstrap phase playbook that uses initial host credentials and applies the standalone `bootstrap` role.
 - `examples/playbooks/base.yml`: Base phase playbook for post-bootstrap role execution that applies the aggregate base role one host at a time for safer reboot-capable runs.
 - `examples/playbooks/user.yml`: User phase playbook for post-base role execution that applies the aggregate `user` role for human admin account enforcement.
@@ -81,7 +81,8 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/te
 - When the example run's `base_upgrade` role makes no package-maintenance changes and leaves no reboot-required follow-up, `base_needrestart` now skips the batch check automatically to reduce no-change noise.
 - `playbooks/base.yml` uses `serial: 1`, which is safer when optional roles such as `base_upgrade` may reboot a host during the run.
 - `user_account.yml` defines the example human admin account enforced after the base phase through the aggregate `user` role.
-- `user.yml` enables the optional password role in the example lab, while `user_password.yml` sets a demo SHA-512 password hash for the example human admin account using the plaintext test password `password` and documents that a real host should use a Vault-managed hash instead.
+- `user_groups.yml` defines the example supplementary admin-group baseline, the future role-declared accumulator, and the inventory-specific follow-up layer used when `user.yml` enables `user_groups`.
+- `user.yml` enables the optional supplementary-group and password roles in the example lab, while `user_password.yml` sets a demo SHA-512 password hash for the example human admin account using the plaintext test password `password` and documents that a real host should use a Vault-managed hash instead.
 - `ansible.cfg` sets `display_skipped_hosts = False`, so routine conditional skips from optional roles or gated tasks do not dominate the example output.
 - `hosts.ini` keeps default `ansible_user=ansible` in `[all:vars]`, while `[bootstrap:vars]` holds initial login values used only during bootstrap.
 - `playbooks/bootstrap.yml` prompts once for the bootstrap password and reuses it for both SSH login and sudo.
