@@ -3,6 +3,19 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v1.4.0]
+### Added
+- Added the standalone `user_sudo` role for managing explicit sudoers policy for one existing human admin account with user-versus-group policy selection and optional passwordless sudo.
+- Added the example `user_sudo.yml` inventory file plus the aggregate `user_include_sudo` toggle used to exercise the new role in the local lab.
+
+### Changed
+- Updated the aggregate `user` role so `user_sudo` is an explicit opt-in follow-up role that runs after optional `user_groups` and before optional `user_password`.
+- Kept `base_sudo` focused on the automation-account baseline while `user_sudo` now owns the separate post-base sudoers drop-in for the human admin layer.
+- Added an explicit one-run cleanup path so disabling aggregate `user_sudo` can remove a previously managed human-admin sudoers drop-in without re-enabling steady-state sudo management.
+
+### Documentation
+- Updated repository, workflow, role, and example documentation to describe the new `user_sudo` role, the new aggregate ordering, the cleanup toggle for stale human-admin sudoers drop-ins, and the `su`-based validation dependency used for passwordless-behavior checks.
+
 ## [v1.3.0]
 ### Added
 - Added the standalone `user_groups` role for managing supplementary group membership for existing human admin accounts with per-user append-versus-explicit behavior.

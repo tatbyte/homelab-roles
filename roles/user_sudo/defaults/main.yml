@@ -1,0 +1,23 @@
+---
+# roles/user_sudo/defaults/main.yml
+# Default variables for the `user_sudo` role.
+# Defines the explicit sudoers policy enforced for one human admin account after account and group setup.
+
+# Whether the managed sudoers drop-in should exist or be removed.
+user_sudo_state: present
+
+# Existing human admin username whose sudo access is managed.
+user_sudo_user: "{{ user_account_name | default('admin') }}"
+
+# Choose whether the managed sudoers rule targets the human admin account
+# directly or one sudo-capable group the user belongs to.
+user_sudo_policy_type: user
+
+# Group name used when `user_sudo_policy_type: group`.
+user_sudo_group: sudo
+
+# If true, manage passwordless sudo for the selected user or group principal.
+user_sudo_passwordless: false
+
+# Managed sudoers drop-in path for this human admin sudo policy.
+user_sudo_drop_in_path: "/etc/sudoers.d/90-user_sudo-{{ user_sudo_user }}"

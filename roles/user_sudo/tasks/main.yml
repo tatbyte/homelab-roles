@@ -1,0 +1,16 @@
+---
+# roles/user_sudo/tasks/main.yml
+# Task entrypoint for the `user_sudo` role.
+# Imports the assert, config, and validate phase files in order.
+
+- name: Assert
+  ansible.builtin.import_tasks: assert.yml
+  tags: [user_sudo, assert, user_sudo_assert]
+
+- name: Config
+  ansible.builtin.import_tasks: config.yml
+  tags: [user_sudo, config, user_sudo_config]
+
+- name: Validate
+  ansible.builtin.import_tasks: validate.yml
+  tags: [user_sudo, validate, user_sudo_validate]

@@ -10,7 +10,16 @@
 # 2. `user_groups` runs next when enabled.
 user_include_groups: true
 
-# 3. `user_password` runs after account and group state when enabled.
+# 3. `user_sudo` runs after account and supplementary-group state when enabled.
+# Keep this enabled in the example lab so the human admin account has one
+# explicit managed sudoers drop-in instead of relying only on distro defaults.
+user_include_sudo: true
+
+# If you later disable `user_include_sudo`, set this to true for one cleanup
+# run so the previously managed example sudoers drop-in is removed explicitly.
+user_cleanup_disabled_sudo_drop_in: false
+
+# 4. `user_password` runs after account, group, and sudo state when enabled.
 # Keep password management enabled in the example lab so the example human
 # admin account has a usable local password in addition to any SSH access.
 # The companion `user_password.yml` file uses the plaintext test password

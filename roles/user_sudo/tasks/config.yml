@@ -1,0 +1,24 @@
+---
+# roles/user_sudo/tasks/config.yml
+# Config phase tasks for the `user_sudo` role.
+# Writes the managed human admin sudoers drop-in after deriving the requested policy content.
+
+- name: "Config | Derive Managed Human Admin Sudo Policy"
+  ansible.builtin.import_tasks: derive_policy.yml
+  when: user_sudo_state == 'present'
+
+- name: "Config | Ensure Managed Human Admin Sudoers Drop-In"
+  ansible.builtin.copy:
+    dest: "{{ user_sudo_drop_in_path }}"
+    content: "{{ user_sudo_drop_in_content }}"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "visudo -cf %s"
+  when: user_sudo_state == 'present'
+
+- name: "Config | Remove Managed Human Admin Sudoers Drop-In"
+  ansible.builtin.file:
+    path: "{{ user_sudo_drop_in_path }}"
+    state: absent
+  when: user_sudo_state == 'absent'
