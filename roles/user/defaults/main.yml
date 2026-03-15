@@ -1,0 +1,4 @@
+---
+# roles/user/defaults/main.yml
+# Default variables for the `user` role.
+# Intentionally empty because this aggregate role currently delegates work through explicit child-role includes only.

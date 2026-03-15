@@ -1,0 +1,11 @@
+---
+# roles/user/tasks/main.yml
+# Task entrypoint for the `user` role.
+# Defines the aggregate user-role execution order through explicit role includes.
+
+- name: "User | Include user_account role"
+  ansible.builtin.include_role:
+    name: user_account
+    apply:
+      tags: [user, user_account]
+  tags: [user, user_account, assert, config, validate, user_account_assert, user_account_config, user_account_validate]

@@ -15,8 +15,8 @@ Explains how the role creates and validates the automation account used after th
 | Variable                     | Default     | Required | Description                                 |
 |-----------------------------|-------------|----------|---------------------------------------------|
 | `bootstrap_user`            | `admin`     | yes      | Automation username to create/manage        |
-| `bootstrap_puid`            | `1000`      | yes      | UID for automation user (>= 1000)           |
-| `bootstrap_pgid`            | `1000`      | yes      | GID for automation user (>= 1000)           |
+| `bootstrap_puid`            | `1100`      | yes      | UID for automation user (>= 1000)           |
+| `bootstrap_pgid`            | `1100`      | yes      | GID for automation user (>= 1000)           |
 | `bootstrap_sudo_group`      | `sudo`      | yes      | Sudo-capable group that must include user   |
 | `bootstrap_passwordless_sudo` | `false`   | no       | If true, write `/etc/sudoers.d/90-<user>` with `NOPASSWD` |
 | `bootstrap_user_shell`      | `/bin/bash` | yes      | Shell for automation user (absolute path)   |

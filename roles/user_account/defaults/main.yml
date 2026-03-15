@@ -1,0 +1,43 @@
+---
+# roles/user_account/defaults/main.yml
+# Default variables for the `user_account` role.
+# Defines the human admin account state enforced by this role after the base phase.
+
+# Human admin username to create and manage.
+user_account_name: admin
+
+# Fixed UID/GID keep ownership predictable across hosts and restores.
+user_account_uid: 1050
+user_account_gid: 1050
+
+# Primary group for the managed human admin account.
+user_account_primary_group: "{{ user_account_name }}"
+
+# Desired account state for the human admin account.
+user_account_state: present
+
+# Baseline login shell for the human admin account.
+# Keep this minimal here so a future `user_shell` role can own richer shell policy.
+user_account_shell: /bin/bash
+
+# Home directory for the human admin account.
+user_account_home: "/home/{{ user_account_name }}"
+
+# If true, move an existing home directory when the requested home path changes.
+user_account_move_home: false
+
+# If true, ensure the primary group exists before managing the user account.
+user_account_manage_primary_group: true
+
+# If true, create the home directory while ensuring a present account.
+user_account_create_home: true
+
+# If true, remove the home directory and mail spool when ensuring an absent account.
+user_account_remove: false
+
+# Optional GECOS/comment field for the human admin account.
+user_account_comment: Human admin account managed by Ansible
+
+# Optional password-lock state for the account.
+# Set to true to lock the password, false to unlock it, or null to leave password-lock state unmanaged.
+user_account_password_lock: null

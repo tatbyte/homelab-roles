@@ -98,6 +98,18 @@ Optional current follow-up:
 
 Future optional follow-up roles should also be included explicitly from `roles/base/tasks/main.yml` and gated only by aggregate include flags.
 
+## Aggregate User Order
+
+The aggregate `user` role in this repository applies its human-admin user roles in a stable order.
+`roles/user/tasks/main.yml` is the single source of truth and uses explicit `ansible.builtin.include_role` entries for the aggregate sequence.
+Its include-task tags should mirror the generic phase tags plus the child role's role-specific tags so both broad and narrow tagged runs behave predictably.
+
+Current order:
+
+1. `user_account`
+
+Use this sequence to keep human-admin account creation and adoption explicit after the `base_*` layer and before any future user-environment roles such as SSH, shell, or profile management.
+
 ## Tag Usage
 
 Run specific phases during development or troubleshooting:

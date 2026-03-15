@@ -1,0 +1,84 @@
+---
+# roles/user_account/tasks/assert.yml
+# Assert phase tasks for the `user_account` role.
+# Validates the human admin account variables before account management starts.
+
+- name: "Assert | Validate required user_account variables"
+  ansible.builtin.assert:
+    that:
+      - user_account_name is defined
+      - user_account_name | length > 0
+      - user_account_primary_group is defined
+      - user_account_primary_group | length > 0
+      - user_account_state in ['present', 'absent']
+      - user_account_move_home is boolean
+      - user_account_manage_primary_group is boolean
+      - user_account_create_home is boolean
+      - user_account_remove is boolean
+      - user_account_password_lock is none or user_account_password_lock is boolean
+      - user_account_state != 'present' or (
+          user_account_uid is number
+          and user_account_uid | int >= 1000
+        )
+      - user_account_state != 'present' or not user_account_manage_primary_group or (
+          user_account_gid is number
+          and user_account_gid | int >= 1000
+        )
+      - user_account_state != 'present' or (
+          user_account_shell is defined
+          and user_account_shell | length > 0
+          and user_account_shell.startswith('/')
+        )
+      - user_account_state != 'present' or (
+          user_account_home is defined
+          and user_account_home | length > 0
+          and user_account_home.startswith('/')
+        )
+    fail_msg: >-
+      user_account_name/state/group and present-state uid/gid/home/shell values must be defined and valid
+    quiet: true
+
+- name: "Assert | Collect Existing Human Admin Account Entry"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ user_account_name }}"
+  register: user_account_assert_passwd_lookup
+  changed_when: false
+  failed_when: false
+  when: user_account_state == 'present'
+
+- name: "Assert | Validate Home-Move Intent For Existing Human Admin Account"
+  ansible.builtin.assert:
+    that:
+      - >-
+        user_account_name not in (user_account_assert_passwd_lookup.ansible_facts.getent_passwd | default({}))
+        or
+        (user_account_assert_passwd_lookup.ansible_facts.getent_passwd | default({}))[user_account_name][4] == user_account_home
+        or
+        user_account_move_home | bool
+    fail_msg: >-
+      Existing user_account home does not match user_account_home. Set user_account_move_home to true to move the home directory explicitly.
+    quiet: true
+  when: user_account_state == 'present'
+
+- name: "Assert | Collect Primary Group Entry When Group Management Is Disabled"
+  ansible.builtin.getent:
+    database: group
+    key: "{{ user_account_primary_group }}"
+  register: user_account_assert_group_lookup
+  changed_when: false
+  failed_when: false
+  when:
+    - user_account_state == 'present'
+    - not user_account_manage_primary_group | bool
+
+- name: "Assert | Validate Existing Primary Group When Group Management Is Disabled"
+  ansible.builtin.assert:
+    that:
+      - user_account_primary_group in (user_account_assert_group_lookup.ansible_facts.getent_group | default({}))
+    fail_msg: >-
+      user_account_primary_group must already exist when user_account_manage_primary_group is false
+    quiet: true
+  when:
+    - user_account_state == 'present'
+    - not user_account_manage_primary_group | bool
