@@ -112,6 +112,7 @@ Current order:
 4. `user_password` when `user_include_password: true`
 
 Use this sequence to keep human-admin account creation and adoption explicit first, then optional supplementary-group policy, then optional user-level sudo policy, then optional secret-backed local password management, before any future user-environment roles such as SSH, shell, or profile management.
+When `user_include_sudo: false` and `user_cleanup_disabled_sudo_drop_in: true`, the aggregate still includes `user_sudo` in `absent` mode so a previously managed drop-in can be removed without re-enabling ongoing sudo management.
 
 ## Tag Usage
 

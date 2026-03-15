@@ -83,7 +83,7 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/te
 - `user_account.yml` defines the example human admin account enforced after the base phase through the aggregate `user` role.
 - `user_groups.yml` defines the example supplementary admin-group baseline, the future role-declared accumulator, and the inventory-specific follow-up layer used when `user.yml` enables `user_groups`.
 - `user_sudo.yml` defines the explicit sudoers drop-in enforced for the example human admin account when `user.yml` enables `user_sudo`.
-- `user.yml` enables the optional supplementary-group, sudo, and password roles in the example lab, while `user_password.yml` sets a demo SHA-512 password hash for the example human admin account using the plaintext test password `password` and documents that a real host should use a Vault-managed hash instead.
+- `user.yml` enables the optional supplementary-group, sudo, and password roles in the example lab, and also keeps the documented one-run sudo-drop-in cleanup toggle near the other aggregate user switches, while `user_password.yml` sets a demo SHA-512 password hash for the example human admin account using the plaintext test password `password` and documents that a real host should use a Vault-managed hash instead.
 - `ansible.cfg` sets `display_skipped_hosts = False`, so routine conditional skips from optional roles or gated tasks do not dominate the example output.
 - `hosts.ini` keeps default `ansible_user=ansible` in `[all:vars]`, while `[bootstrap:vars]` holds initial login values used only during bootstrap.
 - `playbooks/bootstrap.yml` prompts once for the bootstrap password and reuses it for both SSH login and sudo.

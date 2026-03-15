@@ -15,6 +15,10 @@ user_include_groups: true
 # explicit managed sudoers drop-in instead of relying only on distro defaults.
 user_include_sudo: true
 
+# If you later disable `user_include_sudo`, set this to true for one cleanup
+# run so the previously managed example sudoers drop-in is removed explicitly.
+user_cleanup_disabled_sudo_drop_in: false
+
 # 4. `user_password` runs after account, group, and sudo state when enabled.
 # Keep password management enabled in the example lab so the example human
 # admin account has a usable local password in addition to any SSH access.

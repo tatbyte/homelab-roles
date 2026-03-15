@@ -3,6 +3,9 @@
 # Default variables for the `user_sudo` role.
 # Defines the explicit sudoers policy enforced for one human admin account after account and group setup.
 
+# Whether the managed sudoers drop-in should exist or be removed.
+user_sudo_state: present
+
 # Existing human admin username whose sudo access is managed.
 user_sudo_user: "{{ user_account_name | default('admin') }}"
 

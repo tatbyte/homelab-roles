@@ -8,12 +8,14 @@ Explains how the role manages explicit sudoers policy for one human admin accoun
 - Supports dedicated per-user sudoers rules or group-based sudoers policy for the existing human admin account
 - Supports optional passwordless sudo through an explicit inventory variable
 - Manages one auditable sudoers drop-in and validates it with `visudo` before install
+- Supports explicit absent-state cleanup for removing a previously managed sudoers drop-in
 - Verifies the resulting managed sudoers content and any required group membership after configuration
 
 ## Variables
 
 | Variable | Default | Required | Description |
 |----------|---------|----------|-------------|
+| `user_sudo_state` | `present` | no | Whether the managed sudoers drop-in should exist (`present`) or be removed (`absent`) |
 | `user_sudo_user` | `{{ user_account_name | default('admin') }}` | yes | Existing human admin username whose sudo access is managed |
 | `user_sudo_policy_type` | `user` | no | Whether the managed sudoers rule targets the human admin account directly (`user`) or one sudo-capable group the user belongs to (`group`) |
 | `user_sudo_group` | `sudo` | yes when `user_sudo_policy_type: group` | Group name used for the managed sudoers rule in group-policy mode |
@@ -24,6 +26,7 @@ Explains how the role manages explicit sudoers policy for one human admin accoun
 
 Use `user_sudo` after `base` has already installed the host sudo baseline through `base_sudo`, and after `user_account` or `user_groups` has already ensured the target human admin account and any required supplementary group memberships exist.
 `base_sudo` remains responsible for the automation account and the host-wide sudo package baseline, while `user_sudo` keeps the human-admin sudoers drop-in separate and explicit.
+Validation uses `su -s /bin/sh -c "sudo -k -n true"` to verify prompted versus passwordless behavior, so normal runs expect `su` in addition to the `sudo` and `visudo` tooling provided by the base sudo layer.
 
 Direct usage:
 
@@ -39,6 +42,18 @@ Direct usage:
         user_sudo_user: alice
         user_sudo_policy_type: user
         user_sudo_passwordless: true
+```
+
+Cleanup usage:
+
+```yaml
+- hosts: all
+  become: true
+  roles:
+    - role: user_sudo
+      vars:
+        user_sudo_state: absent
+        user_sudo_user: alice
 ```
 
 Example aggregate-role usage:
@@ -57,6 +72,7 @@ Example aggregate-role usage:
 
 When `user_sudo_policy_type: group`, keep the target user's membership in that group managed earlier, typically through `user_groups`.
 When `user_sudo_policy_type: user`, the managed sudoers rule stays scoped to the selected human admin account only.
+When `user_sudo_state: absent`, the role removes the managed drop-in and validates that the file is gone without requiring the target user or group to still exist.
 Validation checks both the managed drop-in content and the resulting effective sudo behavior, including whether non-interactive sudo succeeds only when `user_sudo_passwordless: true`.
 
 ## Dependencies

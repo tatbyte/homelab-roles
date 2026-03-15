@@ -11,9 +11,10 @@ Documents notable changes across repository structure, roles, examples, and docu
 ### Changed
 - Updated the aggregate `user` role so `user_sudo` is an explicit opt-in follow-up role that runs after optional `user_groups` and before optional `user_password`.
 - Kept `base_sudo` focused on the automation-account baseline while `user_sudo` now owns the separate post-base sudoers drop-in for the human admin layer.
+- Added an explicit one-run cleanup path so disabling aggregate `user_sudo` can remove a previously managed human-admin sudoers drop-in without re-enabling steady-state sudo management.
 
 ### Documentation
-- Updated repository, workflow, role, and example documentation to describe the new `user_sudo` role, the new aggregate ordering, and the example inventory split for user-level sudo policy.
+- Updated repository, workflow, role, and example documentation to describe the new `user_sudo` role, the new aggregate ordering, the cleanup toggle for stale human-admin sudoers drop-ins, and the `su`-based validation dependency used for passwordless-behavior checks.
 
 ## [v1.3.0]
 ### Added

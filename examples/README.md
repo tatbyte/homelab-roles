@@ -73,7 +73,7 @@ When the example run's `base_upgrade` role makes no package-maintenance changes 
 `inventory/group_vars/all/user_account.yml` defines the example human admin account enforced after the base phase through the aggregate `user` role.
 `inventory/group_vars/all/user_groups.yml` defines the example supplementary admin-group baseline, the future role-declared accumulator, and the inventory-specific follow-up layer used when `user.yml` enables `user_groups`.
 `inventory/group_vars/all/user_sudo.yml` defines the explicit sudoers drop-in enforced for the example human admin account when `user.yml` enables `user_sudo`.
-`inventory/group_vars/all/user.yml` enables the optional supplementary-group, sudo, and password roles in the example lab, while `inventory/group_vars/all/user_password.yml` sets a demo SHA-512 password hash for the example human admin account using the plaintext test password `password` and documents that a real host should use a Vault-managed hash instead.
+`inventory/group_vars/all/user.yml` enables the optional supplementary-group, sudo, and password roles in the example lab, and keeps the one-run stale-sudo-drop-in cleanup toggle with the other aggregate user switches, while `inventory/group_vars/all/user_password.yml` sets a demo SHA-512 password hash for the example human admin account using the plaintext test password `password` and documents that a real host should use a Vault-managed hash instead.
 `ansible.cfg` sets `display_skipped_hosts = False`, so optional-role and conditional-task skips are hidden during normal example runs.
 
 ## Bootstrap Credentials

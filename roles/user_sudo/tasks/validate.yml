@@ -5,6 +5,7 @@
 
 - name: "Validate | Derive Managed Human Admin Sudo Policy"
   ansible.builtin.import_tasks: derive_policy.yml
+  when: user_sudo_state == 'present'
 
 - name: "Validate | Collect Human Admin Account Entry For Sudo Validation"
   ansible.builtin.getent:
@@ -13,6 +14,7 @@
   register: user_sudo_validate_passwd_lookup
   changed_when: false
   failed_when: false
+  when: user_sudo_state == 'present'
 
 - name: "Validate | Collect Sudo Policy Group Entry"
   ansible.builtin.getent:
@@ -21,7 +23,9 @@
   register: user_sudo_validate_group_lookup
   changed_when: false
   failed_when: false
-  when: user_sudo_policy_type == 'group'
+  when:
+    - user_sudo_state == 'present'
+    - user_sudo_policy_type == 'group'
 
 - name: "Validate | Collect Effective Group List For Human Admin Account"
   ansible.builtin.command:
@@ -29,13 +33,16 @@
   register: user_sudo_validate_user_groups
   changed_when: false
   failed_when: false
-  when: user_sudo_policy_type == 'group'
+  when:
+    - user_sudo_state == 'present'
+    - user_sudo_policy_type == 'group'
 
 - name: "Validate | Read Managed Human Admin Sudoers Drop-In"
   ansible.builtin.slurp:
     path: "{{ user_sudo_drop_in_path }}"
   register: user_sudo_validate_drop_in
   changed_when: false
+  when: user_sudo_state == 'present'
 
 - name: "Validate | Collect Effective Human Admin Sudo Privileges"
   ansible.builtin.command:
@@ -45,6 +52,7 @@
   register: user_sudo_validate_sudo_list
   changed_when: false
   failed_when: false
+  when: user_sudo_state == 'present'
 
 - name: "Validate | Check Non-Interactive Human Admin Sudo Behavior"
   ansible.builtin.command:
@@ -58,6 +66,7 @@
   register: user_sudo_validate_noninteractive_sudo
   changed_when: false
   failed_when: false
+  when: user_sudo_state == 'present'
 
 - name: "Validate | Verify Human Admin Sudo Policy"
   ansible.builtin.assert:
@@ -90,3 +99,21 @@
       Validate | Human admin sudo policy does not match the requested final
       state
     quiet: true
+  when: user_sudo_state == 'present'
+
+- name: "Validate | Collect Managed Human Admin Sudoers Drop-In State"
+  ansible.builtin.stat:
+    path: "{{ user_sudo_drop_in_path }}"
+  register: user_sudo_validate_drop_in_stat
+  changed_when: false
+  when: user_sudo_state == 'absent'
+
+- name: "Validate | Verify Managed Human Admin Sudoers Drop-In Is Absent"
+  ansible.builtin.assert:
+    that:
+      - not user_sudo_validate_drop_in_stat.stat.exists
+    fail_msg: >-
+      Validate | Human admin sudoers drop-in still exists after absent-state
+      cleanup
+    quiet: true
+  when: user_sudo_state == 'absent'

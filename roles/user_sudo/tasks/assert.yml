@@ -6,6 +6,7 @@
 - name: "Assert | Validate required user_sudo variables"
   ansible.builtin.assert:
     that:
+      - user_sudo_state in ['present', 'absent']
       - user_sudo_user is defined
       - user_sudo_user is string
       - user_sudo_user | trim | length > 0
@@ -24,7 +25,8 @@
       - (user_sudo_drop_in_path | basename) not in ['.', '..']
       - user_sudo_drop_in_path is not match('.*\\s+.*')
     fail_msg: >-
-      user_sudo_user must be a non-empty username without whitespace,
+      user_sudo_state must be present or absent, user_sudo_user must be a
+      non-empty username without whitespace,
       user_sudo_policy_type must be user or group, user_sudo_group must be a
       non-empty group name without whitespace, user_sudo_passwordless must be a
       boolean, and user_sudo_drop_in_path must be one direct file path under
@@ -38,6 +40,7 @@
   register: user_sudo_assert_passwd_lookup
   changed_when: false
   failed_when: false
+  when: user_sudo_state == 'present'
 
 - name: "Assert | Validate Human Admin Account Exists Before Sudo Management"
   ansible.builtin.assert:
@@ -47,6 +50,7 @@
       user_sudo_user must already exist before the user_sudo role manages the
       human admin sudo policy
     quiet: true
+  when: user_sudo_state == 'present'
 
 - name: "Assert | Collect Sudo Policy Group Entry"
   ansible.builtin.getent:
@@ -55,7 +59,9 @@
   register: user_sudo_assert_group_lookup
   changed_when: false
   failed_when: false
-  when: user_sudo_policy_type == 'group'
+  when:
+    - user_sudo_state == 'present'
+    - user_sudo_policy_type == 'group'
 
 - name: "Assert | Validate Sudo Policy Group Exists"
   ansible.builtin.assert:
@@ -64,7 +70,9 @@
     fail_msg: >-
       user_sudo_group must already exist when user_sudo_policy_type is group
     quiet: true
-  when: user_sudo_policy_type == 'group'
+  when:
+    - user_sudo_state == 'present'
+    - user_sudo_policy_type == 'group'
 
 - name: "Assert | Collect Effective Group List For Human Admin Account"
   ansible.builtin.command:
@@ -72,7 +80,9 @@
   register: user_sudo_assert_user_groups
   changed_when: false
   failed_when: false
-  when: user_sudo_policy_type == 'group'
+  when:
+    - user_sudo_state == 'present'
+    - user_sudo_policy_type == 'group'
 
 - name: "Assert | Validate Human Admin Membership In Sudo Policy Group"
   ansible.builtin.assert:
@@ -83,4 +93,6 @@
       user_sudo_user must already belong to user_sudo_group before the
       user_sudo role can manage group-based sudo policy
     quiet: true
-  when: user_sudo_policy_type == 'group'
+  when:
+    - user_sudo_state == 'present'
+    - user_sudo_policy_type == 'group'
