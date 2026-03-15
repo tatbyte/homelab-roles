@@ -1,0 +1,92 @@
+---
+# roles/user_sudo/tasks/validate.yml
+# Validate phase tasks for the `user_sudo` role.
+# Verifies the resulting managed sudoers content and any required group-based sudo policy state.
+
+- name: "Validate | Derive Managed Human Admin Sudo Policy"
+  ansible.builtin.import_tasks: derive_policy.yml
+
+- name: "Validate | Collect Human Admin Account Entry For Sudo Validation"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ user_sudo_user }}"
+  register: user_sudo_validate_passwd_lookup
+  changed_when: false
+  failed_when: false
+
+- name: "Validate | Collect Sudo Policy Group Entry"
+  ansible.builtin.getent:
+    database: group
+    key: "{{ user_sudo_group }}"
+  register: user_sudo_validate_group_lookup
+  changed_when: false
+  failed_when: false
+  when: user_sudo_policy_type == 'group'
+
+- name: "Validate | Collect Effective Group List For Human Admin Account"
+  ansible.builtin.command:
+    cmd: "id -Gn {{ user_sudo_user }}"
+  register: user_sudo_validate_user_groups
+  changed_when: false
+  failed_when: false
+  when: user_sudo_policy_type == 'group'
+
+- name: "Validate | Read Managed Human Admin Sudoers Drop-In"
+  ansible.builtin.slurp:
+    path: "{{ user_sudo_drop_in_path }}"
+  register: user_sudo_validate_drop_in
+  changed_when: false
+
+- name: "Validate | Collect Effective Human Admin Sudo Privileges"
+  ansible.builtin.command:
+    cmd: "sudo -l -U {{ user_sudo_user }}"
+  environment:
+    LC_ALL: C
+  register: user_sudo_validate_sudo_list
+  changed_when: false
+  failed_when: false
+
+- name: "Validate | Check Non-Interactive Human Admin Sudo Behavior"
+  ansible.builtin.command:
+    argv:
+      - su
+      - -s
+      - /bin/sh
+      - -c
+      - sudo -k -n true
+      - "{{ user_sudo_user }}"
+  register: user_sudo_validate_noninteractive_sudo
+  changed_when: false
+  failed_when: false
+
+- name: "Validate | Verify Human Admin Sudo Policy"
+  ansible.builtin.assert:
+    that:
+      - user_sudo_user in (user_sudo_validate_passwd_lookup.ansible_facts.getent_passwd | default({}))
+      - >-
+        (
+          user_sudo_policy_type != 'group'
+        ) or (
+          user_sudo_group in (user_sudo_validate_group_lookup.ansible_facts.getent_group | default({}))
+        )
+      - >-
+        (
+          user_sudo_policy_type != 'group'
+        ) or (
+          user_sudo_validate_user_groups.rc == 0
+          and user_sudo_group in (user_sudo_validate_user_groups.stdout | trim | split())
+        )
+      - (user_sudo_validate_drop_in.content | b64decode) == user_sudo_drop_in_content
+      - user_sudo_validate_sudo_list.rc == 0
+      - >-
+        (
+          user_sudo_passwordless | bool
+          and user_sudo_validate_noninteractive_sudo.rc == 0
+        ) or (
+          not user_sudo_passwordless | bool
+          and user_sudo_validate_noninteractive_sudo.rc != 0
+        )
+    fail_msg: >-
+      Validate | Human admin sudo policy does not match the requested final
+      state
+    quiet: true

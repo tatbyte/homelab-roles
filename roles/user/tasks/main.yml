@@ -18,6 +18,14 @@
   when: user_include_groups | default(false)
   tags: [user, user_groups, assert, config, validate, user_groups_assert, user_groups_config, user_groups_validate]
 
+- name: "User | Include optional user_sudo role"
+  ansible.builtin.include_role:
+    name: user_sudo
+    apply:
+      tags: [user, user_sudo]
+  when: user_include_sudo | default(false)
+  tags: [user, user_sudo, assert, config, validate, user_sudo_assert, user_sudo_config, user_sudo_validate]
+
 - name: "User | Include optional user_password role"
   ansible.builtin.include_role:
     name: user_password

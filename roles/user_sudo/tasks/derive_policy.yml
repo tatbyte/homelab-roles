@@ -1,0 +1,38 @@
+---
+# roles/user_sudo/tasks/derive_policy.yml
+# Shared derived-state tasks for the `user_sudo` role.
+# Builds the managed sudoers identity and drop-in content from the requested human admin sudo policy.
+
+- name: "Derive | Build Managed Human Admin Sudo Policy"
+  ansible.builtin.set_fact:
+    user_sudo_policy_identity: >-
+      {{
+        ('%' ~ user_sudo_group)
+        if user_sudo_policy_type == 'group'
+        else user_sudo_user
+      }}
+    user_sudo_policy_rule: >-
+      {{
+        (
+          ('%' ~ user_sudo_group)
+          if user_sudo_policy_type == 'group'
+          else user_sudo_user
+        )
+        ~ ' ALL=(ALL:ALL) '
+        ~ ('NOPASSWD:' if user_sudo_passwordless | bool else '')
+        ~ 'ALL'
+      }}
+    user_sudo_drop_in_content: |
+      # Managed by Ansible: user_sudo
+      # Source: roles/user_sudo/tasks/config.yml
+      {{
+        (
+          ('%' ~ user_sudo_group)
+          if user_sudo_policy_type == 'group'
+          else user_sudo_user
+        )
+        ~ ' ALL=(ALL:ALL) '
+        ~ ('NOPASSWD:' if user_sudo_passwordless | bool else '')
+        ~ 'ALL'
+      }}
+  changed_when: false
