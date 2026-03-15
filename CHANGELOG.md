@@ -3,6 +3,23 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v1.5.0]
+### Added
+- Added the standalone `user_zshell` role for managing one human admin zsh login shell and a managed `.zshrc` file with inventory-driven aliases, environment variables, and PATH additions.
+- Added the example `user_zshell.yml` inventory file plus the aggregate `user_include_zshell` toggle used to exercise the new zsh role in the local lab.
+
+### Changed
+- Updated the aggregate `user` role so `user_zshell` is an explicit opt-in follow-up role that runs after optional `user_password`.
+- Narrowed `user_account` so it now manages only a fallback baseline shell when direct shell ownership is enabled, while aggregate `user` disables that ownership automatically before `user_zshell` runs.
+- Updated the example base package set to install `zsh` because the example human admin zsh layer now uses `/usr/bin/zsh`.
+- Reworked the feature into the zsh-only `user_zshell` role with a single managed `.zshrc` template (`user_zshell_zshrc.j2`) and an optional `user_zshell_rc_template_name` override.
+- Expanded the example `user_zshell` inventory profile with editor defaults, local `.local/bin` PATH integration, and extended zsh-oriented aliases matching the managed `.zshrc` experience.
+- Made `user_zshell` tolerant of zsh binary location variance by resolving `/usr/bin/zsh` and `/bin/zsh` candidates when the configured `user_zshell_login_shell` path is unavailable, and using the first executable match.
+- Centralized zsh-path resolution in the shared derive phase so full runs and narrow tagged runs use the same effective SSH login shell, and preserved the documented PATH-addition behavior that prepends existing directories in order.
+
+### Documentation
+- Updated repository, workflow, role, and example documentation to describe the new `user_zshell` role, the expanded aggregate ordering, the zsh-based example shell layer, and the split between baseline account creation and richer zsh management.
+
 ## [v1.4.0]
 ### Added
 - Added the standalone `user_sudo` role for managing explicit sudoers policy for one existing human admin account with user-versus-group policy selection and optional passwordless sudo.

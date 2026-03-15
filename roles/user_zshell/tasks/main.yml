@@ -1,0 +1,16 @@
+---
+# roles/user_zshell/tasks/main.yml
+# Task entrypoint for the `user_zshell` role.
+# Imports the assert, config, and validate phase files in order.
+
+- name: Assert
+  ansible.builtin.import_tasks: assert.yml
+  tags: [user_zshell, assert, user_zshell_assert]
+
+- name: Config
+  ansible.builtin.import_tasks: config.yml
+  tags: [user_zshell, config, user_zshell_config]
+
+- name: Validate
+  ansible.builtin.import_tasks: validate.yml
+  tags: [user_zshell, validate, user_zshell_validate]

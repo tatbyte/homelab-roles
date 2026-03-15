@@ -13,6 +13,7 @@
       - user_account_state in ['present', 'absent']
       - user_account_move_home is boolean
       - user_account_manage_primary_group is boolean
+      - user_account_manage_shell is boolean
       - user_account_create_home is boolean
       - user_account_remove is boolean
       - user_account_state != 'present' or (
@@ -23,7 +24,7 @@
           user_account_gid is number
           and user_account_gid | int >= 1000
         )
-      - user_account_state != 'present' or (
+      - user_account_state != 'present' or not user_account_manage_shell or (
           user_account_shell is defined
           and user_account_shell | length > 0
           and user_account_shell.startswith('/')
@@ -34,7 +35,9 @@
           and user_account_home.startswith('/')
         )
     fail_msg: >-
-      user_account_name/state/group and present-state uid/gid/home/shell values must be defined and valid
+      user_account_name/state/group and present-state uid/gid/home values must
+      be defined and valid, and user_account_shell must be valid when
+      user_account_manage_shell is true
     quiet: true
 
 - name: "Assert | Collect Existing Human Admin Account Entry"

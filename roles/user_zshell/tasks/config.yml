@@ -1,0 +1,21 @@
+---
+# roles/user_zshell/tasks/config.yml
+# Config phase tasks for the `user_zshell` role.
+# Enforces the managed zsh login shell and `.zshrc` file for one human admin
+# account.
+
+- name: "Config | Derive Managed Human Admin Zsh Policy"
+  ansible.builtin.import_tasks: derive_zshell_policy.yml
+
+- name: "Config | Ensure Managed Human Admin Zsh Login Shell"
+  ansible.builtin.user:
+    name: "{{ user_zshell_user }}"
+    shell: "{{ user_zshell_effective_login_shell | default(user_zshell_login_shell) }}"
+
+- name: "Config | Ensure Managed Human Admin Zsh RC File"
+  ansible.builtin.template:
+    src: "{{ user_zshell_effective_rc_template_name }}"
+    dest: "{{ user_zshell_rc_path }}"
+    owner: "{{ user_zshell_user }}"
+    group: "{{ user_zshell_group }}"
+    mode: "0644"

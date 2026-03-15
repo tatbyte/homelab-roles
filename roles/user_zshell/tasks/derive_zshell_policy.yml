@@ -1,0 +1,66 @@
+---
+# roles/user_zshell/tasks/derive_zshell_policy.yml
+# Shared derived-state tasks for the `user_zshell` role.
+# Builds the managed effective zsh path and `.zshrc` template state from the
+# requested human admin zsh policy.
+
+- name: "Derive | Build Zsh Login Shell Candidate Paths"
+  ansible.builtin.set_fact:
+    user_zshell_login_shell_candidates: >-
+      {{
+        [
+          user_zshell_login_shell,
+          '/usr/bin/' ~ (user_zshell_login_shell | basename),
+          '/bin/' ~ (user_zshell_login_shell | basename)
+        ] | unique
+      }}
+  changed_when: false
+
+- name: "Derive | Probe Candidate Zsh Login Shell Binaries"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  register: user_zshell_derive_login_shell_candidates
+  loop: "{{ user_zshell_login_shell_candidates }}"
+  changed_when: false
+
+- name: "Derive | Resolve Effective Zsh Login Shell Path"
+  ansible.builtin.set_fact:
+    user_zshell_login_shell_resolved: >-
+      {{
+        (
+          user_zshell_derive_login_shell_candidates.results
+          | selectattr('stat.exists', 'equalto', true)
+          | selectattr('stat.isreg', 'equalto', true)
+          | selectattr('stat.executable', 'equalto', true)
+          | map(attribute='item')
+          | first
+        ) | default('')
+      }}
+    user_zshell_effective_login_shell: >-
+      {{
+        (
+          user_zshell_derive_login_shell_candidates.results
+          | selectattr('stat.exists', 'equalto', true)
+          | selectattr('stat.isreg', 'equalto', true)
+          | selectattr('stat.executable', 'equalto', true)
+          | map(attribute='item')
+          | first
+        ) | default(user_zshell_login_shell)
+      }}
+  changed_when: false
+
+- name: "Derive | Build Managed Human Admin Zsh Policy"
+  ansible.builtin.set_fact:
+    user_zshell_rc_path: "{{ user_zshell_home.rstrip('/') ~ '/.zshrc' }}"
+    user_zshell_effective_rc_template_name: >-
+      {{
+        user_zshell_rc_template_name
+        if user_zshell_rc_template_name != ''
+        else 'user_zshell_zshrc.j2'
+      }}
+  changed_when: false
+
+- name: "Derive | Derive Managed Human Admin Zsh RC Template Path"
+  ansible.builtin.set_fact:
+    user_zshell_rc_template_path: "{{ role_path }}/templates/{{ user_zshell_effective_rc_template_name }}"
+  changed_when: false

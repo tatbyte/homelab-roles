@@ -8,6 +8,8 @@
     name: user_account
     apply:
       tags: [user, user_account]
+  vars:
+    user_account_manage_shell: "{{ not (user_include_zshell | default(false)) }}"
   tags: [user, user_account, assert, config, validate, user_account_assert, user_account_config, user_account_validate]
 
 - name: "User | Include optional user_groups role"
@@ -37,3 +39,13 @@
       tags: [user, user_password]
   when: user_include_password | default(false)
   tags: [user, user_password, assert, config, validate, user_password_assert, user_password_config, user_password_validate]
+
+- name: "User | Include optional user_zshell role"
+  ansible.builtin.include_role:
+    name: user_zshell
+    apply:
+      tags: [user, user_zshell]
+  when:
+    - user_include_zshell | default(false)
+    - (user_account_state | default('present')) == 'present'
+  tags: [user, user_zshell, assert, config, validate, user_zshell_assert, user_zshell_config, user_zshell_validate]

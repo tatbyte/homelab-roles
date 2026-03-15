@@ -20,8 +20,10 @@ user_account_primary_group: "{{ user_account_name }}"
 # Keep the example account present after the base phase.
 user_account_state: present
 
-# Baseline login shell enforced for the example admin account.
-# Keep this minimal here so a future `user_shell` role can own broader shell policy.
+# Baseline login shell enforced only when the aggregate `user` role is not
+# delegating shell ownership to `user_zshell`.
+# Keep this minimal so the follow-up example zsh role can own the real login
+# shell and managed `.zshrc` policy.
 user_account_shell: /bin/bash
 
 # Home directory enforced for the example admin account.

@@ -18,7 +18,7 @@
     state: "{{ user_account_state }}"
     uid: "{{ user_account_uid if user_account_state == 'present' else omit }}"
     group: "{{ user_account_primary_group if user_account_state == 'present' else omit }}"
-    shell: "{{ user_account_shell if user_account_state == 'present' else omit }}"
+    shell: "{{ user_account_shell if user_account_state == 'present' and user_account_manage_shell | bool else omit }}"
     home: "{{ user_account_home if user_account_state == 'present' else omit }}"
     move_home: "{{ user_account_move_home if user_account_state == 'present' else omit }}"
     create_home: "{{ user_account_create_home if user_account_state == 'present' else omit }}"

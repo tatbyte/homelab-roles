@@ -110,9 +110,11 @@ Current order:
 2. `user_groups` when `user_include_groups: true`
 3. `user_sudo` when `user_include_sudo: true`
 4. `user_password` when `user_include_password: true`
+5. `user_zshell` when `user_include_zshell: true`
 
-Use this sequence to keep human-admin account creation and adoption explicit first, then optional supplementary-group policy, then optional user-level sudo policy, then optional secret-backed local password management, before any future user-environment roles such as SSH, shell, or profile management.
+Use this sequence to keep human-admin account creation and adoption explicit first, then optional supplementary-group policy, then optional user-level sudo policy, then optional secret-backed local password management, then optional zsh policy, before any future user-environment roles such as SSH or profile management.
 When `user_include_sudo: false` and `user_cleanup_disabled_sudo_drop_in: true`, the aggregate still includes `user_sudo` in `absent` mode so a previously managed drop-in can be removed without re-enabling ongoing sudo management.
+When `user_include_zshell: true`, `user_account` still runs first but skips direct shell ownership so `user_zshell` becomes the single owner of the zsh login shell and managed `.zshrc` file.
 
 ## Tag Usage
 

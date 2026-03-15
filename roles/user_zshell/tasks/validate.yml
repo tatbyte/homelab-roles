@@ -1,0 +1,69 @@
+---
+# roles/user_zshell/tasks/validate.yml
+# Validate phase tasks for the `user_zshell` role.
+# Verifies the resulting zsh login shell and managed `.zshrc` file state after
+# configuration.
+
+- name: "Validate | Derive Managed Human Admin Zsh Policy"
+  ansible.builtin.import_tasks: derive_zshell_policy.yml
+
+- name: "Validate | Collect Human Admin Account Entry For Zsh Validation"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ user_zshell_user }}"
+  register: user_zshell_validate_passwd_lookup
+  changed_when: false
+  failed_when: false
+
+- name: "Validate | Collect Requested Zsh Login Shell Path"
+  ansible.builtin.stat:
+    path: "{{ user_zshell_effective_login_shell | default(user_zshell_login_shell) }}"
+  register: user_zshell_validate_login_shell_stat
+  changed_when: false
+
+- name: "Validate | Stat Managed Human Admin Zsh RC File"
+  ansible.builtin.stat:
+    path: "{{ user_zshell_rc_path }}"
+  register: user_zshell_validate_rc_stat
+  changed_when: false
+
+- name: "Validate | Read Managed Human Admin Zsh RC File"
+  ansible.builtin.slurp:
+    path: "{{ user_zshell_rc_path }}"
+  register: user_zshell_validate_rc_slurp
+  changed_when: false
+
+- name: "Validate | Derive Human Admin Zsh Validation Facts"
+  ansible.builtin.set_fact:
+    user_zshell_validate_passwd_entries: "{{ user_zshell_validate_passwd_lookup.ansible_facts.getent_passwd | default({}) }}"
+    user_zshell_validate_present_entry: >-
+      {{
+        (user_zshell_validate_passwd_lookup.ansible_facts.getent_passwd | default({})).get(user_zshell_user)
+      }}
+  changed_when: false
+
+- name: "Validate | Render Expected Human Admin Zsh RC File"
+  ansible.builtin.set_fact:
+    user_zshell_validate_expected_rc_content: "{{ lookup('template', user_zshell_rc_template_path) }}"
+  changed_when: false
+
+- name: "Validate | Verify Human Admin Zsh Policy"
+  ansible.builtin.assert:
+    that:
+      - user_zshell_user in user_zshell_validate_passwd_entries
+      - user_zshell_validate_present_entry is not none
+      - user_zshell_validate_present_entry[4] == user_zshell_home
+      - user_zshell_validate_present_entry[5] == (user_zshell_effective_login_shell | default(user_zshell_login_shell))
+      - user_zshell_validate_login_shell_stat.stat.exists
+      - user_zshell_validate_login_shell_stat.stat.isreg
+      - user_zshell_validate_login_shell_stat.stat.executable
+      - user_zshell_validate_rc_stat.stat.exists
+      - user_zshell_validate_rc_stat.stat.isreg
+      - user_zshell_validate_rc_stat.stat.pw_name == user_zshell_user
+      - user_zshell_validate_rc_stat.stat.gr_name == user_zshell_group
+      - user_zshell_validate_rc_stat.stat.mode == '0644'
+      - (user_zshell_validate_rc_slurp.content | b64decode) == user_zshell_validate_expected_rc_content
+    fail_msg: >-
+      Validate | Human admin zsh policy does not match the requested final
+      state
+    quiet: true
