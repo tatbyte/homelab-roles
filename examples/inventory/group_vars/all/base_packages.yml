@@ -17,6 +17,7 @@ base_packages_install:
   - git               # clone repos / version control
   - sudo              # privilege escalation
   - bash-completion   # shell tab-completion improvements
+  - zsh               # example human-admin shell used by user_zshell
 
   # Basic editors / file viewing
   - vim               # main terminal editor

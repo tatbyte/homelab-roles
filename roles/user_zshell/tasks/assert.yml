@@ -1,0 +1,126 @@
+---
+# roles/user_zshell/tasks/assert.yml
+# Assert phase tasks for the `user_zshell` role.
+# Validates the requested human admin zsh policy before the login shell and
+# `.zshrc` file are managed.
+
+- name: "Assert | Validate required user_zshell variables"
+  ansible.builtin.assert:
+    that:
+      - user_zshell_user is string
+      - user_zshell_user | trim | length > 0
+      - user_zshell_user == (user_zshell_user | trim)
+      - user_zshell_user is not match('.*\\s+.*')
+      - user_zshell_group is string
+      - user_zshell_group | trim | length > 0
+      - user_zshell_group == (user_zshell_group | trim)
+      - user_zshell_group is not match('.*\\s+.*')
+      - user_zshell_home is string
+      - user_zshell_home | trim | length > 0
+      - user_zshell_home == (user_zshell_home | trim)
+      - user_zshell_home.startswith('/')
+      - user_zshell_home is not match('.*\\s+.*')
+      - user_zshell_login_shell is string
+      - user_zshell_login_shell | trim | length > 0
+      - user_zshell_login_shell == (user_zshell_login_shell | trim)
+      - user_zshell_login_shell.startswith('/')
+      - user_zshell_login_shell is not match('.*\\s+.*')
+      - (user_zshell_login_shell | basename) == 'zsh'
+      - user_zshell_aliases is mapping
+      - user_zshell_environment is mapping
+      - user_zshell_path_additions is sequence
+      - user_zshell_path_additions is not string
+      - >-
+        (user_zshell_aliases | dict2items | rejectattr('key', 'match', '^[^\\s=]+$') | list | length) == 0
+      - >-
+        (user_zshell_aliases | dict2items | rejectattr('value', 'string') | list | length) == 0
+      - >-
+        (user_zshell_environment | dict2items | rejectattr('key', 'match', '^[A-Za-z_][A-Za-z0-9_]*$') | list | length) == 0
+      - >-
+        (user_zshell_environment | dict2items | rejectattr('value', 'string') | list | length) == 0
+      - >-
+        (user_zshell_path_additions | reject('string') | list | length) == 0
+      - >-
+        (user_zshell_path_additions | select('match', '^/') | list | length) == (user_zshell_path_additions | length)
+      - >-
+        (user_zshell_path_additions | select('match', '^\\S+$') | list | length) == (user_zshell_path_additions | length)
+    fail_msg: >-
+      user_zshell_user/group/home/login_shell must be valid non-empty values
+      without whitespace, the login shell must be zsh, alias and environment
+      mappings must contain valid string values, and PATH additions must be
+      absolute string paths without whitespace
+    quiet: true
+
+- name: "Assert | Derive Managed Human Admin Zsh Policy"
+  ansible.builtin.import_tasks: derive_zshell_policy.yml
+
+- name: "Assert | Collect Human Admin Account Entry For Zsh Management"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ user_zshell_user }}"
+  register: user_zshell_assert_passwd_lookup
+  changed_when: false
+  failed_when: false
+
+- name: "Assert | Validate Human Admin Account Exists Before Zsh Management"
+  ansible.builtin.assert:
+    that:
+      - user_zshell_user in (user_zshell_assert_passwd_lookup.ansible_facts.getent_passwd | default({}))
+    fail_msg: >-
+      user_zshell_user must already exist before the user_zshell role manages
+      the human admin zsh policy
+    quiet: true
+
+- name: "Assert | Collect Human Admin Zsh Group Entry"
+  ansible.builtin.getent:
+    database: group
+    key: "{{ user_zshell_group }}"
+  register: user_zshell_assert_group_lookup
+  changed_when: false
+  failed_when: false
+
+- name: "Assert | Validate Human Admin Zsh Group Exists Before Zsh Management"
+  ansible.builtin.assert:
+    that:
+      - user_zshell_group in (user_zshell_assert_group_lookup.ansible_facts.getent_group | default({}))
+    fail_msg: >-
+      user_zshell_group must already exist before user_zshell can write the
+      managed `.zshrc` file: {{ user_zshell_group }}
+    quiet: true
+
+- name: "Assert | Validate Requested Zsh Login Shell Exists"
+  ansible.builtin.assert:
+    that:
+      - user_zshell_login_shell_resolved is string
+      - user_zshell_login_shell_resolved | length > 0
+    fail_msg: >-
+      user_zshell_login_shell must already exist and be executable before the
+      user_zshell role can manage the human admin zsh policy. Checked
+      candidates: {{ user_zshell_login_shell_candidates | join(', ') }}
+    quiet: true
+
+- name: "Assert | Validate Zsh RC Template Override Name"
+  ansible.builtin.assert:
+    that:
+      - user_zshell_rc_template_name == '' or
+        (user_zshell_rc_template_name is match('^[A-Za-z0-9._-]+\\.j2$'))
+    fail_msg: >-
+      user_zshell_rc_template_name must be empty or match a template filename
+      ending in .j2 with only A-Za-z0-9._- characters (no path separators)
+    quiet: true
+
+- name: "Assert | Resolve Zsh RC Template Content"
+  ansible.builtin.set_fact:
+    user_zshell_assert_rc_template_rendered: "{{ lookup('template', user_zshell_rc_template_path) }}"
+  changed_when: false
+
+- name: "Assert | Validate Zsh RC Template Is Available"
+  ansible.builtin.assert:
+    that:
+      - user_zshell_assert_rc_template_rendered is string
+    fail_msg: >-
+      user_zshell_effective_rc_template_name must resolve to an existing template in
+      roles/user_zshell/templates and be renderable by Ansible. Empty rendered
+      output is allowed when intentionally used. Checked value:
+      {{ user_zshell_effective_rc_template_name }}
+    quiet: true

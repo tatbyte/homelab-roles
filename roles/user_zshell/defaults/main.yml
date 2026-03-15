@@ -1,0 +1,32 @@
+---
+# roles/user_zshell/defaults/main.yml
+# Default variables for the `user_zshell` role.
+# Defines the managed zsh login shell and `.zshrc` policy for one human admin
+# account after account creation.
+
+# Existing human admin username whose zsh policy is managed.
+user_zshell_user: "{{ user_account_name | default('admin') }}"
+
+# Primary group that should own the managed `.zshrc` file.
+user_zshell_group: "{{ user_account_primary_group | default(user_zshell_user) }}"
+
+# Home directory where the managed `.zshrc` file is written.
+user_zshell_home: "{{ user_account_home | default('/home/' ~ user_zshell_user) }}"
+
+# Zsh login shell to enforce for the selected human admin account.
+user_zshell_login_shell: /usr/bin/zsh
+
+# Optional override for the managed `.zshrc` template.
+# By default the role uses `user_zshell_zshrc.j2`.
+# If you set this, the value must be a template path basename under
+# roles/user_zshell/templates/ and that template must render successfully.
+user_zshell_rc_template_name: ""
+
+# Optional shell aliases written into the managed `.zshrc`.
+user_zshell_aliases: {}
+
+# Optional environment variables written into the managed `.zshrc`.
+user_zshell_environment: {}
+
+# Optional PATH entries prepended in order when the directories exist.
+user_zshell_path_additions: []

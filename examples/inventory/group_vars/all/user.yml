@@ -26,3 +26,8 @@ user_cleanup_disabled_sudo_drop_in: false
 # `password` as a documented local-lab example, so replace that demo hash
 # before using this pattern on a real host.
 user_include_password: true
+
+# 5. `user_zshell` runs after account, group, sudo, and password state.
+# Keep this enabled in the example lab so the human admin account gets the
+# managed zsh login shell and a managed `.zshrc`.
+user_include_zshell: true

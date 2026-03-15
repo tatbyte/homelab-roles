@@ -16,8 +16,12 @@ user_account_primary_group: "{{ user_account_name }}"
 # Desired account state for the human admin account.
 user_account_state: present
 
-# Baseline login shell for the human admin account.
-# Keep this minimal here so a future `user_shell` role can own richer shell policy.
+# If true, manage the login shell directly in `user_account`.
+# Aggregate `user` disables this automatically when `user_zshell` is enabled.
+user_account_manage_shell: true
+
+# Baseline login shell for the human admin account when this role manages it.
+# Keep this minimal so `user_zshell` can own richer zsh policy when enabled.
 user_account_shell: /bin/bash
 
 # Home directory for the human admin account.
