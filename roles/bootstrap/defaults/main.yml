@@ -7,8 +7,8 @@
 bootstrap_user: admin
 
 # Fixed UID/GID keep ownership predictable across hosts and restores.
-bootstrap_puid: 1000
-bootstrap_pgid: 1000
+bootstrap_puid: 1100
+bootstrap_pgid: 1100
 
 # Sudo-capable group to attach the automation account to.
 bootstrap_sudo_group: sudo

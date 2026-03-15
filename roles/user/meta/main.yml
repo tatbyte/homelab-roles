@@ -1,0 +1,6 @@
+---
+# roles/user/meta/main.yml
+# Role metadata for `user`.
+# Leaves dependencies empty because aggregate user-role ordering is defined in `roles/user/tasks/main.yml`.
+
+dependencies: []

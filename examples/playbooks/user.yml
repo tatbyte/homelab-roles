@@ -1,0 +1,10 @@
+---
+# examples/playbooks/user.yml
+# User phase playbook for the example lab.
+# Connects as the automation account after the base phase and applies the aggregate `user` role.
+
+- name: Apply user role after base
+  hosts: all
+  become: true
+  roles:
+    - role: user

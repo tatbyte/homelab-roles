@@ -1,0 +1,4 @@
+---
+# examples/inventory/group_vars/all/user.yml
+# Shared aggregate user-role variables for the example lab.
+# Intentionally empty because the aggregate `user` role currently delegates work through `user_account_*` variables only.

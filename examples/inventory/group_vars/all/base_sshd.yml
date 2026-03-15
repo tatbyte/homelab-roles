@@ -29,3 +29,4 @@ base_sshd_allow_users:
   - vagrant      # Used by Vagrant for VM lifecycle (halt/up) and testing automation
   - ansible
   - admin
+  - human-user    # Example human admin account managed by the user layer

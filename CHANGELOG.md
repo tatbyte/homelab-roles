@@ -3,6 +3,23 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v1.1.0]
+### Added
+- Added the aggregate `user` role for the post-base human-admin user layer, including explicit aggregate ordering, metadata, documentation, and example playbook wiring.
+- Added the standalone `user_account` role for creating, adopting, and validating one human admin account with explicit primary-group, home-directory, baseline shell, and optional password-lock management.
+- Added example inventory files for the new user layer, including `user.yml` and `user_account.yml`, plus a dedicated `examples/playbooks/user.yml` entrypoint.
+
+### Changed
+- Updated the example `site.yml` flow so the full post-bootstrap stack now runs `base` and then `user`.
+- Shifted the bootstrap-role default automation UID/GID to `1100` and kept the new human-admin `user_account` role defaults at `1050` to preserve a clearer ID separation between automation and human accounts.
+- Updated the example SSH allow-list so the example human admin account created by the user layer is permitted by the managed `base_sshd` policy.
+- Hardened `user_account` input validation and final-state validation so missing users or groups fail cleanly instead of crashing through unsafe fact lookups, and so unmanaged primary groups are asserted explicitly before config runs.
+- Added explicit `user_account_move_home` handling so adopting an existing user now fails early on unexpected home-directory changes unless the move is intentionally allowed.
+- Made `user_account` password-lock management opt-in by treating `null` as "leave current password-lock state unchanged", reducing repeated change noise on reruns.
+
+### Documentation
+- Updated repository, workflow, role, and example documentation to describe the new `user` aggregate role, the `user_account` role, the expanded example lab flow, and the bootstrap-versus-user UID/GID defaults.
+
 ## [v1.0.0]
 ### Changed
 - Declared the recurring Debian-family `base` stack complete at `v1.0.0`, covering the aggregate base workflow plus the current optional follow-up roles for firewall, fail2ban, logging, updates, AppArmor, auditd, upgrade, and needrestart.

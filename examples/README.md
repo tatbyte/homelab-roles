@@ -1,7 +1,7 @@
 # examples/README.md
 
 Guide for the local example lab in `examples/`.
-Explains the example file layout, the explicit bootstrap phase, and the follow-up base phase for Debian-family hosts.
+Explains the example file layout, the explicit bootstrap phase, and the follow-up base plus user phases for Debian-family hosts.
 
 ## Scope
 This example lab targets Debian-family hosts such as Debian and Ubuntu.
@@ -10,10 +10,11 @@ The inventory variables and role inputs assume the repository's Debian-family de
 ## Structure
 - `ansible.cfg`: Test-specific Ansible configuration that points at the example inventory and hides skipped-host output for quieter local runs.
 - `inventory/hosts.ini`: Test inventory.
-- `inventory/group_vars/all/`: Shared variables for test hosts, split into per-role files such as `bootstrap.yml`, `base_packages.yml`, `base_hostname.yml`, `base_hosts.yml`, `base_dns.yml`, `base_locale.yml`, `base_ntp.yml`, `base_sudo.yml`, `base_sshd.yml`, `base_firewall.yml`, `base_fail2ban.yml`, `base_logging.yml`, `base_updates.yml`, `base_apparmor.yml`, `base_auditd.yml`, `base_upgrade.yml`, `base_needrestart.yml`, `base_timezone.yml`, and `monitoring_authorized_key.yml`.
+- `inventory/group_vars/all/`: Shared variables for test hosts, split into per-role files such as `bootstrap.yml`, `base_packages.yml`, `base_hostname.yml`, `base_hosts.yml`, `base_dns.yml`, `base_locale.yml`, `base_ntp.yml`, `base_sudo.yml`, `base_sshd.yml`, `base_firewall.yml`, `base_fail2ban.yml`, `base_logging.yml`, `base_updates.yml`, `base_apparmor.yml`, `base_auditd.yml`, `base_upgrade.yml`, `base_needrestart.yml`, `base_timezone.yml`, `user.yml`, `user_account.yml`, and `monitoring_authorized_key.yml`.
 - `playbooks/bootstrap.yml`: Bootstrap phase playbook that connects with the initial admin account and applies the standalone `bootstrap` role.
 - `playbooks/base.yml`: Base phase playbook that connects as the automation account, applies the `base` role, and uses `serial: 1` so reboot-capable base runs process one host at a time.
-- `playbooks/site.yml`: Base-phase entry playbook that imports `base.yml`.
+- `playbooks/user.yml`: User phase playbook that connects as the automation account after the base phase and applies the aggregate `user` role.
+- `playbooks/site.yml`: Post-bootstrap entry playbook that imports `base.yml` and then `user.yml`.
 - `playbooks/tests/test_base_sshd.yml`: Integration test playbook that temporarily adds extra SSH daemon fragments, runs `base_sshd`, verifies merged `AllowUsers` plus `Match User` and `Match Address` behavior, and removes the temporary fixtures.
 
 ## Usage
@@ -23,7 +24,7 @@ Run bootstrap from repository root:
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/bootstrap.yml
 ```
 
-Then run the base phase:
+Then run the full post-bootstrap stack:
 
 ```sh
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/site.yml
@@ -40,6 +41,12 @@ Equivalent direct base-phase command:
 
 ```sh
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/base.yml
+```
+
+Equivalent direct user-phase command:
+
+```sh
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/user.yml
 ```
 
 Optional `base_sshd` integration check:
@@ -62,6 +69,7 @@ The SSH integration test playbook cleans up its temporary `/etc/ssh/sshd_config.
 This means the example base run may fail intentionally after package maintenance when restart follow-up is still pending; set the `base_needrestart_fail_if_*` values back to `false` for report-only example runs.
 When the example run's `base_upgrade` role makes no package-maintenance changes and leaves no reboot-required follow-up, `base_needrestart` now skips the batch check automatically to reduce no-change noise.
 `playbooks/base.yml` uses `serial: 1`, which is safer when optional roles such as `base_upgrade` may reboot a host during the run.
+`inventory/group_vars/all/user_account.yml` defines the example human admin account enforced after the base phase through the aggregate `user` role.
 `ansible.cfg` sets `display_skipped_hosts = False`, so optional-role and conditional-task skips are hidden during normal example runs.
 
 ## Bootstrap Credentials

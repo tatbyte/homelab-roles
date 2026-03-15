@@ -15,6 +15,7 @@ The current role set is centered on:
 
 - bootstrap access for the automation account
 - recurring base host configuration and hardening
+- recurring human admin account management
 - monitoring-related access primitives
 
 This is a roles repository, not the full infrastructure repository.
@@ -31,7 +32,9 @@ homelab-roles/
 │   ├── base/
 │   ├── bootstrap/
 │   ├── monitoring/
-│   └── monitoring_authorized_key/
+│   ├── monitoring_authorized_key/
+│   ├── user/
+│   └── user_account/
 ├── examples/
 │   ├── ansible.cfg
 │   ├── inventory/
@@ -62,6 +65,8 @@ homelab-roles/
 - `base_timezone`: Enforces the system timezone on Debian-family hosts during the base phase.
 - `monitoring`: Aggregates monitoring-related configuration through dependency roles such as `monitoring_authorized_key`.
 - `monitoring_authorized_key`: Installs an SSH authorized key for monitoring-style inter-host access.
+- `user`: Aggregates recurring human admin user configuration through explicit `include_role` ordering in `roles/user/tasks/main.yml` for `user_account`.
+- `user_account`: Creates and validates one human admin account with explicit primary-group, shell, home-directory, and basic account-state enforcement after the base phase.
 
 ## Consume From Another Repo
 Recommended pattern: add this repository to your infra repository (submodule or vendored checkout), then point `roles_path` to `homelab-roles/roles`.
@@ -90,6 +95,12 @@ Example infra playbook:
   roles:
     - role: base
 
+- name: Apply human admin user setup
+  hosts: all
+  become: true
+  roles:
+    - role: user
+
 - name: Apply monitoring access
   hosts: monitoring_targets
   become: true
@@ -106,10 +117,16 @@ Run bootstrap first from repo root:
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/bootstrap.yml
 ```
 
-Then run the base phase:
+Then run the full post-bootstrap stack:
 
 ```sh
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/site.yml
+```
+
+Equivalent direct user-phase command:
+
+```sh
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/user.yml
 ```
 
 Optional `base_sshd` integration check:
@@ -151,7 +168,7 @@ See [docs/00-pre-commit.mb](docs/00-pre-commit.mb) for full setup details.
 Core repository docs:
 
 - [docs/01-examples.md](docs/01-examples.md): Example lab layout and execution flow
-- [docs/02-role-workflow.md](docs/02-role-workflow.md): Shared role phase structure and aggregate base-role ordering
+- [docs/02-role-workflow.md](docs/02-role-workflow.md): Shared role phase structure and aggregate base-role plus user-role ordering
 - [docs/03-file-consistency.md](docs/03-file-consistency.md): File header and wording consistency rules
 - [docs/04-firewall-role-integration.md](docs/04-firewall-role-integration.md): How future roles should register firewall rules for `base_firewall`
 

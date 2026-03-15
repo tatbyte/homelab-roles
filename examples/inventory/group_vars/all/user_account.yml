@@ -1,0 +1,47 @@
+---
+# examples/inventory/group_vars/all/user_account.yml
+# Shared human admin account variables for the example lab.
+# Defines the example account state enforced after the base phase through the aggregate `user` role.
+
+# Human admin account managed by the example user layer.
+# Keep this separate from the automation account created during bootstrap.
+user_account_name: human-user
+
+# Fixed UID/GID help keep ownership predictable if the example admin account
+# already exists and you want the role to adopt it into a stable baseline.
+user_account_uid: 1050
+user_account_gid: 1050
+
+# Primary group for the example human admin account.
+user_account_primary_group: human-user
+
+# Keep the example account present after the base phase.
+user_account_state: present
+
+# Baseline login shell enforced for the example admin account.
+# Keep this minimal here so a future `user_shell` role can own broader shell policy.
+user_account_shell: /bin/bash
+
+# Home directory enforced for the example admin account.
+user_account_home: "/home/{{ user_account_name }}"
+
+# Keep home moves disabled in the example lab unless you intentionally need to
+# relocate an existing account's home directory to a new managed path.
+user_account_move_home: false
+
+# Ensure the example admin primary group exists before the account is managed.
+user_account_manage_primary_group: true
+
+# Create the example admin home directory if it does not already exist.
+user_account_create_home: true
+
+# Keep the home directory if you ever switch the example account to absent.
+user_account_remove: false
+
+# Descriptive GECOS/comment field for the example human admin account.
+user_account_comment: Example human admin account managed by Ansible
+
+# Leave password-lock state unmanaged in the example lab so the role avoids
+# unnecessary unlock operations and repeated change noise on hosts where the
+# current password state is already acceptable.
+user_account_password_lock: null

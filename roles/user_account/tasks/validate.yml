@@ -1,0 +1,87 @@
+---
+# roles/user_account/tasks/validate.yml
+# Validate phase tasks for the `user_account` role.
+# Verifies the resulting passwd, group, and home-directory state after configuration.
+
+- name: "Validate | Collect Human Admin Passwd Entry"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ user_account_name }}"
+  register: user_account_passwd_lookup
+  changed_when: false
+  failed_when: false
+
+- name: "Validate | Collect Human Admin Primary Group Entry"
+  ansible.builtin.getent:
+    database: group
+    key: "{{ user_account_primary_group }}"
+  register: user_account_group_lookup
+  changed_when: false
+  failed_when: false
+  when:
+    - user_account_state == 'present'
+    - user_account_manage_primary_group | bool
+
+- name: "Validate | Stat Human Admin Home Directory"
+  ansible.builtin.stat:
+    path: "{{ user_account_home }}"
+  register: user_account_home_stat
+  changed_when: false
+  when:
+    - user_account_state == 'present'
+    - user_account_create_home | bool
+
+- name: "Validate | Derive Human Admin Validation Facts"
+  ansible.builtin.set_fact:
+    user_account_passwd_entries: "{{ user_account_passwd_lookup.ansible_facts.getent_passwd | default({}) }}"
+    user_account_group_entries: "{{ user_account_group_lookup.ansible_facts.getent_group | default({}) }}"
+    user_account_present_entry: >-
+      {{
+        (user_account_passwd_lookup.ansible_facts.getent_passwd | default({})).get(user_account_name)
+        if user_account_state == 'present'
+        else none
+      }}
+    user_account_present_group_entry: >-
+      {{
+        (user_account_group_lookup.ansible_facts.getent_group | default({})).get(user_account_primary_group)
+        if user_account_state == 'present' and user_account_manage_primary_group | bool
+        else none
+      }}
+  changed_when: false
+
+- name: "Validate | Verify Human Admin Account Matches Configured State"
+  ansible.builtin.assert:
+    that:
+      - user_account_state != 'present' or (
+          user_account_name in user_account_passwd_entries
+        )
+      - user_account_state != 'absent' or (
+          user_account_name not in user_account_passwd_entries
+        )
+      - user_account_state != 'present' or (
+          user_account_present_entry is not none
+          and user_account_present_entry[1] | int == user_account_uid
+        )
+      - user_account_state != 'present' or (
+          user_account_present_entry is not none
+          and user_account_present_entry[4] == user_account_home
+        )
+      - user_account_state != 'present' or (
+          user_account_present_entry is not none
+          and user_account_present_entry[5] == user_account_shell
+        )
+      - user_account_state != 'present' or not user_account_manage_primary_group or (
+          user_account_present_group_entry is not none
+          and user_account_present_group_entry[1] | int == user_account_gid
+          and user_account_present_entry is not none
+          and user_account_present_entry[2] | int == user_account_gid
+        )
+      - user_account_state != 'present' or not user_account_create_home or (
+          user_account_home_stat.stat.exists
+          and user_account_home_stat.stat.isdir
+          and user_account_home_stat.stat.pw_name == user_account_name
+          and user_account_home_stat.stat.gr_name == user_account_primary_group
+        )
+    fail_msg: >-
+      Validate | Human admin account is not in the expected final state (passwd/group/home directory)
+    quiet: true
