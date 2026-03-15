@@ -1,4 +1,6 @@
 ---
 # roles/user/defaults/main.yml
 # Default variables for the `user` role.
-# Intentionally empty because this aggregate role currently delegates work through explicit child-role includes only.
+# Defines optional aggregate-role toggles that extend the human-admin user layer without changing existing consumers by default.
+
+user_include_password: false

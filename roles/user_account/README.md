@@ -7,7 +7,6 @@ Explains how the role creates and validates one human admin account after the ba
 - Ensures the primary group exists for the human admin account when enabled
 - Ensures the human admin user exists with the expected UID, GID, baseline login shell, home directory, and basic account settings
 - Supports enforcing an existing human admin account instead of assuming fresh creation, while requiring explicit opt-in before moving an existing home directory
-- Can optionally manage password-lock state for SSH-oriented admin access
 - Validates resulting passwd, group, and home-directory state
 
 ## Variables
@@ -26,7 +25,6 @@ Explains how the role creates and validates one human admin account after the ba
 | `user_account_create_home` | `true` | no | If true, create the home directory for present accounts |
 | `user_account_remove` | `false` | no | If true and the account is absent, remove the home directory and mail spool |
 | `user_account_comment` | `Human admin account managed by Ansible` | no | Optional GECOS/comment field |
-| `user_account_password_lock` | `null` | no | Optional password-lock state: `true` locks, `false` unlocks, `null` leaves password-lock state unmanaged |
 
 ## Usage
 
@@ -56,6 +54,7 @@ Example role ordering with the planned `user_*` layer:
 `user_account` intentionally keeps shell handling narrow.
 Use `user_account_shell` for the account's baseline login shell, and let a future `user_shell` role manage dotfiles, aliases, environment variables, PATH changes, and any richer shell-policy decisions.
 When adopting an existing user, the role fails early if the current home path differs from `user_account_home` unless `user_account_move_home: true` is set explicitly.
+Use `user_password` when you want to manage a hashed local password or password-lock state for the same human admin account.
 
 ## Dependencies
 None

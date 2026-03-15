@@ -37,7 +37,3 @@ user_account_remove: false
 
 # Optional GECOS/comment field for the human admin account.
 user_account_comment: Human admin account managed by Ansible
-
-# Optional password-lock state for the account.
-# Set to true to lock the password, false to unlock it, or null to leave password-lock state unmanaged.
-user_account_password_lock: null

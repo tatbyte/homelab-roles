@@ -1,10 +1,7 @@
 ---
 # examples/inventory/group_vars/all/base_firewall.yml
 # Shared firewall variables for the example lab.
-# Defines the aggregate-role opt-in, UFW package, enabled state, default policies, baseline rules, and optional host additions enforced during the base phase.
-
-# Opt in to the optional base_firewall role from the aggregate base role.
-base_include_firewall: true
+# Defines the UFW package, enabled state, default policies, baseline rules, and optional host additions enforced during the base phase.
 
 # Package list installed with APT to provide the firewall on the host.
 base_firewall_packages:

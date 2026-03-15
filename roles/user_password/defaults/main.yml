@@ -1,0 +1,15 @@
+---
+# roles/user_password/defaults/main.yml
+# Default variables for the `user_password` role.
+# Defines the Vault-friendly password state enforced for one human admin account after the account already exists.
+
+# Human admin username whose local password state is managed.
+user_password_user: "{{ user_account_name | default('admin') }}"
+
+# Vault-managed hashed password for the human admin account.
+# Keep this null unless you are supplying a real password hash from a secret backend.
+user_password_password_hash: null
+
+# Optional password-lock state for the human admin account.
+# Set to true to lock, false to unlock, or null to leave lock state unchanged.
+user_password_password_lock: null

@@ -40,8 +40,3 @@ user_account_remove: false
 
 # Descriptive GECOS/comment field for the example human admin account.
 user_account_comment: Example human admin account managed by Ansible
-
-# Leave password-lock state unmanaged in the example lab so the role avoids
-# unnecessary unlock operations and repeated change noise on hosts where the
-# current password state is already acceptable.
-user_account_password_lock: null

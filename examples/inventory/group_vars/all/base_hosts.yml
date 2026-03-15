@@ -1,12 +1,7 @@
 ---
 # examples/inventory/group_vars/all/base_hosts.yml
 # Shared hosts-file variables for the example lab.
-# Defines the aggregate-role opt-in plus the inventory-driven `/etc/hosts` block settings used during the base phase.
-
-# Opt in to the optional base_hosts role from the aggregate base role.
-# This keeps inventory-driven host mappings available on every example host
-# without depending on external DNS for internal lab name resolution.
-base_include_hosts: true
+# Defines the inventory-driven `/etc/hosts` block settings used during the base phase.
 
 # Inventory group used to build the managed `/etc/hosts` block.
 # Keep `all` here so every host in the example lab learns the inventory

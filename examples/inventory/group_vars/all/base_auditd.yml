@@ -1,10 +1,7 @@
 ---
 # examples/inventory/group_vars/all/base_auditd.yml
 # Shared audit variables for the example lab.
-# Defines the aggregate-role opt-in plus the audit package, service, and minimal configuration baseline enforced during the base phase.
-
-# Opt in to the optional base_auditd role from the aggregate base role.
-base_include_auditd: true
+# Defines the audit package, service, and minimal configuration baseline enforced during the base phase.
 
 # Package list installed with APT to provide the Linux audit daemon baseline.
 base_auditd_packages:

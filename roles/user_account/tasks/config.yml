@@ -23,10 +23,4 @@
     move_home: "{{ user_account_move_home if user_account_state == 'present' else omit }}"
     create_home: "{{ user_account_create_home if user_account_state == 'present' else omit }}"
     comment: "{{ user_account_comment if user_account_state == 'present' else omit }}"
-    password_lock: >-
-      {{
-        user_account_password_lock
-        if user_account_state == 'present' and user_account_password_lock is not none
-        else omit
-      }}
     remove: "{{ user_account_remove if user_account_state == 'absent' else omit }}"

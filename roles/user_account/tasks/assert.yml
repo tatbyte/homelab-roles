@@ -15,7 +15,6 @@
       - user_account_manage_primary_group is boolean
       - user_account_create_home is boolean
       - user_account_remove is boolean
-      - user_account_password_lock is none or user_account_password_lock is boolean
       - user_account_state != 'present' or (
           user_account_uid is number
           and user_account_uid | int >= 1000

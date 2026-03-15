@@ -1,10 +1,7 @@
 ---
 # examples/inventory/group_vars/all/base_dns.yml
 # Shared DNS variables for the example lab.
-# Defines the aggregate-role opt-in plus the resolver mode, DNS servers, and optional search domains enforced during the base phase.
-
-# Opt in to the optional base_dns role from the aggregate base role.
-base_include_dns: true
+# Defines the resolver mode, DNS servers, and optional search domains enforced during the base phase.
 
 # Resolver backend managed during the base phase.
 # Keep the default `systemd_resolved` mode in the example lab so DNS state

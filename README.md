@@ -34,7 +34,8 @@ homelab-roles/
 │   ├── monitoring/
 │   ├── monitoring_authorized_key/
 │   ├── user/
-│   └── user_account/
+│   ├── user_account/
+│   └── user_password/
 ├── examples/
 │   ├── ansible.cfg
 │   ├── inventory/
@@ -65,8 +66,9 @@ homelab-roles/
 - `base_timezone`: Enforces the system timezone on Debian-family hosts during the base phase.
 - `monitoring`: Aggregates monitoring-related configuration through dependency roles such as `monitoring_authorized_key`.
 - `monitoring_authorized_key`: Installs an SSH authorized key for monitoring-style inter-host access.
-- `user`: Aggregates recurring human admin user configuration through explicit `include_role` ordering in `roles/user/tasks/main.yml` for `user_account`.
+- `user`: Aggregates recurring human admin user configuration through explicit `include_role` ordering in `roles/user/tasks/main.yml` for `user_account` plus optional `user_password`.
 - `user_account`: Creates and validates one human admin account with explicit primary-group, shell, home-directory, and basic account-state enforcement after the base phase.
+- `user_password`: Manages Vault-friendly hashed local password state and optional password locking for one existing human admin account after the base phase.
 
 ## Consume From Another Repo
 Recommended pattern: add this repository to your infra repository (submodule or vendored checkout), then point `roles_path` to `homelab-roles/roles`.
@@ -144,6 +146,7 @@ ansible-playbook playbooks/site.yml
 
 See [examples/README.md](examples/README.md) and [docs/01-examples.md](docs/01-examples.md) for lab details.
 The current example lab intentionally keeps `base_upgrade` and strict `base_needrestart` follow-up enabled, so a base run may fail when pending reboot or service-restart work is detected after upgrades.
+The current example lab also enables `user_password` with a documented demo hash for the plaintext test password `password`, so replace that example value before copying the pattern to a real host.
 
 ## Linting
 Pre-commit and linting are configured in this repository.
@@ -171,6 +174,7 @@ Core repository docs:
 - [docs/02-role-workflow.md](docs/02-role-workflow.md): Shared role phase structure and aggregate base-role plus user-role ordering
 - [docs/03-file-consistency.md](docs/03-file-consistency.md): File header and wording consistency rules
 - [docs/04-firewall-role-integration.md](docs/04-firewall-role-integration.md): How future roles should register firewall rules for `base_firewall`
+- [docs/05-vault.md](docs/05-vault.md): Short Vault guidance for secret-bearing inventory values such as `user_password`
 
 ## License
 MIT

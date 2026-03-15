@@ -107,8 +107,9 @@ Its include-task tags should mirror the generic phase tags plus the child role's
 Current order:
 
 1. `user_account`
+2. `user_password` when `user_include_password: true`
 
-Use this sequence to keep human-admin account creation and adoption explicit after the `base_*` layer and before any future user-environment roles such as SSH, shell, or profile management.
+Use this sequence to keep human-admin account creation and adoption explicit first, then optional secret-backed local password management, before any future user-environment roles such as SSH, shell, or profile management.
 
 ## Tag Usage
 
@@ -129,9 +130,12 @@ Run the full workflow by running the playbook with no tag filter.
 
 ## Optional Role Toggle Convention
 
-Use a consistent toggle pattern when you add new optional roles to the aggregate `base` stack.
+Use a consistent toggle pattern when you add new optional roles to an aggregate stack.
 
+- Keep aggregate include toggles in aggregate-scoped variables such as `base.yml` or `user.yml`.
+- Keep child-role inputs in the matching child-role file such as `base_firewall.yml` or `user_password.yml`.
 - Use `base_include_<role>` when the whole role is optional in the aggregate `base` role.
+- Use `user_include_<role>` when the whole role is optional in the aggregate `user` role.
 - Use `<role>_enabled` only when the role manages a service and an installed-but-disabled state is a valid supported outcome.
 - Do not add `enabled` flags to roles that only enforce static configuration or one-time state.
 
