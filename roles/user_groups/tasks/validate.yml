@@ -1,0 +1,78 @@
+---
+# roles/user_groups/tasks/validate.yml
+# Validate phase tasks for the `user_groups` role.
+# Verifies the resulting supplementary-group state for each managed human admin account after configuration.
+
+- name: "Validate | Derive Effective Human Admin Supplementary-Group Memberships"
+  ansible.builtin.import_tasks: derive_effective_memberships.yml
+
+- name: "Validate | Collect Human Admin Account Entries For Group Validation"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ item.user }}"
+  register: user_groups_validate_passwd_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ user_groups_effective_memberships }}"
+  loop_control:
+    label: "{{ item.user }}"
+
+- name: "Validate | Collect Effective Group Lists For Managed Human Admin Accounts"
+  ansible.builtin.command:
+    cmd: "id -Gn {{ item.user }}"
+  register: user_groups_validate_all_groups
+  changed_when: false
+  failed_when: false
+  loop: "{{ user_groups_effective_memberships }}"
+  loop_control:
+    label: "{{ item.user }}"
+
+- name: "Validate | Collect Primary Groups For Managed Human Admin Accounts"
+  ansible.builtin.command:
+    cmd: "id -gn {{ item.user }}"
+  register: user_groups_validate_primary_groups
+  changed_when: false
+  failed_when: false
+  loop: "{{ user_groups_effective_memberships }}"
+  loop_control:
+    label: "{{ item.user }}"
+
+- name: "Validate | Verify Human Admin Supplementary Group Membership"
+  vars:
+    user_groups_validate_desired_groups: "{{ item.groups | unique | sort }}"
+    user_groups_validate_primary_group: >-
+      {{
+        user_groups_validate_primary_groups.results[user_groups_membership_index].stdout
+        | trim
+      }}
+    user_groups_validate_actual_supplementary_groups: >-
+      {{
+        (
+          user_groups_validate_all_groups.results[user_groups_membership_index].stdout
+          | trim
+          | split()
+        )
+        | difference([user_groups_validate_primary_group])
+        | unique
+        | sort
+      }}
+  ansible.builtin.assert:
+    that:
+      - item.user in (user_groups_validate_passwd_lookup.results[user_groups_membership_index].ansible_facts.getent_passwd | default({}))
+      - user_groups_validate_all_groups.results[user_groups_membership_index].rc == 0
+      - user_groups_validate_primary_groups.results[user_groups_membership_index].rc == 0
+      - (user_groups_validate_desired_groups | difference(user_groups_validate_actual_supplementary_groups) | length) == 0
+      - >-
+        (
+          item.append | default(true) | bool
+        ) or (
+          user_groups_validate_actual_supplementary_groups == user_groups_validate_desired_groups
+        )
+    fail_msg: >-
+      Validate | Human admin supplementary-group state does not match the
+      requested user_groups policy
+    quiet: true
+  loop: "{{ user_groups_effective_memberships }}"
+  loop_control:
+    label: "{{ item.user }}"
+    index_var: user_groups_membership_index

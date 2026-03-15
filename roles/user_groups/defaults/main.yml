@@ -1,0 +1,30 @@
+---
+# roles/user_groups/defaults/main.yml
+# Default variables for the `user_groups` role.
+# Defines supplementary group membership enforcement for existing human admin accounts after account creation.
+
+# If true, create any requested supplementary groups before enforcing
+# membership. Leave this false when the desired groups should already exist
+# from the base system or another role.
+user_groups_manage_groups: false
+
+# Shared baseline supplementary group memberships enforced for human admin
+# accounts.
+user_groups_base_memberships: []
+
+# Supplementary group memberships declared by other roles before `user_groups`
+# runs.
+user_groups_role_declared_memberships: []
+
+# Extra inventory-specific supplementary group memberships appended after the
+# baseline and role-declared layers.
+user_groups_additional_memberships: []
+
+# Effective supplementary group memberships after the base, role-declared, and
+# additional layers are combined.
+user_groups_memberships: >-
+  {{
+    (user_groups_base_memberships | default([]))
+    + (user_groups_role_declared_memberships | default([]))
+    + (user_groups_additional_memberships | default([]))
+  }}

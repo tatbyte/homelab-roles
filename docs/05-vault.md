@@ -58,7 +58,7 @@ user_password_password_hash: "{{ vault_user_password_hash }}"
 
 - `user_password`: best current fit, because it manages `user_password_password_hash`, which is secret-bearing and should not live in plain inventory.
 
-Today, `user_account`, `base_*`, and `monitoring_authorized_key` do not need Vault for their normal role inputs.
+Today, `user_account`, `user_groups`, `base_*`, and `monitoring_authorized_key` do not need Vault for their normal role inputs.
 The example `bootstrap` flow also prompts for the initial password instead of storing it in inventory.
 
 ## Why

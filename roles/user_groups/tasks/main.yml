@@ -1,0 +1,16 @@
+---
+# roles/user_groups/tasks/main.yml
+# Task entrypoint for the `user_groups` role.
+# Imports the assert, config, and validate phase files in order.
+
+- name: Assert
+  ansible.builtin.import_tasks: assert.yml
+  tags: [user_groups, assert, user_groups_assert]
+
+- name: Config
+  ansible.builtin.import_tasks: config.yml
+  tags: [user_groups, config, user_groups_config]
+
+- name: Validate
+  ansible.builtin.import_tasks: validate.yml
+  tags: [user_groups, validate, user_groups_validate]

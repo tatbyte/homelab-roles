@@ -1,0 +1,124 @@
+---
+# roles/user_groups/tasks/assert.yml
+# Assert phase tasks for the `user_groups` role.
+# Validates the requested human admin supplementary-group policy before group membership management starts.
+
+- name: "Assert | Validate user_groups variable structure"
+  ansible.builtin.assert:
+    that:
+      - user_groups_manage_groups is boolean
+      - user_groups_base_memberships is sequence
+      - user_groups_base_memberships is not string
+      - user_groups_role_declared_memberships is sequence
+      - user_groups_role_declared_memberships is not string
+      - user_groups_additional_memberships is sequence
+      - user_groups_additional_memberships is not string
+      - user_groups_memberships is sequence
+      - user_groups_memberships is not string
+    fail_msg: >-
+      user_groups_manage_groups must be a boolean and
+      user_groups_base_memberships, user_groups_role_declared_memberships,
+      user_groups_additional_memberships, and user_groups_memberships must be
+      lists
+    quiet: true
+
+- name: "Assert | Validate requested human admin supplementary-group memberships"
+  ansible.builtin.assert:
+    that:
+      - item is mapping
+      - (item.keys() | difference(['user', 'groups', 'append']) | length) == 0
+      - item.user is defined
+      - item.user is string
+      - item.user | trim | length > 0
+      - item.user == (item.user | trim)
+      - item.user is not match('.*\\s+.*')
+      - item.groups is defined
+      - item.groups is sequence
+      - item.groups is not string
+      - (item.groups | map('string') | list | length) == (item.groups | length)
+      - (item.groups | map('trim') | reject('equalto', '') | list | length) == (item.groups | length)
+      - >-
+        (
+          item.groups
+          | select('match', '.*\\s+.*')
+          | list
+          | length
+        ) == 0
+      - (item.groups | unique | list | length) == (item.groups | length)
+      - item.append is not defined or item.append is boolean
+    fail_msg: >-
+      Each user_groups_memberships item must be a mapping with only user,
+      groups, and optional append keys. user must be a non-empty username
+      without whitespace, groups must be a list of unique non-empty group
+      names without whitespace, and append must be a boolean when set
+    quiet: true
+  loop: "{{ user_groups_memberships }}"
+  loop_control:
+    label: "{{ item.user | default('user-membership') }}"
+
+- name: "Assert | Derive Effective Human Admin Supplementary-Group Memberships"
+  ansible.builtin.import_tasks: derive_effective_memberships.yml
+
+- name: "Assert | Collect Existing Human Admin Account Entries For Group Management"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ item.user }}"
+  register: user_groups_assert_passwd_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ user_groups_effective_memberships }}"
+  loop_control:
+    label: "{{ item.user }}"
+
+- name: "Assert | Validate Human Admin Accounts Exist Before Group Management"
+  ansible.builtin.assert:
+    that:
+      - item.item.user in (item.ansible_facts.getent_passwd | default({}))
+    fail_msg: >-
+      Every user_groups effective user must already exist before the
+      user_groups role manages supplementary groups
+    quiet: true
+  loop: "{{ user_groups_assert_passwd_lookup.results }}"
+  loop_control:
+    label: "{{ item.item.user }}"
+
+- name: "Assert | Derive Requested Supplementary Group List"
+  ansible.builtin.set_fact:
+    user_groups_desired_groups: >-
+      {{
+        user_groups_effective_memberships
+        | map(attribute='groups')
+        | flatten
+        | unique
+        | list
+      }}
+  changed_when: false
+
+- name: "Assert | Collect Requested Supplementary Group Entries When Automatic Group Creation Is Disabled"
+  ansible.builtin.getent:
+    database: group
+    key: "{{ item }}"
+  register: user_groups_assert_group_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ user_groups_desired_groups }}"
+  loop_control:
+    label: "{{ item }}"
+  when:
+    - not user_groups_manage_groups | bool
+    - user_groups_desired_groups | length > 0
+
+- name: "Assert | Validate Requested Supplementary Groups Exist When Automatic Group Creation Is Disabled"
+  ansible.builtin.assert:
+    that:
+      - item.item in (item.ansible_facts.getent_group | default({}))
+    fail_msg: >-
+      Every requested user_groups supplementary group must already exist when
+      user_groups_manage_groups is false
+    quiet: true
+  loop: "{{ user_groups_assert_group_lookup.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when:
+    - not user_groups_manage_groups | bool
+    - user_groups_desired_groups | length > 0
