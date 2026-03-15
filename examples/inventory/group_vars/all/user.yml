@@ -1,4 +1,11 @@
 ---
 # examples/inventory/group_vars/all/user.yml
 # Shared aggregate user-role variables for the example lab.
-# Intentionally empty because the aggregate `user` role currently delegates work through `user_account_*` variables only.
+# Defines the optional aggregate-role toggles for the example user layer.
+
+# Keep password management enabled in the example lab so the example human
+# admin account has a usable local password in addition to any SSH access.
+# The companion `user_password.yml` file uses the plaintext test password
+# `password` as a documented local-lab example, so replace that demo hash
+# before using this pattern on a real host.
+user_include_password: true

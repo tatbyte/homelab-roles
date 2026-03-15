@@ -1,0 +1,81 @@
+---
+# roles/user_password/tasks/validate.yml
+# Validate phase tasks for the `user_password` role.
+# Verifies the resulting passwd and shadow-password state after configuration.
+
+- name: "Validate | Collect Human Admin Passwd Entry For Password Management"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ user_password_user }}"
+  register: user_password_passwd_lookup
+  changed_when: false
+  failed_when: false
+
+- name: "Validate | Collect Human Admin Shadow Entry"
+  ansible.builtin.getent:
+    database: shadow
+    key: "{{ user_password_user }}"
+  register: user_password_shadow_lookup
+  changed_when: false
+  failed_when: false
+
+- name: "Validate | Derive Human Admin Password Validation Facts"
+  ansible.builtin.set_fact:
+    user_password_passwd_entries: "{{ user_password_passwd_lookup.ansible_facts.getent_passwd | default({}) }}"
+    user_password_shadow_entries: "{{ user_password_shadow_lookup.ansible_facts.getent_shadow | default({}) }}"
+    user_password_shadow_entry: >-
+      {{
+        (user_password_shadow_lookup.ansible_facts.getent_shadow | default({})).get(user_password_user)
+      }}
+    user_password_shadow_password_field: >-
+      {{
+        (
+          (user_password_shadow_lookup.ansible_facts.getent_shadow | default({})).get(user_password_user)[0]
+        )
+        if (
+          (user_password_shadow_lookup.ansible_facts.getent_shadow | default({})).get(user_password_user)
+          is not none
+        )
+        else ''
+      }}
+    user_password_expected_shadow_password_field: >-
+      {{
+        (
+          '!' ~ (user_password_password_hash | regex_replace('^!+', ''))
+        )
+        if user_password_password_hash is not none and user_password_password_lock is sameas true
+        else (
+          user_password_password_hash | regex_replace('^!+', '')
+        )
+        if user_password_password_hash is not none
+        else none
+      }}
+  changed_when: false
+
+- name: "Validate | Verify Human Admin Password State"
+  ansible.builtin.assert:
+    that:
+      - user_password_user in user_password_passwd_entries
+      - user_password_user in user_password_shadow_entries
+      - >-
+        (
+          user_password_expected_shadow_password_field is none
+        ) or (
+          user_password_shadow_password_field == user_password_expected_shadow_password_field
+        )
+      - >-
+        (
+          user_password_expected_shadow_password_field is not none
+        ) or (
+          user_password_password_lock is none
+        ) or (
+          user_password_password_lock is sameas true
+          and user_password_shadow_password_field.startswith('!')
+        ) or (
+          user_password_password_lock is sameas false
+          and not user_password_shadow_password_field.startswith('!')
+        )
+    fail_msg: >-
+      Validate | Human admin password state is not in the expected final state
+      (passwd/shadow/password hash/password lock)
+    quiet: true

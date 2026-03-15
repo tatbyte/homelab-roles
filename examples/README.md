@@ -10,7 +10,7 @@ The inventory variables and role inputs assume the repository's Debian-family de
 ## Structure
 - `ansible.cfg`: Test-specific Ansible configuration that points at the example inventory and hides skipped-host output for quieter local runs.
 - `inventory/hosts.ini`: Test inventory.
-- `inventory/group_vars/all/`: Shared variables for test hosts, split into per-role files such as `bootstrap.yml`, `base_packages.yml`, `base_hostname.yml`, `base_hosts.yml`, `base_dns.yml`, `base_locale.yml`, `base_ntp.yml`, `base_sudo.yml`, `base_sshd.yml`, `base_firewall.yml`, `base_fail2ban.yml`, `base_logging.yml`, `base_updates.yml`, `base_apparmor.yml`, `base_auditd.yml`, `base_upgrade.yml`, `base_needrestart.yml`, `base_timezone.yml`, `user.yml`, `user_account.yml`, and `monitoring_authorized_key.yml`.
+- `inventory/group_vars/all/`: Shared variables for test hosts, split into aggregate-scoped files such as `base.yml` and `user.yml`, plus role-scoped files such as `bootstrap.yml`, `base_packages.yml`, `base_hostname.yml`, `base_hosts.yml`, `base_dns.yml`, `base_locale.yml`, `base_ntp.yml`, `base_sudo.yml`, `base_sshd.yml`, `base_firewall.yml`, `base_fail2ban.yml`, `base_logging.yml`, `base_updates.yml`, `base_apparmor.yml`, `base_auditd.yml`, `base_upgrade.yml`, `base_needrestart.yml`, `base_timezone.yml`, `user_account.yml`, `user_password.yml`, and `monitoring_authorized_key.yml`.
 - `playbooks/bootstrap.yml`: Bootstrap phase playbook that connects with the initial admin account and applies the standalone `bootstrap` role.
 - `playbooks/base.yml`: Base phase playbook that connects as the automation account, applies the `base` role, and uses `serial: 1` so reboot-capable base runs process one host at a time.
 - `playbooks/user.yml`: User phase playbook that connects as the automation account after the base phase and applies the aggregate `user` role.
@@ -56,20 +56,22 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/te
 ```
 
 The SSH integration test playbook cleans up its temporary `/etc/ssh/sshd_config.d/` fixture files in an `always` block, so you do not need to remove them manually after the run.
-`inventory/group_vars/all/base_firewall.yml` sets `base_include_firewall: true`, which opts the example base run into the optional `base_firewall` role and documents the role-declared rule accumulator plus the `managed:` comment convention used for stale-rule cleanup.
-`inventory/group_vars/all/base_logging.yml` sets `base_include_logging: true`, which opts the example base run into the optional `base_logging` role with persistent journald storage enabled.
-`inventory/group_vars/all/base_updates.yml` sets `base_include_updates: true`, which opts the example base run into the optional `base_updates` role with unattended-upgrades enabled.
-`inventory/group_vars/all/base_apparmor.yml` sets `base_include_apparmor: true`, which opts the example base run into the optional `base_apparmor` role with the AppArmor service enabled.
-`inventory/group_vars/all/base_auditd.yml` sets `base_include_auditd: true`, which opts the example base run into the optional `base_auditd` role with the audit daemon enabled and a minimal explicit baseline configuration.
-`inventory/group_vars/all/base_fail2ban.yml` sets `base_include_fail2ban: true`, which opts the example base run into the optional `base_fail2ban` role with a managed SSH jail baseline.
-`inventory/group_vars/all/base_hosts.yml` sets `base_include_hosts: true`, which opts the example base run into the optional `base_hosts` role so example hosts can resolve inventory peer names through `/etc/hosts`.
-`inventory/group_vars/all/base_dns.yml` sets `base_include_dns: true`, which opts the example base run into the optional `base_dns` role with an explicit `systemd-resolved` baseline.
-`inventory/group_vars/all/base_upgrade.yml` sets `base_include_upgrade: true`, which keeps the example base run applying immediate package upgrades so post-upgrade follow-up such as `base_needrestart` reflects the current host state.
-`inventory/group_vars/all/base_needrestart.yml` sets `base_include_needrestart: true`, which opts the example base run into the optional `base_needrestart` role and enables strict failure flags so pending restart or reboot follow-up is surfaced immediately without restarting services automatically.
+`inventory/group_vars/all/base.yml` keeps the aggregate `base_include_*` toggles in one place so enabled optional base roles are easy to scan.
+`inventory/group_vars/all/base_firewall.yml` documents the shared firewall baseline, the role-declared rule accumulator, and the `managed:` comment convention used for stale-rule cleanup when `base.yml` enables `base_firewall`.
+`inventory/group_vars/all/base_logging.yml` defines the persistent journald baseline used when `base.yml` enables `base_logging`.
+`inventory/group_vars/all/base_updates.yml` defines the unattended-upgrades baseline used when `base.yml` enables `base_updates`.
+`inventory/group_vars/all/base_apparmor.yml` defines the AppArmor service baseline used when `base.yml` enables `base_apparmor`.
+`inventory/group_vars/all/base_auditd.yml` defines the audit-daemon baseline used when `base.yml` enables `base_auditd`.
+`inventory/group_vars/all/base_fail2ban.yml` defines the managed SSH jail baseline used when `base.yml` enables `base_fail2ban`.
+`inventory/group_vars/all/base_hosts.yml` defines the inventory-driven hosts-file baseline used when `base.yml` enables `base_hosts`.
+`inventory/group_vars/all/base_dns.yml` defines the explicit `systemd-resolved` baseline used when `base.yml` enables `base_dns`.
+`inventory/group_vars/all/base_upgrade.yml` defines the immediate package-maintenance behavior used when `base.yml` enables `base_upgrade`.
+`inventory/group_vars/all/base_needrestart.yml` defines the restart-check behavior used when `base.yml` enables `base_needrestart`.
 This means the example base run may fail intentionally after package maintenance when restart follow-up is still pending; set the `base_needrestart_fail_if_*` values back to `false` for report-only example runs.
 When the example run's `base_upgrade` role makes no package-maintenance changes and leaves no reboot-required follow-up, `base_needrestart` now skips the batch check automatically to reduce no-change noise.
 `playbooks/base.yml` uses `serial: 1`, which is safer when optional roles such as `base_upgrade` may reboot a host during the run.
 `inventory/group_vars/all/user_account.yml` defines the example human admin account enforced after the base phase through the aggregate `user` role.
+`inventory/group_vars/all/user.yml` enables the optional password role in the example lab, while `inventory/group_vars/all/user_password.yml` sets a demo SHA-512 password hash for the example human admin account using the plaintext test password `password` and documents that a real host should use a Vault-managed hash instead.
 `ansible.cfg` sets `display_skipped_hosts = False`, so optional-role and conditional-task skips are hidden during normal example runs.
 
 ## Bootstrap Credentials
@@ -81,5 +83,5 @@ The example inventory stores only the bootstrap login user:
 
 ## Extending
 - Add playbooks under `examples/playbooks/`.
-- Update `examples/inventory/hosts.ini` and the role-scoped files under `examples/inventory/group_vars/all/` as needed.
+- Update `examples/inventory/hosts.ini` and the aggregate-scoped plus role-scoped files under `examples/inventory/group_vars/all/` as needed.
 - Keep this README aligned with any new test scenarios.

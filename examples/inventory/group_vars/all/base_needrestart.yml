@@ -1,10 +1,7 @@
 ---
 # examples/inventory/group_vars/all/base_needrestart.yml
 # Shared needrestart variables for the example lab.
-# Defines the aggregate-role opt-in plus the non-interactive restart-check behavior exposed during the base phase.
-
-# Opt in to the optional base_needrestart role from the aggregate base role.
-base_include_needrestart: true
+# Defines the non-interactive restart-check behavior exposed during the base phase.
 
 # Package list installed with APT to provide the needrestart restart-check
 # command used by the example lab.

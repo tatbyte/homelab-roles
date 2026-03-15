@@ -1,0 +1,36 @@
+---
+# roles/user_password/tasks/assert.yml
+# Assert phase tasks for the `user_password` role.
+# Validates the human admin password variables before password management starts.
+
+- name: "Assert | Validate required user_password variables"
+  ansible.builtin.assert:
+    that:
+      - user_password_user is defined
+      - user_password_user | length > 0
+      - user_password_password_hash is none or (
+          user_password_password_hash is string
+          and user_password_password_hash | length > 0
+          and user_password_password_hash.startswith('$')
+        )
+      - user_password_password_lock is none or user_password_password_lock is boolean
+      - user_password_password_hash is not none or user_password_password_lock is not none
+    fail_msg: >-
+      user_password_user must be defined and at least one valid user_password password or lock input must be set
+    quiet: true
+
+- name: "Assert | Collect Human Admin Account Entry For Password Management"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ user_password_user }}"
+  register: user_password_assert_passwd_lookup
+  changed_when: false
+  failed_when: false
+
+- name: "Assert | Validate Human Admin Account Exists Before Password Management"
+  ansible.builtin.assert:
+    that:
+      - user_password_user in (user_password_assert_passwd_lookup.ansible_facts.getent_passwd | default({}))
+    fail_msg: >-
+      user_password_user must already exist before the user_password role manages local password state
+    quiet: true

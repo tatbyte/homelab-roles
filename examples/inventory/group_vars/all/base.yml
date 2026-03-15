@@ -1,0 +1,35 @@
+---
+# examples/inventory/group_vars/all/base.yml
+# Shared aggregate base-role variables for the example lab.
+# Defines the optional aggregate-role toggles for the example base layer.
+
+# Keep inventory-driven hosts-file management enabled in the example lab so
+# hosts can resolve one another without depending on external DNS.
+base_include_hosts: true
+
+# Keep the explicit DNS resolver baseline enabled in the example lab.
+base_include_dns: true
+
+# Keep the additive firewall baseline enabled in the example lab.
+base_include_firewall: true
+
+# Keep the managed SSH jail baseline enabled in the example lab.
+base_include_fail2ban: true
+
+# Keep persistent local journald storage enabled in the example lab.
+base_include_logging: true
+
+# Keep unattended-upgrades enabled in the example lab.
+base_include_updates: true
+
+# Keep AppArmor enabled in the example lab.
+base_include_apparmor: true
+
+# Keep the audit daemon enabled in the example lab.
+base_include_auditd: true
+
+# Keep the explicit immediate-upgrade pass enabled in the example lab.
+base_include_upgrade: true
+
+# Keep restart-check reporting enabled after the example upgrade run.
+base_include_needrestart: true

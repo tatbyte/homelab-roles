@@ -6,8 +6,9 @@ Documents notable changes across repository structure, roles, examples, and docu
 ## [v1.1.0]
 ### Added
 - Added the aggregate `user` role for the post-base human-admin user layer, including explicit aggregate ordering, metadata, documentation, and example playbook wiring.
-- Added the standalone `user_account` role for creating, adopting, and validating one human admin account with explicit primary-group, home-directory, baseline shell, and optional password-lock management.
-- Added example inventory files for the new user layer, including `user.yml` and `user_account.yml`, plus a dedicated `examples/playbooks/user.yml` entrypoint.
+- Added the standalone `user_account` role for creating, adopting, and validating one human admin account with explicit primary-group, home-directory, and baseline shell management.
+- Added the standalone `user_password` role for managing Vault-friendly hashed local password state and optional password locking for one existing human admin account.
+- Added example inventory files for the new user layer, including `user.yml`, `user_account.yml`, and `user_password.yml`, plus a dedicated `examples/playbooks/user.yml` entrypoint.
 
 ### Changed
 - Updated the example `site.yml` flow so the full post-bootstrap stack now runs `base` and then `user`.
@@ -15,10 +16,12 @@ Documents notable changes across repository structure, roles, examples, and docu
 - Updated the example SSH allow-list so the example human admin account created by the user layer is permitted by the managed `base_sshd` policy.
 - Hardened `user_account` input validation and final-state validation so missing users or groups fail cleanly instead of crashing through unsafe fact lookups, and so unmanaged primary groups are asserted explicitly before config runs.
 - Added explicit `user_account_move_home` handling so adopting an existing user now fails early on unexpected home-directory changes unless the move is intentionally allowed.
-- Made `user_account` password-lock management opt-in by treating `null` as "leave current password-lock state unchanged", reducing repeated change noise on reruns.
+- Moved password-state ownership out of `user_account` and into `user_password` so hashed local passwords and password locking are managed in one dedicated secret-aware role.
 
 ### Documentation
-- Updated repository, workflow, role, and example documentation to describe the new `user` aggregate role, the `user_account` role, the expanded example lab flow, and the bootstrap-versus-user UID/GID defaults.
+- Updated repository, workflow, role, and example documentation to describe the new `user` aggregate role, the `user_account` and `user_password` roles, the expanded example lab flow, and the bootstrap-versus-user UID/GID defaults.
+- Documented that the local example lab enables `user_password` with a demo SHA-512 hash for the plaintext test password `password` so local account-login testing is straightforward.
+- Documented and aligned the example aggregate-toggle layout so `base_include_*` values now live in `examples/inventory/group_vars/all/base.yml`, matching the newer `user.yml` aggregate-toggle pattern.
 
 ## [v1.0.0]
 ### Changed
