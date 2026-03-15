@@ -3,12 +3,26 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v1.2.0]
+### Added
+- Added the standalone `user_password` role for managing Vault-friendly hashed local password state and optional password locking for one existing human admin account.
+- Added the example `user_password.yml` inventory file plus the documented demo SHA-512 password hash used for local testing.
+- Added concise Vault guidance in `docs/05-vault.md`, including the recommended `~/.config/ansible/` path layout and the current secret-bearing role guidance.
+
+### Changed
+- Moved password-state ownership out of `user_account` and into `user_password` so hashed local passwords and password locking are managed in one dedicated secret-aware role.
+- Updated the aggregate `user` role, example inventory, and documentation so `user_password` is an explicit opt-in follow-up role gated by `user_include_password`.
+- Documented and aligned the example aggregate-toggle layout so `base_include_*` values now live in `examples/inventory/group_vars/all/base.yml`, matching the newer `user.yml` aggregate-toggle pattern.
+
+### Documentation
+- Updated repository, workflow, role, and example documentation to describe the new `user_password` role, the Vault usage pattern, and the aggregate-versus-child variable split used by the example lab.
+- Documented that the local example lab enables `user_password` with a demo SHA-512 hash for the plaintext test password `password` so local account-login testing is straightforward.
+
 ## [v1.1.0]
 ### Added
 - Added the aggregate `user` role for the post-base human-admin user layer, including explicit aggregate ordering, metadata, documentation, and example playbook wiring.
 - Added the standalone `user_account` role for creating, adopting, and validating one human admin account with explicit primary-group, home-directory, and baseline shell management.
-- Added the standalone `user_password` role for managing Vault-friendly hashed local password state and optional password locking for one existing human admin account.
-- Added example inventory files for the new user layer, including `user.yml`, `user_account.yml`, and `user_password.yml`, plus a dedicated `examples/playbooks/user.yml` entrypoint.
+- Added example inventory files for the new user layer, including `user.yml` and `user_account.yml`, plus a dedicated `examples/playbooks/user.yml` entrypoint.
 
 ### Changed
 - Updated the example `site.yml` flow so the full post-bootstrap stack now runs `base` and then `user`.
@@ -16,12 +30,9 @@ Documents notable changes across repository structure, roles, examples, and docu
 - Updated the example SSH allow-list so the example human admin account created by the user layer is permitted by the managed `base_sshd` policy.
 - Hardened `user_account` input validation and final-state validation so missing users or groups fail cleanly instead of crashing through unsafe fact lookups, and so unmanaged primary groups are asserted explicitly before config runs.
 - Added explicit `user_account_move_home` handling so adopting an existing user now fails early on unexpected home-directory changes unless the move is intentionally allowed.
-- Moved password-state ownership out of `user_account` and into `user_password` so hashed local passwords and password locking are managed in one dedicated secret-aware role.
 
 ### Documentation
-- Updated repository, workflow, role, and example documentation to describe the new `user` aggregate role, the `user_account` and `user_password` roles, the expanded example lab flow, and the bootstrap-versus-user UID/GID defaults.
-- Documented that the local example lab enables `user_password` with a demo SHA-512 hash for the plaintext test password `password` so local account-login testing is straightforward.
-- Documented and aligned the example aggregate-toggle layout so `base_include_*` values now live in `examples/inventory/group_vars/all/base.yml`, matching the newer `user.yml` aggregate-toggle pattern.
+- Updated repository, workflow, role, and example documentation to describe the new `user` aggregate role, the `user_account` role, the expanded example lab flow, and the bootstrap-versus-user UID/GID defaults.
 
 ## [v1.0.0]
 ### Changed
