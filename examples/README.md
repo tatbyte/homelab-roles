@@ -49,7 +49,7 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/te
 ```
 
 The SSH integration test playbook cleans up its temporary `/etc/ssh/sshd_config.d/` fixture files in an `always` block, so you do not need to remove them manually after the run.
-`inventory/group_vars/all/base_firewall.yml` sets `base_include_firewall: true`, which opts the example base run into the optional `base_firewall` role.
+`inventory/group_vars/all/base_firewall.yml` sets `base_include_firewall: true`, which opts the example base run into the optional `base_firewall` role and documents the role-declared rule accumulator plus the `managed:` comment convention used for stale-rule cleanup.
 `inventory/group_vars/all/base_logging.yml` sets `base_include_logging: true`, which opts the example base run into the optional `base_logging` role with persistent journald storage enabled.
 `inventory/group_vars/all/base_updates.yml` sets `base_include_updates: true`, which opts the example base run into the optional `base_updates` role with unattended-upgrades enabled.
 `inventory/group_vars/all/base_apparmor.yml` sets `base_include_apparmor: true`, which opts the example base run into the optional `base_apparmor` role with the AppArmor service enabled.

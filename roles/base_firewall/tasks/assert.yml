@@ -18,8 +18,12 @@
       - base_firewall_purge_unmanaged_rules is boolean
       - base_firewall_state_checksum_path is string
       - base_firewall_state_checksum_path | trim | length > 0
+      - base_firewall_managed_comment_prefix is string
+      - base_firewall_managed_comment_prefix | trim | length > 0
       - base_firewall_base_rules is sequence
       - base_firewall_base_rules is not string
+      - base_firewall_role_declared_rules is sequence
+      - base_firewall_role_declared_rules is not string
       - base_firewall_additional_rules is sequence
       - base_firewall_additional_rules is not string
       - base_firewall_rules is sequence
@@ -32,9 +36,11 @@
       a supported UFW logging level, base_firewall_default_incoming_policy and
       base_firewall_default_outgoing_policy must use supported UFW policy
       values, base_firewall_purge_unmanaged_rules must be a boolean,
-      base_firewall_state_checksum_path must be a non-empty path,
-      base_firewall_base_rules and base_firewall_additional_rules must be
-      lists, and base_firewall_rules must be a list
+      base_firewall_state_checksum_path and
+      base_firewall_managed_comment_prefix must be non-empty strings,
+      base_firewall_base_rules, base_firewall_role_declared_rules, and
+      base_firewall_additional_rules must be lists, and base_firewall_rules
+      must be a list
     quiet: true
 
 - name: "Assert | Validate base_firewall rule structure"
@@ -62,6 +68,25 @@
       quotes, and log must be a boolean when set
     quiet: true
   loop: "{{ base_firewall_rules }}"
+  loop_control:
+    label: >-
+      {{
+        item.comment
+        | default(item.rule ~ ' ' ~ (item.port | default(item.to_ip | default('any')) | string))
+      }}
+
+- name: "Assert | Require managed comments on role-declared firewall rules"
+  ansible.builtin.assert:
+    that:
+      - item.comment is defined
+      - item.comment is string
+      - item.comment.startswith(base_firewall_managed_comment_prefix)
+    fail_msg: >-
+      Each base_firewall_role_declared_rules item must define a comment that
+      starts with {{ base_firewall_managed_comment_prefix }} so base_firewall
+      can trace and remove stale role-managed rules safely
+    quiet: true
+  loop: "{{ base_firewall_role_declared_rules }}"
   loop_control:
     label: >-
       {{
