@@ -99,6 +99,16 @@
       candidates: {{ user_zshell_login_shell_candidates | join(', ') }}
     quiet: true
 
+- name: "Assert | Validate Zsh RC Template Override Name"
+  ansible.builtin.assert:
+    that:
+      - user_zshell_rc_template_name == '' or
+        (user_zshell_rc_template_name is match('^[A-Za-z0-9._-]+\\.j2$'))
+    fail_msg: >-
+      user_zshell_rc_template_name must be empty or match a template filename
+      ending in .j2 with only A-Za-z0-9._- characters (no path separators)
+    quiet: true
+
 - name: "Assert | Resolve Zsh RC Template Content"
   ansible.builtin.set_fact:
     user_zshell_assert_rc_template_rendered: "{{ lookup('template', user_zshell_rc_template_path) }}"
@@ -109,7 +119,8 @@
     that:
       - user_zshell_assert_rc_template_rendered is string
     fail_msg: >-
-      user_zshell_effective_rc_template_name must resolve to an existing
-      template in roles/user_zshell/templates. Checked value:
+      user_zshell_effective_rc_template_name must resolve to an existing template in
+      roles/user_zshell/templates and be renderable by Ansible. Empty rendered
+      output is allowed when intentionally used. Checked value:
       {{ user_zshell_effective_rc_template_name }}
     quiet: true

@@ -17,6 +17,9 @@ Documents notable changes across repository structure, roles, examples, and docu
 - Made `user_zshell` tolerant of zsh binary location variance by resolving `/usr/bin/zsh` and `/bin/zsh` candidates when the configured `user_zshell_login_shell` path is unavailable, and using the first executable match.
 - Centralized zsh-path resolution in the shared derive phase so full runs and narrow tagged runs use the same effective SSH login shell, and preserved the documented PATH-addition behavior that prepends existing directories in order.
 
+### Fixed
+- Hardened `user_zshell` template override handling by validating `user_zshell_rc_template_name` as a safe basename and documenting/rendering behavior so invalid values are rejected during assert rather than failing deep in template rendering.
+
 ### Documentation
 - Updated repository, workflow, role, and example documentation to describe the new `user_zshell` role, the expanded aggregate ordering, the zsh-based example shell layer, and the split between baseline account creation and richer zsh management.
 

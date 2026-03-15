@@ -65,6 +65,15 @@ Example aggregate-role usage:
 When `user_include_zshell: true`, the aggregate `user` role disables direct shell ownership in `user_account` first so `user_zshell` becomes the single owner of the zsh login shell and `.zshrc` file.
 The managed zsh policy file path is always `.zshrc`.
 Because the role updates the passwd login shell to zsh, interactive SSH sessions for the managed user land in zsh and use the managed `.zshrc`.
+`user_shell` is intentionally retired in favor of this `user_zshell` role namespace. Use `user_zshell_*` variables and `user_include_zshell` with the aggregate role.
+
+### `.zshrc` Template Override Contract
+
+- `user_zshell_rc_template_name` must be either empty (use default
+  `user_zshell_zshrc.j2`) or a basename filename matching
+  `^[A-Za-z0-9._-]+\\.j2$` located in `roles/user_zshell/templates/`.
+- The template is rendered through Ansible during assertion and must be loadable.
+- The rendered content may be empty if that is intentional.
 
 ## Dependencies
 None

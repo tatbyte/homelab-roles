@@ -18,6 +18,8 @@ user_zshell_login_shell: /usr/bin/zsh
 
 # Optional override for the managed `.zshrc` template.
 # By default the role uses `user_zshell_zshrc.j2`.
+# If you set this, the value must be a template path basename under
+# roles/user_zshell/templates/ and that template must render successfully.
 user_zshell_rc_template_name: ""
 
 # Optional shell aliases written into the managed `.zshrc`.
