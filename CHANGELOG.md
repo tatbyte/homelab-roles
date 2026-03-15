@@ -3,6 +3,18 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v1.0.0]
+### Changed
+- Declared the recurring Debian-family `base` stack complete at `v1.0.0`, covering the aggregate base workflow plus the current optional follow-up roles for firewall, fail2ban, logging, updates, AppArmor, auditd, upgrade, and needrestart.
+- Extended `base_firewall` so it now aggregates `base_firewall_base_rules`, `base_firewall_role_declared_rules`, and `base_firewall_additional_rules` into the effective managed ruleset.
+- Added additive stale-rule cleanup in `base_firewall` for role-owned UFW rules whose comments use the managed prefix, so ports can close automatically when future app or service roles stop declaring them.
+- Added stricter `base_firewall` validation for the managed comment prefix and role-declared firewall rules so future service-role integrations fail early when they do not follow the shared convention.
+
+### Documentation
+- Updated repository, aggregate-role, role, and example documentation to describe the `v1.0.0` base-role milestone and the current complete base stack.
+- Added firewall integration guidance for future application or service roles in `docs/04-firewall-role-integration.md`, including the managed comment convention, registration pattern, ordering requirement, and stale-rule cleanup flow.
+- Updated the example firewall variable file so automatic role-declared rule aggregation is shown explicitly in the example lab configuration.
+
 ## [v0.27.0]
 ### Added
 - Added the `base_needrestart` role for Debian-family restart-check reporting, including defaults, full phase tasks, role documentation, and example variables.

@@ -32,6 +32,10 @@ base_firewall_purge_unmanaged_rules: false
 # host-specific reason to place this state file somewhere else under /etc.
 base_firewall_state_checksum_path: /etc/ufw/.base_firewall_state.sha256
 
+# Comment prefix reserved for firewall rules that should be cleaned up
+# automatically when they are no longer declared by enabled roles.
+base_firewall_managed_comment_prefix: "managed:"
+
 # Firewall baseline rules that must exist in UFW on every host.
 # When the default incoming policy is deny or reject, keep at least one
 # incoming allow or limit rule for the SSH or Ansible management port.
@@ -44,15 +48,27 @@ base_firewall_base_rules:
     proto: tcp
     comment: Limit SSH access
 
+# Firewall rules registered by other roles before base_firewall runs.
+# Each item should use the managed comment prefix so stale role-owned rules
+# can be removed automatically when the declaring role is later disabled.
+base_firewall_role_declared_rules: []
+
 # Extra rules can be added per host or per group without replacing the
 # shared baseline. For example, a host that runs the Traefik dashboard can
 # set base_firewall_additional_rules in host_vars.
 base_firewall_additional_rules: []
 
 # Effective managed firewall rules used by the role.
-# Keep this derived from the shared baseline plus host or group additions
-# unless you have a strong reason to replace the merge behavior directly.
-# base_firewall_rules: "{{ base_firewall_base_rules + base_firewall_additional_rules }}"
+# Keep this derived from the shared baseline, any role-declared rules, and
+# explicit host or group additions unless you have a strong reason to
+# replace the merge behavior directly. This keeps firewall rules registered
+# by other roles automatically included without manual merges here.
+base_firewall_rules: >-
+  {{
+    base_firewall_base_rules
+    + base_firewall_role_declared_rules
+    + base_firewall_additional_rules
+  }}
 
 # Example host-specific addition:
 # base_firewall_additional_rules:
@@ -62,3 +78,11 @@ base_firewall_additional_rules: []
 #     proto: tcp
 #     from_ip: 192.168.1.0/24
 #     comment: Allow Traefik dashboard from LAN
+
+# Example role-declared addition:
+# base_firewall_role_declared_rules:
+#   - rule: allow
+#     direction: in
+#     port: "8080"
+#     proto: tcp
+#     comment: "managed:docker_traefik:dashboard"

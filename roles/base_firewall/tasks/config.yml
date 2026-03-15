@@ -20,16 +20,19 @@
         | hash('sha256')
       }}
 
-- name: "Config | Read added firewall rules for purge comparison"
+- name: "Config | Read added firewall rules"
   ansible.builtin.command: ufw show added
   register: base_firewall_added_rules
   changed_when: false
-  when: base_firewall_purge_unmanaged_rules
 
 - name: "Config | Initialize expected firewall rule variants for purge comparison"
   ansible.builtin.set_fact:
     base_firewall_config_expected_rule_command_variants: []
   when: base_firewall_purge_unmanaged_rules
+
+- name: "Config | Initialize expected managed firewall rule variants"
+  ansible.builtin.set_fact:
+    base_firewall_config_expected_managed_rule_command_variants: []
 
 - name: "Config | Collect expected firewall rule variants for purge comparison"
   vars:
@@ -91,6 +94,68 @@
       }}
   when: base_firewall_purge_unmanaged_rules
 
+- name: "Config | Collect expected managed firewall rule variants"
+  vars:
+    base_firewall_expected_rule_command_long: >-
+      {{
+        'ufw '
+        ~ item.rule
+        ~ ' '
+        ~ (item.direction | default('in'))
+        ~ (' log' if (item.log | default(false)) else '')
+        ~ ' from '
+        ~ (item.from_ip | default('any'))
+        ~ ' to '
+        ~ (item.to_ip | default('any'))
+        ~ (' port ' ~ (item.port | string) if (item.port is defined) else '')
+        ~ (' proto ' ~ item.proto if (item.proto is defined) else '')
+        ~ (" comment '" ~ item.comment ~ "'" if (item.comment is defined and item.comment | length > 0) else '')
+      }}
+    base_firewall_expected_rule_command_short: >-
+      {{
+        (
+          'ufw '
+          ~ item.rule
+          ~ ' '
+          ~ ((item.direction | default('in')) ~ ' ' if (item.direction | default('in')) == 'out' else '')
+          ~ ('log ' if (item.log | default(false)) else '')
+          ~ (item.port | string)
+          ~ ('/' ~ item.proto if (item.proto is defined and item.proto != 'any') else '')
+          ~ (" comment '" ~ item.comment ~ "'" if (item.comment is defined and item.comment | length > 0) else '')
+        )
+        if (
+          item.port is defined and
+          (item.from_ip | default('any')) == 'any' and
+          (item.to_ip | default('any')) == 'any'
+        )
+        else ''
+      }}
+  ansible.builtin.set_fact:
+    base_firewall_config_expected_managed_rule_command_variants: >-
+      {{
+        (base_firewall_config_expected_managed_rule_command_variants | default([]))
+        +
+        [
+          [
+            base_firewall_expected_rule_command_long,
+            base_firewall_expected_rule_command_short
+          ]
+          | reject('equalto', '')
+          | unique
+          | list
+        ]
+      }}
+  loop: "{{ base_firewall_rules }}"
+  loop_control:
+    label: >-
+      {{
+        item.comment
+        | default(item.rule ~ ' ' ~ (item.port | default(item.to_ip | default('any')) | string))
+      }}
+  when:
+    - item.comment is defined
+    - item.comment.startswith(base_firewall_managed_comment_prefix)
+
 - name: "Config | Reset firewall before purging unmanaged rules"
   vars:
     base_firewall_missing_purge_rule_count: >-
@@ -115,6 +180,50 @@
   when:
     - base_firewall_purge_unmanaged_rules
     - base_firewall_requires_rule_purge
+
+- name: "Config | Derive stale managed firewall rules"
+  vars:
+    base_firewall_desired_managed_rule_commands: >-
+      {{
+        base_firewall_config_expected_managed_rule_command_variants
+        | default([])
+        | flatten
+        | unique
+        | list
+      }}
+    base_firewall_managed_comment_search_pattern: >-
+      {{
+        " comment '"
+        ~ (base_firewall_managed_comment_prefix | regex_escape)
+      }}
+  ansible.builtin.set_fact:
+    base_firewall_live_managed_rule_commands: >-
+      {{
+        base_firewall_added_rules.stdout_lines
+        | select('search', base_firewall_managed_comment_search_pattern)
+        | list
+      }}
+    base_firewall_stale_managed_rule_commands: >-
+      {{
+        (
+          base_firewall_added_rules.stdout_lines
+          | select('search', base_firewall_managed_comment_search_pattern)
+          | list
+        )
+        | difference(base_firewall_desired_managed_rule_commands)
+      }}
+  when: not base_firewall_purge_unmanaged_rules
+
+- name: "Config | Remove stale managed firewall rules"
+  ansible.builtin.command: >-
+    ufw --force delete {{ item | regex_replace('^ufw\\s+', '') }}
+  changed_when: true
+  loop: "{{ base_firewall_stale_managed_rule_commands | default([]) }}"
+  loop_control:
+    label: "{{ item }}"
+  when:
+    - not base_firewall_purge_unmanaged_rules
+    - (base_firewall_stale_managed_rule_commands | default([]) | length) > 0
 
 - name: "Config | Set firewall logging level"
   community.general.ufw:

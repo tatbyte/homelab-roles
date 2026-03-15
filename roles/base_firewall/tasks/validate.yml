@@ -124,6 +124,108 @@
   loop_control:
     label: "{{ base_firewall_expected_rule_commands | first }}"
 
+- name: "Validate | Initialize expected managed firewall rule variants"
+  ansible.builtin.set_fact:
+    base_firewall_validate_expected_managed_rule_command_variants: []
+
+- name: "Validate | Collect expected managed firewall rule variants"
+  vars:
+    base_firewall_expected_rule_command_long: >-
+      {{
+        'ufw '
+        ~ item.rule
+        ~ ' '
+        ~ (item.direction | default('in'))
+        ~ (' log' if (item.log | default(false)) else '')
+        ~ ' from '
+        ~ (item.from_ip | default('any'))
+        ~ ' to '
+        ~ (item.to_ip | default('any'))
+        ~ (' port ' ~ (item.port | string) if (item.port is defined) else '')
+        ~ (' proto ' ~ item.proto if (item.proto is defined) else '')
+        ~ (" comment '" ~ item.comment ~ "'" if (item.comment is defined and item.comment | length > 0) else '')
+      }}
+    base_firewall_expected_rule_command_short: >-
+      {{
+        (
+          'ufw '
+          ~ item.rule
+          ~ ' '
+          ~ ((item.direction | default('in')) ~ ' ' if (item.direction | default('in')) == 'out' else '')
+          ~ ('log ' if (item.log | default(false)) else '')
+          ~ (item.port | string)
+          ~ ('/' ~ item.proto if (item.proto is defined and item.proto != 'any') else '')
+          ~ (" comment '" ~ item.comment ~ "'" if (item.comment is defined and item.comment | length > 0) else '')
+        )
+        if (
+          item.port is defined and
+          (item.from_ip | default('any')) == 'any' and
+          (item.to_ip | default('any')) == 'any'
+        )
+        else ''
+      }}
+  ansible.builtin.set_fact:
+    base_firewall_validate_expected_managed_rule_command_variants: >-
+      {{
+        (base_firewall_validate_expected_managed_rule_command_variants | default([]))
+        +
+        [
+          [
+            base_firewall_expected_rule_command_long,
+            base_firewall_expected_rule_command_short
+          ]
+          | reject('equalto', '')
+          | unique
+          | list
+        ]
+      }}
+  loop: "{{ base_firewall_rules }}"
+  loop_control:
+    label: >-
+      {{
+        item.comment
+        | default(item.rule ~ ' ' ~ (item.port | default(item.to_ip | default('any')) | string))
+      }}
+  when:
+    - item.comment is defined
+    - item.comment.startswith(base_firewall_managed_comment_prefix)
+
+- name: "Validate | Assert stale managed firewall rules are absent"
+  vars:
+    base_firewall_expected_managed_rule_commands: >-
+      {{
+        base_firewall_validate_expected_managed_rule_command_variants
+        | default([])
+        | flatten
+        | unique
+        | list
+      }}
+    base_firewall_managed_comment_search_pattern: >-
+      {{
+        " comment '"
+        ~ (base_firewall_managed_comment_prefix | regex_escape)
+      }}
+    base_firewall_live_managed_rule_commands: >-
+      {{
+        base_firewall_added_rules.stdout_lines
+        | select('search', base_firewall_managed_comment_search_pattern)
+        | list
+      }}
+    base_firewall_stale_managed_rule_commands: >-
+      {{
+        base_firewall_live_managed_rule_commands
+        | difference(base_firewall_expected_managed_rule_commands)
+      }}
+  ansible.builtin.assert:
+    that:
+      - (base_firewall_stale_managed_rule_commands | length) == 0
+    fail_msg: >-
+      base_firewall found stale managed firewall rules that are no longer in
+      base_firewall_rules: {{
+        base_firewall_stale_managed_rule_commands | join(' || ')
+      }}
+    quiet: true
+
 - name: "Validate | Initialize expected firewall rule variants for purge validation"
   ansible.builtin.set_fact:
     base_firewall_validate_expected_rule_command_variants: []

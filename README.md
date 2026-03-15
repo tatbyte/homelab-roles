@@ -48,7 +48,7 @@ homelab-roles/
 - `base_auditd`: Enforces a minimal Linux audit daemon package, service, and baseline configuration on Debian-family hosts during the base phase.
 - `base_dns`: Enforces a minimal DNS resolver baseline through `systemd-resolved` on Debian-family hosts during the base phase.
 - `base_fail2ban`: Enforces a minimal Fail2ban package, service, and SSH jail baseline on Debian-family hosts during the base phase.
-- `base_firewall`: Enforces an additive UFW baseline with managed default policies and requested allow or limit rules on Debian-family hosts during the base phase, with an optional purge mode for exact rebuilds.
+- `base_firewall`: Enforces an additive UFW baseline with managed default policies, aggregated base plus role-declared plus explicit rules, and stale cleanup for `managed:`-prefixed role-owned UFW rules on Debian-family hosts during the base phase, with an optional purge mode for exact rebuilds.
 - `base_hosts`: Enforces inventory-driven and optional manual cluster host mappings through a managed `/etc/hosts` block on Debian-family hosts during the base phase.
 - `base_logging`: Enforces a persistent local journald baseline on Debian-family hosts during the base phase, with an optional volatile mode for non-persistent logs.
 - `base_needrestart`: Runs `needrestart` in non-interactive batch mode and exposes pending service-restart or reboot follow-up state on Debian-family hosts during the base phase, while skipping the check automatically only when the same run's `base_upgrade` role reported no package-maintenance changes and no reboot-required follow-up.
@@ -153,6 +153,7 @@ Core repository docs:
 - [docs/01-examples.md](docs/01-examples.md): Example lab layout and execution flow
 - [docs/02-role-workflow.md](docs/02-role-workflow.md): Shared role phase structure and aggregate base-role ordering
 - [docs/03-file-consistency.md](docs/03-file-consistency.md): File header and wording consistency rules
+- [docs/04-firewall-role-integration.md](docs/04-firewall-role-integration.md): How future roles should register firewall rules for `base_firewall`
 
 ## License
 MIT

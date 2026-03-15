@@ -33,6 +33,7 @@ Use `base` on Debian-family hosts after the bootstrap phase has already created 
 
 Bootstrap is handled separately by the standalone `bootstrap` role/playbook.
 Role-specific inputs for `base` currently come from `base_packages_*`, `base_locale_*`, `base_timezone_*`, `base_ntp_*`, `base_hostname_*`, optional `base_include_hosts` plus `base_hosts_*`, optional `base_include_dns` plus `base_dns_*`, `base_sudo_*`, `base_sshd_*`, optional `base_include_firewall` plus `base_firewall_*`, optional `base_include_fail2ban` plus `base_fail2ban_*`, optional `base_include_logging` plus `base_logging_*`, optional `base_include_updates` plus `base_updates_*`, optional `base_include_apparmor` plus `base_apparmor_*`, optional `base_include_auditd` plus `base_auditd_*`, optional `base_include_upgrade` plus `base_upgrade_*`, and optional `base_include_needrestart` plus `base_needrestart_*`.
+If you want `base_firewall` to consume `base_firewall_role_declared_rules` registered by roles outside this aggregate stack, run those roles before `base_firewall` in the same play or run `base_firewall` again in a later play after they have registered their rules.
 
 Current include order in `base` is:
 
