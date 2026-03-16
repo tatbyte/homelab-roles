@@ -31,3 +31,8 @@ user_include_password: true
 # Keep this enabled in the example lab so the human admin account gets the
 # managed zsh login shell and a managed `.zshrc`.
 user_include_zshell: true
+
+# 6. `user_directories` runs after the optional zsh shell layer.
+# Keep this enabled in the example lab so the human admin account gets a small
+# standard workspace layout under its existing home directory.
+user_include_directories: true

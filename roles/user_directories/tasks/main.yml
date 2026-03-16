@@ -1,0 +1,16 @@
+---
+# roles/user_directories/tasks/main.yml
+# Task entrypoint for the `user_directories` role.
+# Imports the assert, config, and validate phase files in order.
+
+- name: Assert
+  ansible.builtin.import_tasks: assert.yml
+  tags: [user_directories, assert, user_directories_assert]
+
+- name: Config
+  ansible.builtin.import_tasks: config.yml
+  tags: [user_directories, config, user_directories_config]
+
+- name: Validate
+  ansible.builtin.import_tasks: validate.yml
+  tags: [user_directories, validate, user_directories_validate]

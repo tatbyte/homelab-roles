@@ -1,0 +1,25 @@
+---
+# roles/user_directories/tasks/derive_effective_directories.yml
+# Shared derived-state tasks for the `user_directories` role.
+# Flattens per-user directory lists into the effective managed directory policy.
+
+- name: "Derive | Build Effective Human Admin Directory Policy"
+  ansible.builtin.set_fact:
+    user_directories_effective_directories: >-
+      {%- set flattened = [] -%}
+      {%- for user_entry in user_directories_users -%}
+        {%- for directory_entry in user_entry.directories | default([]) -%}
+          {%- set user_home = user_entry.home | regex_replace('//+', '/') | regex_replace('/+$', '') -%}
+          {%- set relative_path = directory_entry.path | regex_replace('//+', '/') | regex_replace('/+$', '') -%}
+          {%- set _ = flattened.append({
+            'user': user_entry.user,
+            'group': user_entry.group,
+            'home': user_entry.home,
+            'relative_path': relative_path,
+            'path': user_home ~ '/' ~ relative_path,
+            'mode': directory_entry.mode | default(user_directories_default_directory_mode),
+          }) -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{ flattened }}
+  changed_when: false

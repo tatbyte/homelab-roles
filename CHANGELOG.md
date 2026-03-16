@@ -3,6 +3,18 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v1.6.0]
+### Added
+- Added the standalone `user_directories` role for managing common home-directory workspace paths such as `.local/bin`, `scripts`, `.config`, and `projects` for one or more existing human admin users.
+- Added the example `user_directories.yml` inventory file plus the aggregate `user_include_directories` toggle used to exercise the new role in the local lab.
+
+### Changed
+- Updated the aggregate `user` role so `user_directories` is an explicit opt-in follow-up role that runs after the optional `user_zshell` role, matching the current shell-layer ordering for this repository.
+
+### Documentation
+- Updated repository, workflow, role, and example documentation to describe the new `user_directories` role, the expanded aggregate ordering, and the example workspace-directory baseline.
+- Aligned the new `user_directories` defaults and example inventory with the existing `user_zshell` PATH convention by using `.local/bin` instead of a top-level `bin` directory.
+
 ## [v1.5.0]
 ### Added
 - Added the standalone `user_zshell` role for managing one human admin zsh login shell and a managed `.zshrc` file with inventory-driven aliases, environment variables, and PATH additions.
