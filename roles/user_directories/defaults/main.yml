@@ -1,0 +1,23 @@
+---
+# roles/user_directories/defaults/main.yml
+# Default variables for the `user_directories` role.
+# Defines common home-directory paths managed for human admin users after their accounts already exist.
+
+# Default mode for managed home-directory paths when an entry does not set one
+# explicitly.
+user_directories_default_directory_mode: "0755"
+
+# Reusable standard directories created inside a managed human admin home
+# directory by default.
+user_directories_standard_directories:
+  - path: .local/bin
+  - path: scripts
+  - path: .config
+  - path: projects
+
+# Per-user directory policies managed by this role.
+user_directories_users:
+  - user: "{{ user_account_name | default('admin') }}"
+    group: "{{ user_account_primary_group | default(user_account_name | default('admin')) }}"
+    home: "{{ user_account_home | default('/home/' ~ (user_account_name | default('admin'))) }}"
+    directories: "{{ user_directories_standard_directories }}"

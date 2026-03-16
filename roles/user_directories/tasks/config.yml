@@ -1,0 +1,19 @@
+---
+# roles/user_directories/tasks/config.yml
+# Config phase tasks for the `user_directories` role.
+# Creates the requested managed home-directory paths for one or more human admin users.
+
+- name: "Config | Derive Effective Human Admin Directory Policy"
+  ansible.builtin.import_tasks: derive_effective_directories.yml
+
+- name: "Config | Ensure Managed Human Admin Directories Exist"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.user }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop: "{{ user_directories_effective_directories }}"
+  loop_control:
+    label: "{{ item.path }}"
+  when: user_directories_effective_directories | length > 0

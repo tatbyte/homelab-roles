@@ -1,0 +1,34 @@
+---
+# roles/user_directories/tasks/validate.yml
+# Validate phase tasks for the `user_directories` role.
+# Verifies the resulting managed home-directory paths after configuration.
+
+- name: "Validate | Derive Effective Human Admin Directory Policy"
+  ansible.builtin.import_tasks: derive_effective_directories.yml
+
+- name: "Validate | Stat Managed Human Admin Directories"
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+  register: user_directories_validate_directory_stats
+  changed_when: false
+  loop: "{{ user_directories_effective_directories }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: "Validate | Verify Human Admin Directory Policy"
+  vars:
+    user_directories_expected_directory: "{{ item.item }}"
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+      - item.stat.isdir
+      - item.stat.pw_name == user_directories_expected_directory.user
+      - item.stat.gr_name == user_directories_expected_directory.group
+      - item.stat.mode == user_directories_expected_directory.mode
+    fail_msg: >-
+      Validate | Human admin directory state does not match the requested
+      user_directories policy
+    quiet: true
+  loop: "{{ user_directories_validate_directory_stats.results }}"
+  loop_control:
+    label: "{{ item.item.path }}"

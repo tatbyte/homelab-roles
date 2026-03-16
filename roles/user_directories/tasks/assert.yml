@@ -1,0 +1,227 @@
+---
+# roles/user_directories/tasks/assert.yml
+# Assert phase tasks for the `user_directories` role.
+# Validates the requested human admin directory policy before home-directory paths are managed.
+
+- name: "Assert | Validate user_directories variable structure"
+  ansible.builtin.assert:
+    that:
+      - user_directories_default_directory_mode is string
+      - user_directories_default_directory_mode is match('^[0-7]{4}$')
+      - user_directories_standard_directories is sequence
+      - user_directories_standard_directories is not string
+      - user_directories_users is sequence
+      - user_directories_users is not string
+    fail_msg: >-
+      user_directories_default_directory_mode must be a four-digit octal
+      string, and user_directories_standard_directories and
+      user_directories_users must be lists
+    quiet: true
+
+- name: "Assert | Validate requested human admin directory policies"
+  ansible.builtin.assert:
+    that:
+      - item is mapping
+      - (item.keys() | difference(['user', 'group', 'home', 'directories']) | length) == 0
+      - item.user is defined
+      - item.user is string
+      - item.user | trim | length > 0
+      - item.user == (item.user | trim)
+      - item.user is not match('.*\\s+.*')
+      - item.group is defined
+      - item.group is string
+      - item.group | trim | length > 0
+      - item.group == (item.group | trim)
+      - item.group is not match('.*\\s+.*')
+      - item.home is defined
+      - item.home is string
+      - item.home | trim | length > 0
+      - item.home == (item.home | trim)
+      - item.home.startswith('/')
+      - item.home is not match('.*\\s+.*')
+      - item.directories is defined
+      - item.directories is sequence
+      - item.directories is not string
+    fail_msg: >-
+      Each user_directories_users item must be a mapping with only user,
+      group, home, and directories keys. user and group must be non-empty
+      values without whitespace, home must be an absolute path without
+      whitespace, and directories must be a list of relative paths
+    quiet: true
+  loop: "{{ user_directories_users }}"
+  loop_control:
+    label: "{{ item.user | default('user-directories') }}"
+
+- name: "Assert | Validate User Names Are Unique Across Directory Policies"
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          user_directories_users
+          | map(attribute='user')
+          | list
+          | unique
+          | length
+        ) == (user_directories_users | length)
+    fail_msg: >-
+      Each user_directories_users item must target a unique user
+    quiet: true
+
+- name: "Assert | Validate requested human admin directory definitions"
+  vars:
+    user_directories_directory: "{{ item.1 }}"
+    user_directories_directory_path_segments: >-
+      {{
+        (
+          user_directories_directory.path
+          | regex_replace('/+$', '')
+          | split('/')
+        )
+        if (
+          user_directories_directory.path is defined
+          and user_directories_directory.path is string
+          and (user_directories_directory.path | trim | length > 0)
+        )
+        else []
+      }}
+  ansible.builtin.assert:
+    that:
+      - user_directories_directory is mapping
+      - (user_directories_directory.keys() | difference(['path', 'mode']) | length) == 0
+      - user_directories_directory.path is defined
+      - user_directories_directory.path is string
+      - user_directories_directory.path | trim | length > 0
+      - user_directories_directory.path == (user_directories_directory.path | trim)
+      - not user_directories_directory.path.startswith('/')
+      - user_directories_directory.path is not match('.*\\s+.*')
+      - (user_directories_directory.path | regex_replace('/+$', '')) | length > 0
+      - "'.' not in user_directories_directory_path_segments"
+      - "'..' not in user_directories_directory_path_segments"
+      - >-
+        (
+          user_directories_directory.mode is not defined
+        ) or (
+          user_directories_directory.mode is string
+          and user_directories_directory.mode is match('^[0-7]{4}$')
+        )
+    fail_msg: >-
+      Each user_directories directory item must be a mapping with only path
+      and optional mode keys. path must be a non-empty relative path without
+      whitespace, must not target the home directory itself, and must not use
+      current-directory or parent-directory traversal segments. mode must be a
+      four-digit octal string when set
+    quiet: true
+  loop: "{{ user_directories_users | subelements('directories', skip_missing=False) }}"
+  loop_control:
+    label: "{{ item.0.user ~ ':' ~ (item.1.path | default('directory')) }}"
+
+- name: "Assert | Validate Per-User Directory Paths Are Unique"
+  vars:
+    user_directories_normalized_paths: >-
+      {{
+        item.directories
+        | map(attribute='path')
+        | map('regex_replace', '//+', '/')
+        | map('regex_replace', '/+$', '')
+        | list
+      }}
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          user_directories_normalized_paths
+          | unique
+          | length
+        ) == (user_directories_normalized_paths | length)
+    fail_msg: >-
+      Each user_directories_users entry must define unique relative directory
+      paths for that user after trailing-slash and repeated-slash normalization
+    quiet: true
+  loop: "{{ user_directories_users }}"
+  loop_control:
+    label: "{{ item.user }}"
+
+- name: "Assert | Derive Effective Human Admin Directory Policy"
+  ansible.builtin.import_tasks: derive_effective_directories.yml
+
+- name: "Assert | Collect Existing Human Admin Account Entries For Directory Management"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ item.user }}"
+  register: user_directories_assert_passwd_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ user_directories_users }}"
+  loop_control:
+    label: "{{ item.user }}"
+
+- name: "Assert | Validate Human Admin Accounts Exist Before Directory Management"
+  vars:
+    user_directories_assert_requested_home: >-
+      {{
+        item.item.home
+        | regex_replace('//+', '/')
+        | regex_replace('/+$', '')
+      }}
+    user_directories_assert_passwd_home: >-
+      {{
+        item.ansible_facts.getent_passwd[item.item.user][4]
+        | regex_replace('//+', '/')
+        | regex_replace('/+$', '')
+      }}
+  ansible.builtin.assert:
+    that:
+      - item.item.user in (item.ansible_facts.getent_passwd | default({}))
+      - user_directories_assert_passwd_home == user_directories_assert_requested_home
+    fail_msg: >-
+      Every user_directories user must already exist and the requested home
+      path must match the current passwd entry before directories are managed
+    quiet: true
+  loop: "{{ user_directories_assert_passwd_lookup.results }}"
+  loop_control:
+    label: "{{ item.item.user }}"
+
+- name: "Assert | Stat Existing Human Admin Home Directories"
+  ansible.builtin.stat:
+    path: "{{ item.home }}"
+  register: user_directories_assert_home_stats
+  changed_when: false
+  loop: "{{ user_directories_users }}"
+  loop_control:
+    label: "{{ item.home }}"
+
+- name: "Assert | Validate Human Admin Home Directories Exist"
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+      - item.stat.isdir
+    fail_msg: >-
+      Every user_directories home path must already exist as a directory
+      before the role manages child paths
+    quiet: true
+  loop: "{{ user_directories_assert_home_stats.results }}"
+  loop_control:
+    label: "{{ item.stat.path | default(item.item.home) }}"
+
+- name: "Assert | Collect Human Admin Directory Groups"
+  ansible.builtin.getent:
+    database: group
+    key: "{{ item }}"
+  register: user_directories_assert_group_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ user_directories_users | map(attribute='group') | unique | list }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: "Assert | Validate Human Admin Directory Groups Exist"
+  ansible.builtin.assert:
+    that:
+      - item.item in (item.ansible_facts.getent_group | default({}))
+    fail_msg: >-
+      Every requested user_directories group must already exist before the
+      role manages directory ownership
+    quiet: true
+  loop: "{{ user_directories_assert_group_lookup.results }}"
+  loop_control:
+    label: "{{ item.item }}"
