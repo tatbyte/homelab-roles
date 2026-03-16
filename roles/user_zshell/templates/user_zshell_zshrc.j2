@@ -1,6 +1,11 @@
 # Managed by Ansible: user_zshell
 # Source: roles/user_zshell/tasks/config.yml
 
+# ----- Shared login/profile baseline -----
+if [ -f "$HOME/.profile" ]; then
+  . "$HOME/.profile"
+fi
+
 # ----- Editors -----
 export EDITOR={{ (user_zshell_environment.get('EDITOR', 'vim')) | quote }}
 export VISUAL={{ (user_zshell_environment.get('VISUAL', 'vim')) | quote }}

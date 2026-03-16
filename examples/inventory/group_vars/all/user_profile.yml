@@ -1,0 +1,21 @@
+---
+# examples/inventory/group_vars/all/user_profile.yml
+# Shared human admin profile variables for the example lab.
+# Defines the managed login and session profile baseline enforced after the zsh
+# layer through the aggregate `user` role.
+
+# Keep the example profile baseline scoped to the same human admin account
+# managed earlier in `user_account.yml`.
+user_profile_users:
+  - user: "{{ user_account_name }}"
+    group: "{{ user_account_primary_group }}"
+    home: "{{ user_account_home }}"
+    environment:
+      EDITOR: vim
+      VISUAL: vim
+      PAGER: less
+    path_additions:
+      - "{{ user_account_home }}/.local/bin"
+    profile_lines:
+      - umask 022
+    manage_bash_profile: true

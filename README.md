@@ -38,6 +38,7 @@ homelab-roles/
 │   ├── user_directories/
 │   ├── user_git/
 │   ├── user_groups/
+│   ├── user_profile/
 │   ├── user_zshell/
 │   ├── user_sudo/
 │   └── user_password/
@@ -71,12 +72,13 @@ homelab-roles/
 - `base_timezone`: Enforces the system timezone on Debian-family hosts during the base phase.
 - `monitoring`: Aggregates monitoring-related configuration through dependency roles such as `monitoring_authorized_key`.
 - `monitoring_authorized_key`: Installs an SSH authorized key for monitoring-style inter-host access.
-- `user`: Aggregates recurring human admin user configuration through explicit `include_role` ordering in `roles/user/tasks/main.yml` for `user_account` plus optional `user_groups`, optional `user_sudo`, optional `user_password`, optional `user_zshell`, optional `user_directories`, and optional `user_git`, with an optional cleanup path for stale managed human-admin sudo drop-ins.
+- `user`: Aggregates recurring human admin user configuration through explicit `include_role` ordering in `roles/user/tasks/main.yml` for `user_account` plus optional `user_groups`, optional `user_sudo`, optional `user_password`, optional `user_zshell`, optional `user_profile`, optional `user_directories`, and optional `user_git`, with an optional cleanup path for stale managed human-admin sudo drop-ins.
 - `user_account`: Creates and validates one human admin account with explicit primary-group, home-directory, and basic account-state enforcement after the base phase, while optionally managing only a minimal fallback shell.
 - `user_directories`: Standardizes common home-directory paths such as `.local/bin`, `scripts`, `.config`, and `projects` for one or more existing human admin users after account creation, with per-user directory lists plus owner/group/mode enforcement.
 - `user_git`: Manages per-user `~/.gitconfig` files for one or more existing human admin users after account creation, with inventory-driven identity, aliases, simple `section.option` settings, optional Git package prerequisite handling, and entry-level validation.
 - `user_groups`: Enforces supplementary group membership for one or more existing human admin accounts after account creation, with aggregated base plus role-declared plus explicit inventory inputs and per-user append-versus-explicit behavior.
-- `user_zshell`: Enforces one human admin zsh login shell plus a managed `.zshrc` after account creation, with inventory-driven aliases/environment variables/PATH additions and example zsh usage.
+- `user_profile`: Manages per-user `.profile` files plus optional `.bash_profile` files for one or more existing human admin users after account creation, with inventory-driven environment variables, PATH additions, and login/session defaults.
+- `user_zshell`: Enforces one human admin zsh login shell plus a managed `.zshrc` after account creation, with inventory-driven aliases and zsh-shell behavior, while the new `user_profile` role owns shared login/session defaults in the example stack.
 - `user_sudo`: Enforces explicit sudoers policy for one existing human admin account after account and optional group setup, with inventory-driven user-versus-group policy, optional passwordless sudo, and explicit absent-state cleanup for a previously managed drop-in.
 - `user_password`: Manages Vault-friendly hashed local password state and optional password locking for one existing human admin account after the base phase.
 
@@ -156,7 +158,7 @@ ansible-playbook playbooks/site.yml
 
 See [examples/README.md](examples/README.md) and [docs/01-examples.md](docs/01-examples.md) for lab details.
 The current example lab intentionally keeps `base_upgrade` and strict `base_needrestart` follow-up enabled, so a base run may fail when pending reboot or service-restart work is detected after upgrades.
-The current example lab also enables `user_groups` for a documented supplementary admin-group baseline, `user_sudo` for an explicit human-admin sudoers drop-in, `user_password` with a demo hash for the plaintext test password `password`, `user_zshell` for a managed zsh login shell plus `.zshrc`, `user_directories` for common personal workspace paths such as `.local/bin`, `scripts`, `.config`, and `projects`, and `user_git` for a small managed Git identity plus alias baseline, so replace the example identity values and password before copying the pattern to a real host.
+The current example lab also enables `user_groups` for a documented supplementary admin-group baseline, `user_sudo` for an explicit human-admin sudoers drop-in, `user_password` with a demo hash for the plaintext test password `password`, `user_zshell` for a managed zsh login shell plus `.zshrc`, `user_profile` for managed login/session defaults in `.profile` and `.bash_profile`, `user_directories` for common personal workspace paths such as `.local/bin`, `scripts`, `.config`, and `projects`, and `user_git` for a small managed Git identity plus alias baseline, so replace the example identity values and password before copying the pattern to a real host.
 
 ## Linting
 Pre-commit and linting are configured in this repository.

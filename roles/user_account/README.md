@@ -53,7 +53,7 @@ Example role ordering with the planned `user_*` layer:
 ```
 
 `user_account` intentionally keeps shell handling narrow.
-Use `user_account_shell` only for the account's baseline login shell when `user_account_manage_shell: true`, and let `user_zshell` manage zsh-specific dotfiles, aliases, environment variables, PATH changes, and the richer login-shell policy.
+Use `user_account_shell` only for the account's baseline login shell when `user_account_manage_shell: true`, let `user_zshell` manage zsh-specific dotfiles, aliases, and interactive shell behavior, and let `user_profile` manage shared login/session exports, PATH changes, and profile-file baselines.
 The aggregate `user` role disables direct shell management in `user_account` automatically when `user_include_zshell: true`.
 When adopting an existing user, the role fails early if the current home path differs from `user_account_home` unless `user_account_move_home: true` is set explicitly.
 Use `user_password` when you want to manage a hashed local password or password-lock state for the same human admin account.

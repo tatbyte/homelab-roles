@@ -32,12 +32,17 @@ user_include_password: true
 # managed zsh login shell and a managed `.zshrc`.
 user_include_zshell: true
 
-# 6. `user_directories` runs after the optional zsh shell layer.
+# 6. `user_profile` runs after the optional zsh shell layer.
+# Keep this enabled in the example lab so the human admin account gets managed
+# login/session defaults in `.profile` and a simple `.bash_profile` bridge.
+user_include_profile: true
+
+# 7. `user_directories` runs after the optional login/profile layer.
 # Keep this enabled in the example lab so the human admin account gets a small
 # standard workspace layout under its existing home directory.
 user_include_directories: true
 
-# 7. `user_git` runs after the optional directory-standardization layer.
+# 8. `user_git` runs after the optional directory-standardization layer.
 # Keep this enabled in the example lab so the human admin account gets a small
 # managed Git identity plus alias baseline in `~/.gitconfig`.
 user_include_git: true

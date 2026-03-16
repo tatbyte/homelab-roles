@@ -1,0 +1,38 @@
+---
+# roles/user_profile/defaults/main.yml
+# Default variables for the `user_profile` role.
+# Defines managed login and session profile policy for one or more human admin
+# users after their accounts already exist.
+
+# Default mode for managed `.profile` files.
+user_profile_default_profile_mode: "0644"
+
+# Default mode for managed `.bash_profile` files when enabled.
+user_profile_default_bash_profile_mode: "0644"
+
+# Reusable default environment variables exported from managed profile files.
+user_profile_default_environment: {}
+
+# Reusable default PATH entries prepended in order when the directories exist.
+user_profile_default_path_additions: []
+
+# Reusable default literal lines appended to managed `.profile` files.
+user_profile_default_profile_lines: []
+
+# Whether managed `.bash_profile` files should source `.profile` by default.
+user_profile_default_bash_profile_sources_profile: true
+
+# Reusable default literal lines appended to managed `.bash_profile` files.
+user_profile_default_bash_profile_lines: []
+
+# Per-user profile policies managed by this role.
+user_profile_users:
+  - user: "{{ user_account_name | default('admin') }}"
+    group: "{{ user_account_primary_group | default(user_account_name | default('admin')) }}"
+    home: "{{ user_account_home | default('/home/' ~ (user_account_name | default('admin'))) }}"
+    environment: "{{ user_profile_default_environment }}"
+    path_additions: "{{ user_profile_default_path_additions }}"
+    profile_lines: "{{ user_profile_default_profile_lines }}"
+    manage_bash_profile: false
+    bash_profile_sources_profile: "{{ user_profile_default_bash_profile_sources_profile }}"
+    bash_profile_lines: "{{ user_profile_default_bash_profile_lines }}"

@@ -1,0 +1,149 @@
+---
+# roles/user_profile/tasks/validate.yml
+# Validate phase tasks for the `user_profile` role.
+# Verifies the resulting managed `.profile` and optional `.bash_profile` file
+# state after configuration.
+
+- name: "Validate | Derive Effective Human Admin Profile Policy"
+  ansible.builtin.import_tasks: derive_effective_profile_policy.yml
+
+- name: "Validate | Stat Managed Human Admin .profile Files"
+  ansible.builtin.stat:
+    path: "{{ item.profile_path }}"
+  register: user_profile_validate_profile_stats
+  changed_when: false
+  loop: "{{ user_profile_effective_users }}"
+  loop_control:
+    label: "{{ item.profile_path }}"
+
+- name: "Validate | Read Managed Human Admin .profile Files"
+  ansible.builtin.slurp:
+    path: "{{ item.profile_path }}"
+  register: user_profile_validate_profile_slurps
+  changed_when: false
+  loop: "{{ user_profile_effective_users }}"
+  loop_control:
+    label: "{{ item.profile_path }}"
+
+- name: "Validate | Verify Managed Human Admin .profile Files"
+  vars:
+    user_profile_expected_user: "{{ item.item }}"
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+      - item.stat.isreg
+      - item.stat.pw_name == user_profile_expected_user.user
+      - item.stat.gr_name == user_profile_expected_user.group
+      - item.stat.mode == user_profile_expected_user.profile_mode
+    fail_msg: >-
+      Validate | Managed `.profile` state does not match the requested
+      user_profile file policy
+    quiet: true
+  loop: "{{ user_profile_validate_profile_stats.results }}"
+  loop_control:
+    label: "{{ item.item.profile_path }}"
+
+- name: "Validate | Verify Managed Human Admin .profile Content"
+  vars:
+    user_profile_effective_user: "{{ item.item }}"
+    user_profile_expected_profile_content: >-
+      {{ lookup('template', role_path ~ '/templates/user_profile_profile.j2') }}
+  ansible.builtin.assert:
+    that:
+      - (item.content | b64decode) == user_profile_expected_profile_content
+    fail_msg: >-
+      Validate | Managed `.profile` content does not match the requested
+      user_profile policy
+    quiet: true
+  loop: "{{ user_profile_validate_profile_slurps.results }}"
+  loop_control:
+    label: "{{ item.item.profile_path }}"
+
+- name: "Validate | Stat Human Admin .bash_profile Files"
+  ansible.builtin.stat:
+    path: "{{ item.bash_profile_path }}"
+  register: user_profile_validate_bash_profile_stats
+  changed_when: false
+  loop: "{{ user_profile_effective_users }}"
+  loop_control:
+    label: "{{ item.bash_profile_path }}"
+
+- name: "Validate | Read Existing Human Admin .bash_profile Files"
+  ansible.builtin.slurp:
+    path: "{{ item.item.bash_profile_path }}"
+  register: user_profile_validate_bash_profile_slurps
+  changed_when: false
+  loop: "{{ user_profile_validate_bash_profile_stats.results | selectattr('stat.exists', 'equalto', true) | list }}"
+  loop_control:
+    label: "{{ item.item.bash_profile_path }}"
+
+- name: "Validate | Verify Human Admin .bash_profile File State"
+  vars:
+    user_profile_expected_user: "{{ item.item }}"
+    user_profile_validate_existing_bash_profile: >-
+      {{
+        (
+          user_profile_validate_bash_profile_slurps.results
+          | selectattr('item.item.user', 'equalto', item.item.user)
+          | first
+        ) | default({})
+      }}
+    user_profile_validate_existing_bash_profile_content: >-
+      {{
+        (
+          user_profile_validate_existing_bash_profile.content
+          if (user_profile_validate_existing_bash_profile | length) > 0
+          else ''
+        ) | b64decode
+      }}
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          user_profile_expected_user.manage_bash_profile
+          and item.stat.exists
+          and item.stat.isreg
+          and item.stat.pw_name == user_profile_expected_user.user
+          and item.stat.gr_name == user_profile_expected_user.group
+          and item.stat.mode == user_profile_expected_user.bash_profile_mode
+        )
+        or
+        (
+          (not user_profile_expected_user.manage_bash_profile)
+          and (
+            (not item.stat.exists)
+            or
+            (
+              'Managed by Ansible: user_profile'
+              not in user_profile_validate_existing_bash_profile_content
+            )
+          )
+        )
+    fail_msg: >-
+      Validate | Managed `.bash_profile` state does not match the requested
+      user_profile file policy
+    quiet: true
+  loop: "{{ user_profile_validate_bash_profile_stats.results }}"
+  loop_control:
+    label: "{{ item.item.bash_profile_path }}"
+
+- name: "Validate | Verify Managed Human Admin .bash_profile Content"
+  vars:
+    user_profile_effective_user: "{{ item.item.item }}"
+    user_profile_expected_bash_profile_content: >-
+      {{ lookup('template', role_path ~ '/templates/user_profile_bash_profile.j2') }}
+  ansible.builtin.assert:
+    that:
+      - (item.content | b64decode) == user_profile_expected_bash_profile_content
+    fail_msg: >-
+      Validate | Managed `.bash_profile` content does not match the requested
+      user_profile policy
+    quiet: true
+  loop: >-
+    {{
+      user_profile_validate_bash_profile_slurps.results
+      | selectattr('item.item.manage_bash_profile', 'equalto', true)
+      | list
+    }}
+  loop_control:
+    label: "{{ item.item.item.bash_profile_path }}"

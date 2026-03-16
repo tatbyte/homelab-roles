@@ -1,0 +1,34 @@
+---
+# roles/user_profile/tasks/derive_effective_profile_policy.yml
+# Shared derived-state tasks for the `user_profile` role.
+# Builds deterministic managed `.profile` and optional `.bash_profile` state
+# from the requested human admin login and session policy.
+
+- name: "Derive | Build Effective Human Admin Profile Policy"
+  ansible.builtin.set_fact:
+    user_profile_effective_users: >-
+      {%- set effective_users = [] -%}
+      {%- for user_entry in user_profile_users -%}
+        {%- set normalized_home = user_entry.home | regex_replace('//+', '/') | regex_replace('/+$', '') -%}
+        {%- set merged_environment = user_profile_default_environment | combine(user_entry.environment | default({})) -%}
+        {%- set merged_path_additions = ((user_profile_default_path_additions + (user_entry.path_additions | default([]))) | unique | list) -%}
+        {%- set merged_profile_lines = user_profile_default_profile_lines + (user_entry.profile_lines | default([])) -%}
+        {%- set merged_bash_profile_lines = user_profile_default_bash_profile_lines + (user_entry.bash_profile_lines | default([])) -%}
+        {%- set _ = effective_users.append({
+          'user': user_entry.user,
+          'group': user_entry.group,
+          'home': normalized_home,
+          'environment': merged_environment,
+          'path_additions': merged_path_additions,
+          'profile_lines': merged_profile_lines,
+          'manage_bash_profile': user_entry.manage_bash_profile | default(false),
+          'bash_profile_sources_profile': user_entry.bash_profile_sources_profile | default(user_profile_default_bash_profile_sources_profile),
+          'bash_profile_lines': merged_bash_profile_lines,
+          'profile_mode': user_entry.profile_mode | default(user_profile_default_profile_mode),
+          'bash_profile_mode': user_entry.bash_profile_mode | default(user_profile_default_bash_profile_mode),
+          'profile_path': normalized_home ~ '/.profile',
+          'bash_profile_path': normalized_home ~ '/.bash_profile',
+        }) -%}
+      {%- endfor -%}
+      {{ effective_users }}
+  changed_when: false

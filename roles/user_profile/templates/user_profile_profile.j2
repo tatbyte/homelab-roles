@@ -1,0 +1,31 @@
+{# roles/user_profile/templates/user_profile_profile.j2 #}
+{# Template for the managed `.profile` file in the `user_profile` role. #}
+# Managed by Ansible: user_profile
+# Source: roles/user_profile/templates/user_profile_profile.j2
+{% if user_profile_effective_user.path_additions | length > 0 %}
+
+# ----- Paths -----
+{% for user_profile_path in user_profile_effective_user.path_additions | reverse %}
+if [ -d {{ user_profile_path | quote }} ]; then
+  case ":$PATH:" in
+    *:{{ user_profile_path }}:*) ;;
+    *) PATH={{ user_profile_path | quote }}:"$PATH" ;;
+  esac
+fi
+{% endfor %}
+export PATH
+{% endif %}
+{% if user_profile_effective_user.environment | length > 0 %}
+
+# ----- Environment -----
+{% for user_profile_env in user_profile_effective_user.environment | dictsort %}
+export {{ user_profile_env[0] }}={{ user_profile_env[1] | quote }}
+{% endfor %}
+{% endif %}
+{% if user_profile_effective_user.profile_lines | length > 0 %}
+
+# ----- Session defaults -----
+{% for user_profile_line in user_profile_effective_user.profile_lines %}
+{{ user_profile_line }}
+{% endfor %}
+{% endif %}
