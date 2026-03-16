@@ -1,0 +1,267 @@
+---
+# roles/user_git/tasks/assert.yml
+# Assert phase tasks for the `user_git` role.
+# Validates the requested human admin Git policy before `.gitconfig` files are managed.
+
+- name: "Assert | Validate user_git variable structure"
+  ansible.builtin.assert:
+    that:
+      - user_git_install_package is boolean
+      - user_git_package_name is string
+      - user_git_package_name | trim | length > 0
+      - user_git_package_name == (user_git_package_name | trim)
+      - user_git_package_name is not match('.*\\s+.*')
+      - user_git_default_gitconfig_mode is string
+      - user_git_default_gitconfig_mode is match('^[0-7]{4}$')
+      - user_git_default_aliases is mapping
+      - user_git_default_settings is mapping
+      - user_git_users is sequence
+      - user_git_users is not string
+    fail_msg: >-
+      user_git_install_package must be boolean, user_git_package_name must be
+      a non-empty package name without whitespace,
+      user_git_default_gitconfig_mode must be a four-digit octal string,
+      user_git_default_aliases and user_git_default_settings must be mappings,
+      and user_git_users must be a list
+    quiet: true
+
+- name: "Assert | Validate requested human admin Git policies"
+  ansible.builtin.assert:
+    that:
+      - item is mapping
+      - (item.keys() | difference(['user', 'group', 'home', 'name', 'email', 'aliases', 'settings', 'mode']) | length) == 0
+      - item.user is defined
+      - item.user is string
+      - item.user | trim | length > 0
+      - item.user == (item.user | trim)
+      - item.user is not match('.*\\s+.*')
+      - item.group is defined
+      - item.group is string
+      - item.group | trim | length > 0
+      - item.group == (item.group | trim)
+      - item.group is not match('.*\\s+.*')
+      - item.home is defined
+      - item.home is string
+      - item.home | trim | length > 0
+      - item.home == (item.home | trim)
+      - item.home.startswith('/')
+      - item.home is not match('.*\\s+.*')
+      - item.name is defined
+      - item.name is string
+      - item.name | trim | length > 0
+      - item.name == (item.name | trim)
+      - item.name is not match('.*[\\r\\n].*')
+      - item.email is defined
+      - item.email is string
+      - item.email | trim | length > 0
+      - item.email == (item.email | trim)
+      - item.email is match('^[^\\s@]+@[^\\s@]+$')
+      - (item.aliases is not defined) or (item.aliases is mapping)
+      - (item.settings is not defined) or (item.settings is mapping)
+      - >-
+        (
+          item.mode is not defined
+        ) or (
+          item.mode is string
+          and item.mode is match('^[0-7]{4}$')
+        )
+    fail_msg: >-
+      Each user_git_users item must be a mapping with only user, group, home,
+      name, email, aliases, settings, and optional mode keys. user, group,
+      home, name, and email must be valid non-empty values, aliases and
+      settings must be mappings when set, and mode must be a four-digit octal
+      string when set
+    quiet: true
+  loop: "{{ user_git_users }}"
+  loop_control:
+    label: "{{ item.user | default('user-git') }}"
+
+- name: "Assert | Validate User Names Are Unique Across Git Policies"
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          user_git_users
+          | map(attribute='user')
+          | list
+          | unique
+          | length
+        ) == (user_git_users | length)
+    fail_msg: >-
+      Each user_git_users item must target a unique user
+    quiet: true
+
+- name: "Assert | Validate requested human admin Git aliases and settings"
+  vars:
+    user_git_requested_aliases: >-
+      {{
+        user_git_default_aliases
+        | combine(item.aliases | default({}))
+      }}
+    user_git_requested_settings: >-
+      {{
+        user_git_default_settings
+        | combine(item.settings | default({}))
+      }}
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          user_git_requested_aliases
+          | dict2items
+          | rejectattr('key', 'match', '^[^\\s=]+$')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_git_requested_aliases
+          | dict2items
+          | rejectattr('value', 'string')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_git_requested_settings
+          | dict2items
+          | rejectattr('key', 'match', '^[A-Za-z0-9][A-Za-z0-9-]*\\.[A-Za-z0-9][A-Za-z0-9-]*$')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_git_requested_settings
+          | dict2items
+          | rejectattr('value', 'string')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_git_requested_settings
+          | dict2items
+          | selectattr('key', 'match', '^(user\\.name|user\\.email|alias\\.).*')
+          | list
+          | length
+        ) == 0
+    fail_msg: >-
+      Git aliases must use simple alias names with string command values, and
+      Git settings must use string values keyed as section.option. Reserved
+      keys user.name, user.email, and alias.* must be managed through the
+      dedicated identity and aliases inputs
+    quiet: true
+  loop: "{{ user_git_users }}"
+  loop_control:
+    label: "{{ item.user }}"
+
+- name: "Assert | Derive Effective Human Admin Git Policy"
+  ansible.builtin.import_tasks: derive_effective_git_policy.yml
+
+- name: "Assert | Collect Existing Human Admin Account Entries For Git Management"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ item.user }}"
+  register: user_git_assert_passwd_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ user_git_users }}"
+  loop_control:
+    label: "{{ item.user }}"
+
+- name: "Assert | Validate Human Admin Accounts Exist Before Git Management"
+  vars:
+    user_git_assert_passwd_entries: "{{ item.ansible_facts.getent_passwd | default({}) }}"
+    user_git_assert_passwd_entry: "{{ user_git_assert_passwd_entries.get(item.item.user, []) }}"
+    user_git_assert_requested_home: >-
+      {{
+        item.item.home
+        | regex_replace('//+', '/')
+        | regex_replace('/+$', '')
+      }}
+    user_git_assert_passwd_home: >-
+      {{
+        (
+          user_git_assert_passwd_entry[4]
+          if (user_git_assert_passwd_entry | length) > 4
+          else ''
+        )
+        | regex_replace('//+', '/')
+        | regex_replace('/+$', '')
+      }}
+  ansible.builtin.assert:
+    that:
+      - item.item.user in user_git_assert_passwd_entries
+      - user_git_assert_passwd_home == user_git_assert_requested_home
+    fail_msg: >-
+      Every user_git user must already exist and the requested home path must
+      match the current passwd entry before `.gitconfig` files are managed
+    quiet: true
+  loop: "{{ user_git_assert_passwd_lookup.results }}"
+  loop_control:
+    label: "{{ item.item.user }}"
+
+- name: "Assert | Stat Existing Human Admin Home Directories"
+  ansible.builtin.stat:
+    path: "{{ item.home }}"
+  register: user_git_assert_home_stats
+  changed_when: false
+  loop: "{{ user_git_users }}"
+  loop_control:
+    label: "{{ item.home }}"
+
+- name: "Assert | Validate Human Admin Home Directories Exist"
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+      - item.stat.isdir
+    fail_msg: >-
+      Every user_git home path must already exist as a directory before the
+      role manages `.gitconfig`
+    quiet: true
+  loop: "{{ user_git_assert_home_stats.results }}"
+  loop_control:
+    label: "{{ item.stat.path | default(item.item.home) }}"
+
+- name: "Assert | Collect Human Admin Git Groups"
+  ansible.builtin.getent:
+    database: group
+    key: "{{ item }}"
+  register: user_git_assert_group_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ user_git_users | map(attribute='group') | unique | list }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: "Assert | Validate Human Admin Git Groups Exist"
+  ansible.builtin.assert:
+    that:
+      - item.item in (item.ansible_facts.getent_group | default({}))
+    fail_msg: >-
+      Every requested user_git group must already exist before the role
+      manages `.gitconfig` ownership
+    quiet: true
+  loop: "{{ user_git_assert_group_lookup.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: "Assert | Resolve Git Binary Availability When Install Handling Is Disabled"
+  ansible.builtin.command:
+    argv: [sh, -c, "command -v git"]
+  register: user_git_assert_git_binary
+  changed_when: false
+  failed_when: false
+  when: not user_git_install_package | bool
+
+- name: "Assert | Validate Git Binary Exists When Install Handling Is Disabled"
+  ansible.builtin.assert:
+    that:
+      - user_git_assert_git_binary.rc == 0
+      - user_git_assert_git_binary.stdout | trim | length > 0
+    fail_msg: >-
+      Git must already be installed when user_git_install_package is false
+      because validation reads back managed config entries through the git
+      command-line interface
+    quiet: true
+  when: not user_git_install_package | bool

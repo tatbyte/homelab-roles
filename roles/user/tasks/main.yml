@@ -59,3 +59,13 @@
     - user_include_directories | default(false)
     - (user_account_state | default('present')) == 'present'
   tags: [user, user_directories, assert, config, validate, user_directories_assert, user_directories_config, user_directories_validate]
+
+- name: "User | Include optional user_git role"
+  ansible.builtin.include_role:
+    name: user_git
+    apply:
+      tags: [user, user_git]
+  when:
+    - user_include_git | default(false)
+    - (user_account_state | default('present')) == 'present'
+  tags: [user, user_git, assert, install, config, validate, user_git_assert, user_git_install, user_git_config, user_git_validate]

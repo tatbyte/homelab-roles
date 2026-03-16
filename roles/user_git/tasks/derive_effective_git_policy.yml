@@ -1,0 +1,117 @@
+---
+# roles/user_git/tasks/derive_effective_git_policy.yml
+# Shared derived-state tasks for the `user_git` role.
+# Flattens per-user Git settings into deterministic managed `.gitconfig` state and validation entries.
+
+- name: "Derive | Build Effective Human Admin Git Policy"
+  ansible.builtin.set_fact:
+    user_git_effective_users: >-
+      {%- set effective_users = [] -%}
+      {%- set effective_entries = [] -%}
+      {%- for user_entry in user_git_users -%}
+        {%- set normalized_home = user_entry.home | regex_replace('//+', '/') | regex_replace('/+$', '') -%}
+        {%- set merged_aliases = user_git_default_aliases | combine(user_entry.aliases | default({})) -%}
+        {%- set merged_settings = user_git_default_settings | combine(user_entry.settings | default({})) -%}
+        {%- set alias_items = [] -%}
+        {%- set setting_items = [] -%}
+        {%- set setting_sections = [] -%}
+        {%- for alias_name, alias_value in (merged_aliases | dictsort) -%}
+          {%- set _ = alias_items.append({
+            'name': alias_name,
+            'value': alias_value,
+            'key': 'alias.' ~ alias_name,
+          }) -%}
+        {%- endfor -%}
+        {%- for setting_key, setting_value in (merged_settings | dictsort) -%}
+          {%- set setting_section = setting_key.split('.', 1)[0] -%}
+          {%- set setting_option = setting_key.split('.', 1)[1] -%}
+          {%- set _ = setting_items.append({
+            'key': setting_key,
+            'section': setting_section,
+            'option': setting_option,
+            'value': setting_value,
+          }) -%}
+          {%- if setting_section not in setting_sections -%}
+            {%- set _ = setting_sections.append(setting_section) -%}
+          {%- endif -%}
+        {%- endfor -%}
+        {%- set effective_user = {
+          'user': user_entry.user,
+          'group': user_entry.group,
+          'home': normalized_home,
+          'name': user_entry.name,
+          'email': user_entry.email,
+          'mode': user_entry.mode | default(user_git_default_gitconfig_mode),
+          'gitconfig_path': normalized_home ~ '/.gitconfig',
+          'alias_items': alias_items,
+          'setting_items': setting_items,
+          'setting_sections': setting_sections,
+        } -%}
+        {%- set _ = effective_users.append(effective_user) -%}
+        {%- set _ = effective_entries.append({
+          'user': user_entry.user,
+          'gitconfig_path': normalized_home ~ '/.gitconfig',
+          'key': 'user.name',
+          'value': user_entry.name,
+        }) -%}
+        {%- set _ = effective_entries.append({
+          'user': user_entry.user,
+          'gitconfig_path': normalized_home ~ '/.gitconfig',
+          'key': 'user.email',
+          'value': user_entry.email,
+        }) -%}
+        {%- for alias_item in alias_items -%}
+          {%- set _ = effective_entries.append({
+            'user': user_entry.user,
+            'gitconfig_path': normalized_home ~ '/.gitconfig',
+            'key': alias_item.key,
+            'value': alias_item.value,
+          }) -%}
+        {%- endfor -%}
+        {%- for setting_item in setting_items -%}
+          {%- set _ = effective_entries.append({
+            'user': user_entry.user,
+            'gitconfig_path': normalized_home ~ '/.gitconfig',
+            'key': setting_item.key,
+            'value': setting_item.value,
+          }) -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{ effective_users }}
+    user_git_effective_config_entries: >-
+      {%- set effective_entries = [] -%}
+      {%- for user_entry in user_git_users -%}
+        {%- set normalized_home = user_entry.home | regex_replace('//+', '/') | regex_replace('/+$', '') -%}
+        {%- set merged_aliases = user_git_default_aliases | combine(user_entry.aliases | default({})) -%}
+        {%- set merged_settings = user_git_default_settings | combine(user_entry.settings | default({})) -%}
+        {%- set _ = effective_entries.append({
+          'user': user_entry.user,
+          'gitconfig_path': normalized_home ~ '/.gitconfig',
+          'key': 'user.name',
+          'value': user_entry.name,
+        }) -%}
+        {%- set _ = effective_entries.append({
+          'user': user_entry.user,
+          'gitconfig_path': normalized_home ~ '/.gitconfig',
+          'key': 'user.email',
+          'value': user_entry.email,
+        }) -%}
+        {%- for alias_name, alias_value in (merged_aliases | dictsort) -%}
+          {%- set _ = effective_entries.append({
+            'user': user_entry.user,
+            'gitconfig_path': normalized_home ~ '/.gitconfig',
+            'key': 'alias.' ~ alias_name,
+            'value': alias_value,
+          }) -%}
+        {%- endfor -%}
+        {%- for setting_key, setting_value in (merged_settings | dictsort) -%}
+          {%- set _ = effective_entries.append({
+            'user': user_entry.user,
+            'gitconfig_path': normalized_home ~ '/.gitconfig',
+            'key': setting_key,
+            'value': setting_value,
+          }) -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{ effective_entries }}
+  changed_when: false

@@ -1,0 +1,92 @@
+---
+# roles/user_git/tasks/validate.yml
+# Validate phase tasks for the `user_git` role.
+# Verifies the resulting managed `.gitconfig` files and expected Git config entries after configuration.
+
+- name: "Validate | Derive Effective Human Admin Git Policy"
+  ansible.builtin.import_tasks: derive_effective_git_policy.yml
+
+- name: "Validate | Stat Managed Human Admin Git Config Files"
+  ansible.builtin.stat:
+    path: "{{ item.gitconfig_path }}"
+  register: user_git_validate_gitconfig_stats
+  changed_when: false
+  loop: "{{ user_git_effective_users }}"
+  loop_control:
+    label: "{{ item.gitconfig_path }}"
+
+- name: "Validate | Verify Managed Human Admin Git Config Files"
+  vars:
+    user_git_expected_user: "{{ item.item }}"
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+      - item.stat.isreg
+      - item.stat.pw_name == user_git_expected_user.user
+      - item.stat.gr_name == user_git_expected_user.group
+      - item.stat.mode == user_git_expected_user.mode
+    fail_msg: >-
+      Validate | Managed `.gitconfig` state does not match the requested
+      user_git file policy
+    quiet: true
+  loop: "{{ user_git_validate_gitconfig_stats.results }}"
+  loop_control:
+    label: "{{ item.item.gitconfig_path }}"
+
+- name: "Validate | Read Back Managed Human Admin Git Config State"
+  ansible.builtin.command:
+    argv:
+      - git
+      - config
+      - --file
+      - "{{ item.gitconfig_path }}"
+      - --list
+  register: user_git_validate_config_state
+  changed_when: false
+  loop: "{{ user_git_effective_users }}"
+  loop_control:
+    label: "{{ item.user }}"
+
+- name: "Validate | Verify Managed Human Admin Git Config State"
+  vars:
+    user_git_expected_user: "{{ item.item }}"
+    user_git_expected_lines: >-
+      {{
+        [
+          'user.name=' ~ user_git_expected_user.name,
+          'user.email=' ~ user_git_expected_user.email,
+        ]
+        + (
+          user_git_expected_user.alias_items
+          | map(attribute='key')
+          | map('lower')
+          | zip(user_git_expected_user.alias_items | map(attribute='value'))
+          | map('join', '=')
+          | list
+        )
+        + (
+          user_git_expected_user.setting_items
+          | map(attribute='key')
+          | map('lower')
+          | zip(user_git_expected_user.setting_items | map(attribute='value'))
+          | map('join', '=')
+          | list
+        )
+      }}
+  ansible.builtin.assert:
+    that:
+      - item.rc == 0
+      - (user_git_expected_lines | difference(item.stdout_lines)) | length == 0
+    fail_msg: >-
+      Validate | Managed Git config state does not match the requested
+      user_git policy
+    quiet: true
+  loop: "{{ user_git_validate_config_state.results }}"
+  loop_control:
+    label: "{{ item.item.user }}"
+
+- name: "Validate | Summarize Managed Human Admin Git Config Entries"
+  ansible.builtin.debug:
+    msg: >-
+      Managed {{ user_git_effective_users | length }} user(s) git config with
+      {{ user_git_effective_config_entries | length }} total entries

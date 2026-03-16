@@ -1,0 +1,12 @@
+---
+# roles/user_git/tasks/install.yml
+# Install phase tasks for the `user_git` role.
+# Ensures the Git package prerequisite is present before managed config validation runs.
+
+- name: "Install | Ensure Git package is present"
+  ansible.builtin.apt:
+    name: "{{ user_git_package_name }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: user_git_install_package | bool
