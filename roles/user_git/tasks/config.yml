@@ -1,0 +1,21 @@
+---
+# roles/user_git/tasks/config.yml
+# Config phase tasks for the `user_git` role.
+# Writes the requested managed `.gitconfig` files for one or more human admin users.
+
+- name: "Config | Derive Effective Human Admin Git Policy"
+  ansible.builtin.import_tasks: derive_effective_git_policy.yml
+
+- name: "Config | Ensure Managed Human Admin Git Config Exists"
+  ansible.builtin.template:
+    src: user_git_gitconfig.j2
+    dest: "{{ item.gitconfig_path }}"
+    owner: "{{ item.user }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  vars:
+    user_git_effective_user: "{{ item }}"
+  loop: "{{ user_git_effective_users }}"
+  loop_control:
+    label: "{{ item.gitconfig_path }}"
+  when: user_git_effective_users | length > 0

@@ -1,0 +1,21 @@
+{# roles/user_git/templates/user_git_gitconfig.j2 #}
+{# Template for the managed `~/.gitconfig` file in the `user_git` role. #}
+# Managed by Ansible: user_git
+# Source: roles/user_git/templates/user_git_gitconfig.j2
+[user]
+  name = {{ user_git_effective_user.name }}
+  email = {{ user_git_effective_user.email }}
+{% if user_git_effective_user.alias_items | length > 0 %}
+
+[alias]
+{% for alias_item in user_git_effective_user.alias_items %}
+  {{ alias_item.name }} = {{ alias_item.value }}
+{% endfor %}
+{% endif %}
+{% for setting_section in user_git_effective_user.setting_sections %}
+
+[{{ setting_section }}]
+{% for setting_item in user_git_effective_user.setting_items if setting_item.section == setting_section %}
+  {{ setting_item.option }} = {{ setting_item.value }}
+{% endfor %}
+{% endfor %}

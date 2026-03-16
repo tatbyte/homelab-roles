@@ -3,6 +3,18 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v1.7.0]
+### Added
+- Added the standalone `user_git` role for managing per-user Git identity, aliases, and simple `section.option` settings through a managed `~/.gitconfig` file for one or more existing human admin users.
+- Added the example `user_git.yml` inventory file plus the aggregate `user_include_git` toggle used to exercise the new role in the local lab.
+
+### Changed
+- Updated the aggregate `user` role so `user_git` is an explicit opt-in follow-up role that runs after the optional `user_directories` role, matching the intended user-environment ordering for this repository.
+- Updated the example `user_zshell` profile so shell aliases stay shell-focused while Git-native aliases live under the new `user_git` role and managed `~/.gitconfig`.
+
+### Documentation
+- Updated repository, workflow, role, and example documentation to describe the new `user_git` role, the expanded aggregate ordering, and the example Git identity plus alias baseline.
+
 ## [v1.6.0]
 ### Added
 - Added the standalone `user_directories` role for managing common home-directory workspace paths such as `.local/bin`, `scripts`, `.config`, and `projects` for one or more existing human admin users.

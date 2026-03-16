@@ -1,0 +1,31 @@
+---
+# roles/user_git/defaults/main.yml
+# Default variables for the `user_git` role.
+# Defines managed Git identity and behavior for human admin users after their accounts already exist.
+
+# Ensure Git exists before managed config-entry validation runs.
+user_git_install_package: true
+
+# Debian-family package name used when Git prerequisite handling is enabled.
+user_git_package_name: git
+
+# Default mode for managed `.gitconfig` files when a user entry does not set
+# one explicitly.
+user_git_default_gitconfig_mode: "0644"
+
+# Reusable default Git aliases applied by the default per-user policy.
+user_git_default_aliases: {}
+
+# Reusable default Git settings applied by the default per-user policy.
+# Keys must use `section.option` form such as `init.defaultBranch`.
+user_git_default_settings: {}
+
+# Per-user Git policies managed by this role.
+user_git_users:
+  - user: "{{ user_account_name | default('admin') }}"
+    group: "{{ user_account_primary_group | default(user_account_name | default('admin')) }}"
+    home: "{{ user_account_home | default('/home/' ~ (user_account_name | default('admin'))) }}"
+    name: ""
+    email: ""
+    aliases: "{{ user_git_default_aliases }}"
+    settings: "{{ user_git_default_settings }}"
