@@ -3,6 +3,19 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v2.0.0]
+### Added
+- Added the standalone `user_vim` role for managing per-user `.vimrc` files for one or more existing human admin users, including defaults, assert/install/config/validate phases, optional template overrides, and optional Vim package handling.
+- Added the example `user_vim.yml` inventory file plus the aggregate `user_include_vim` toggle used to exercise the new role in the local lab.
+
+### Changed
+- Updated the aggregate `user` role so `user_vim` is an explicit opt-in follow-up role that runs after the optional `user_git` role, keeping editor configuration as a lightweight final user-environment layer.
+- Hardened `user_vim` template rendering and validation so missing, unreadable, empty, or render-broken templates fail with clearer per-user role messages instead of less specific downstream template errors.
+- Updated the example user stack so the human admin account now gets a managed `.vimrc` baseline alongside the existing optional user-environment roles.
+
+### Documentation
+- Updated repository, workflow, role, and example documentation to describe the new `user_vim` role, the expanded aggregate ordering, and the example managed Vim baseline.
+
 ## [v1.9.0]
 ### Added
 - Added the standalone `user_ssh` role for managing per-user `.ssh` baselines for one or more existing human admin users, including `authorized_keys`, optional `~/.ssh/config`, optional `~/.ssh/known_hosts`, permission enforcement, and exact file validation.
