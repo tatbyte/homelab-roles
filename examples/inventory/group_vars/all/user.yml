@@ -51,3 +51,8 @@ user_include_directories: true
 # Keep this enabled in the example lab so the human admin account gets a small
 # managed Git identity plus alias baseline in `~/.gitconfig`.
 user_include_git: true
+
+# 10. `user_vim` runs after the optional Git layer.
+# Keep this enabled in the example lab so the human admin account gets a managed
+# `.vimrc` editor configuration baseline.
+user_include_vim: true

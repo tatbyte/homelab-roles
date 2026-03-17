@@ -1,0 +1,32 @@
+---
+# roles/user_vim/tasks/validate_render_template.yml
+# Per-user template rendering and content checks for the `user_vim` validate phase.
+
+- name: "Validate | Render Human Admin Vim RC Template Content"
+  vars:
+    user_vim_effective_user: "{{ item.item.item }}"
+  block:
+    - name: "Validate | Render Human Admin Vim RC Template Content"
+      ansible.builtin.set_fact:
+        user_vim_expected_vimrc_content: "{{ lookup('template', item.item.item.vimrc_template_name) }}"
+  rescue:
+    - name: "Validate | Report Human Admin Vim RC Template Render Failure"
+      ansible.builtin.fail:
+        msg: >-
+          Validate | Managed `.vimrc` content does not match the requested
+          user_vim policy because template rendering failed for
+          {{ item.item.item.vimrc_path }}. Checked template:
+          {{ item.item.item.vimrc_template_name }}.
+          Template render error: {{ ansible_failed_result.msg | default('unknown error') }}
+
+- name: "Validate | Verify Human Admin Vim RC File Content"
+  vars:
+    user_vim_effective_user: "{{ item.item.item }}"
+  ansible.builtin.assert:
+    that:
+      - user_vim_expected_vimrc_content | trim | length > 0
+      - (item.content | b64decode) == user_vim_expected_vimrc_content
+    fail_msg: >-
+      Validate | Managed `.vimrc` content does not match the requested
+      user_vim policy for {{ item.item.item.vimrc_path }}
+    quiet: true

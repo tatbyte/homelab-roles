@@ -1,0 +1,28 @@
+---
+# roles/user_vim/tasks/derive_effective_vim_policy.yml
+# Shared derived-state tasks for the `user_vim` role.
+# Builds the effective per-user `.vimrc` policy used by config and validation.
+
+- name: "Derive | Build Effective Human Admin Vim Policy"
+  ansible.builtin.set_fact:
+    user_vim_effective_users: >-
+      {%- set effective_users = [] -%}
+      {%- for user_entry in user_vim_users -%}
+        {%- set normalized_home = user_entry.home | regex_replace('//+', '/') | regex_replace('/+$', '') -%}
+        {%- set effective_template_name = user_entry.vimrc_template_name | default('') -%}
+        {%- set _ = effective_users.append({
+          'user': user_entry.user,
+          'group': user_entry.group,
+          'home': normalized_home,
+          'vimrc_lines': user_vim_default_vimrc_lines + (user_entry.vimrc_lines | default([])),
+          'mode': user_entry.mode | default(user_vim_default_vimrc_mode),
+          'vimrc_template_name': (
+            effective_template_name
+            if effective_template_name != ''
+            else user_vim_vimrc_template_name
+          ),
+          'vimrc_path': normalized_home ~ '/.vimrc',
+        }) -%}
+      {%- endfor -%}
+      {{ effective_users }}
+  changed_when: false

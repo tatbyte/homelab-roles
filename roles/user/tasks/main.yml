@@ -89,3 +89,13 @@
     - user_include_git | default(false)
     - (user_account_state | default('present')) == 'present'
   tags: [user, user_git, assert, install, config, validate, user_git_assert, user_git_install, user_git_config, user_git_validate]
+
+- name: "User | Include optional user_vim role"
+  ansible.builtin.include_role:
+    name: user_vim
+    apply:
+      tags: [user, user_vim]
+  when:
+    - user_include_vim | default(false)
+    - (user_account_state | default('present')) == 'present'
+  tags: [user, user_vim, assert, install, config, validate, user_vim_assert, user_vim_install, user_vim_config, user_vim_validate]

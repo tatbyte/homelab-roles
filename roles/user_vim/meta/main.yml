@@ -1,0 +1,6 @@
+---
+# roles/user_vim/meta/main.yml
+# Role metadata for `user_vim`.
+# Keeps dependencies empty because the aggregate `user` role already controls ordering.
+
+dependencies: []

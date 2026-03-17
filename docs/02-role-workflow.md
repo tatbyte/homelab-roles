@@ -115,11 +115,13 @@ Current order:
 7. `user_profile` when `user_include_profile: true`
 8. `user_directories` when `user_include_directories: true`
 9. `user_git` when `user_include_git: true`
+10. `user_vim` when `user_include_vim: true`
 
-Use this sequence to keep human-admin account creation and adoption explicit first, then optional supplementary-group policy, then optional user-level sudo policy, then optional secret-backed local password management, then optional managed SSH access state, then optional zsh policy, then optional login/session profile policy, then optional home-directory standardization, then optional Git identity and behavior policy, before any future user-environment roles such as tmux or file deployment.
+Use this sequence to keep human-admin account creation and adoption explicit first, then optional supplementary-group policy, then optional user-level sudo policy, then optional secret-backed local password management, then optional managed SSH access state, then optional zsh policy, then optional login/session profile policy, then optional home-directory standardization, then optional Git identity and behavior policy, then optional Vim RC policy, before any future user-environment roles such as tmux or file deployment.
 When `user_include_sudo: false` and `user_cleanup_disabled_sudo_drop_in: true`, the aggregate still includes `user_sudo` in `absent` mode so a previously managed drop-in can be removed without re-enabling ongoing sudo management.
 When `user_include_ssh: true`, the aggregate applies managed `.ssh` access state before the optional zsh layer so SSH access and interactive shell behavior stay separated cleanly.
 When `user_include_zshell: true`, `user_account` still runs first but skips direct shell ownership so `user_zshell` becomes the single owner of the zsh login shell and managed `.zshrc` file.
+When `user_include_vim: true`, the aggregate keeps `.vimrc` policy in a lightweight final editor layer after shell/profile and Git policy so each layer remains focused.
 
 ## Tag Usage
 

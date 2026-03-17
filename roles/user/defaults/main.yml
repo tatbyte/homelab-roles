@@ -11,4 +11,5 @@ user_include_ssh: false
 user_include_zshell: false
 user_include_profile: false
 user_include_directories: false
+user_include_vim: false
 user_include_git: false

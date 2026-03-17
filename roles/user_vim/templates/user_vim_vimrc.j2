@@ -1,0 +1,7 @@
+{# roles/user_vim/templates/user_vim_vimrc.j2 #}
+{# Template for the managed `~/.vimrc` file in the `user_vim` role. #}
+" Managed by Ansible: user_vim
+" Source: roles/user_vim/templates/user_vim_vimrc.j2
+{% for vimrc_line in user_vim_effective_user.vimrc_lines %}
+{{ vimrc_line }}
+{% endfor %}
