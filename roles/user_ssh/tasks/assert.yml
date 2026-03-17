@@ -1,0 +1,448 @@
+---
+# roles/user_ssh/tasks/assert.yml
+# Assert phase tasks for the `user_ssh` role.
+# Validates the requested human admin SSH access policy before managed SSH
+# files are written.
+
+- name: "Assert | Validate user_ssh variable structure"
+  ansible.builtin.assert:
+    that:
+      - user_ssh_default_ssh_directory_mode is string
+      - user_ssh_default_ssh_directory_mode is match('^[0-7]{4}$')
+      - user_ssh_default_authorized_keys_mode is string
+      - user_ssh_default_authorized_keys_mode is match('^[0-7]{4}$')
+      - user_ssh_default_config_mode is string
+      - user_ssh_default_config_mode is match('^[0-7]{4}$')
+      - user_ssh_default_known_hosts_mode is string
+      - user_ssh_default_known_hosts_mode is match('^[0-7]{4}$')
+      - user_ssh_default_authorized_keys is sequence
+      - user_ssh_default_authorized_keys is not string
+      - user_ssh_default_config_lines is sequence
+      - user_ssh_default_config_lines is not string
+      - user_ssh_default_known_hosts_lines is sequence
+      - user_ssh_default_known_hosts_lines is not string
+      - user_ssh_cleanup_removed_users is sequence
+      - user_ssh_cleanup_removed_users is not string
+      - user_ssh_users is sequence
+      - user_ssh_users is not string
+      - >-
+        (
+          user_ssh_default_authorized_keys
+          | reject('string')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_ssh_default_authorized_keys
+          | reject('match', '^\\S.*$')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_ssh_default_authorized_keys
+          | reject('match', '^[^\\r\\n]+$')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_ssh_default_config_lines
+          | reject('string')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_ssh_default_config_lines
+          | reject('match', '^[^\\r\\n]*$')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_ssh_default_known_hosts_lines
+          | reject('string')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_ssh_default_known_hosts_lines
+          | reject('match', '^[^\\r\\n]*$')
+          | list
+          | length
+        ) == 0
+    fail_msg: >-
+      user_ssh default modes must be four-digit octal strings, default
+      authorized_keys values must be non-empty strings without embedded
+      newlines, default SSH config and known_hosts lines must be string lists
+      without embedded newlines, and user_ssh_users plus
+      user_ssh_cleanup_removed_users must be lists
+    quiet: true
+
+- name: "Assert | Validate Requested Human Admin SSH Policies"
+  ansible.builtin.assert:
+    that:
+      - item is mapping
+      - >-
+        (
+          item.keys()
+          | difference([
+            'user',
+            'group',
+            'home',
+            'authorized_keys',
+            'manage_config',
+            'config_lines',
+            'manage_known_hosts',
+            'known_hosts_lines',
+            'ssh_directory_mode',
+            'authorized_keys_mode',
+            'config_mode',
+            'known_hosts_mode'
+          ])
+          | length
+        ) == 0
+      - item.user is defined
+      - item.user is string
+      - item.user | trim | length > 0
+      - item.user == (item.user | trim)
+      - item.user is not match('.*\\s+.*')
+      - item.group is defined
+      - item.group is string
+      - item.group | trim | length > 0
+      - item.group == (item.group | trim)
+      - item.group is not match('.*\\s+.*')
+      - item.home is defined
+      - item.home is string
+      - item.home | trim | length > 0
+      - item.home == (item.home | trim)
+      - item.home.startswith('/')
+      - item.home is not match('.*\\s+.*')
+      - >-
+        (
+          item.authorized_keys is not defined
+        ) or (
+          item.authorized_keys is sequence
+          and item.authorized_keys is not string
+        )
+      - >-
+        (
+          item.manage_config is not defined
+        ) or (
+          item.manage_config is boolean
+        )
+      - >-
+        (
+          item.config_lines is not defined
+        ) or (
+          item.config_lines is sequence
+          and item.config_lines is not string
+        )
+      - >-
+        (
+          item.manage_known_hosts is not defined
+        ) or (
+          item.manage_known_hosts is boolean
+        )
+      - >-
+        (
+          item.known_hosts_lines is not defined
+        ) or (
+          item.known_hosts_lines is sequence
+          and item.known_hosts_lines is not string
+        )
+      - >-
+        (
+          item.ssh_directory_mode is not defined
+        ) or (
+          item.ssh_directory_mode is string
+          and item.ssh_directory_mode is match('^[0-7]{4}$')
+        )
+      - >-
+        (
+          item.authorized_keys_mode is not defined
+        ) or (
+          item.authorized_keys_mode is string
+          and item.authorized_keys_mode is match('^[0-7]{4}$')
+        )
+      - >-
+        (
+          item.config_mode is not defined
+        ) or (
+          item.config_mode is string
+          and item.config_mode is match('^[0-7]{4}$')
+        )
+      - >-
+        (
+          item.known_hosts_mode is not defined
+        ) or (
+          item.known_hosts_mode is string
+          and item.known_hosts_mode is match('^[0-7]{4}$')
+        )
+    fail_msg: >-
+      Each user_ssh_users item must be a mapping with only user, group, home,
+      authorized_keys, manage_config, config_lines, manage_known_hosts,
+      known_hosts_lines, ssh_directory_mode, authorized_keys_mode,
+      config_mode, and known_hosts_mode keys. user/group/home must be valid
+      non-empty values, optional list inputs must be lists, optional booleans
+      must be booleans, and optional modes must be four-digit octal strings
+    quiet: true
+  loop: "{{ user_ssh_users }}"
+  loop_control:
+    label: "{{ item.user | default('user-ssh') }}"
+
+- name: "Assert | Validate Removed Human Admin SSH Cleanup Targets"
+  ansible.builtin.assert:
+    that:
+      - item is mapping
+      - >-
+        (
+          item.keys()
+          | difference([
+            'user',
+            'home'
+          ])
+          | length
+        ) == 0
+      - item.user is defined
+      - item.user is string
+      - item.user | trim | length > 0
+      - item.user == (item.user | trim)
+      - item.user is not match('.*\\s+.*')
+      - item.home is defined
+      - item.home is string
+      - item.home | trim | length > 0
+      - item.home == (item.home | trim)
+      - item.home.startswith('/')
+      - item.home is not match('.*\\s+.*')
+    fail_msg: >-
+      Each user_ssh_cleanup_removed_users item must be a mapping with only
+      user and home keys, and both values must be valid non-empty strings
+      without whitespace
+    quiet: true
+  loop: "{{ user_ssh_cleanup_removed_users }}"
+  loop_control:
+    label: "{{ item.user | default('user-ssh-cleanup') }}"
+
+- name: "Assert | Validate User Names Are Unique Across SSH Policies"
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          user_ssh_users
+          | map(attribute='user')
+          | list
+          | unique
+          | length
+        ) == (user_ssh_users | length)
+    fail_msg: >-
+      Each user_ssh_users item must target a unique user
+    quiet: true
+
+- name: "Assert | Validate Removed User Names Are Unique Across SSH Cleanup Targets"
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          user_ssh_cleanup_removed_users
+          | map(attribute='user')
+          | list
+          | unique
+          | length
+        ) == (user_ssh_cleanup_removed_users | length)
+    fail_msg: >-
+      Each user_ssh_cleanup_removed_users item must target a unique user
+    quiet: true
+
+- name: "Assert | Validate Active And Removed SSH User Sets Do Not Overlap"
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          user_ssh_users
+          | map(attribute='user')
+          | list
+          | intersect(
+              user_ssh_cleanup_removed_users
+              | map(attribute='user')
+              | list
+            )
+          | length
+        ) == 0
+    fail_msg: >-
+      user_ssh_users and user_ssh_cleanup_removed_users must not target the
+      same user in the same run
+    quiet: true
+
+- name: "Assert | Validate Requested Human Admin SSH Content Inputs"
+  vars:
+    user_ssh_requested_authorized_keys: >-
+      {{
+        user_ssh_default_authorized_keys
+        + (item.authorized_keys | default([]))
+      }}
+    user_ssh_requested_config_lines: >-
+      {{
+        user_ssh_default_config_lines
+        + (item.config_lines | default([]))
+      }}
+    user_ssh_requested_known_hosts_lines: >-
+      {{
+        user_ssh_default_known_hosts_lines
+        + (item.known_hosts_lines | default([]))
+      }}
+  ansible.builtin.assert:
+    that:
+      - user_ssh_requested_authorized_keys | length > 0
+      - >-
+        (
+          user_ssh_requested_authorized_keys
+          | reject('string')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_ssh_requested_authorized_keys
+          | reject('match', '^\\S.*$')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_ssh_requested_authorized_keys
+          | reject('match', '^[^\\r\\n]+$')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_ssh_requested_config_lines
+          | reject('string')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_ssh_requested_config_lines
+          | reject('match', '^[^\\r\\n]*$')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_ssh_requested_known_hosts_lines
+          | reject('string')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_ssh_requested_known_hosts_lines
+          | reject('match', '^[^\\r\\n]*$')
+          | list
+          | length
+        ) == 0
+    fail_msg: >-
+      Each effective user_ssh policy must include at least one authorized key,
+      authorized_keys entries must be non-empty strings without embedded
+      newlines, and optional SSH config or known_hosts lines must be strings
+      without embedded newlines
+    quiet: true
+  loop: "{{ user_ssh_users }}"
+  loop_control:
+    label: "{{ item.user }}"
+
+- name: "Assert | Derive Effective Human Admin SSH Policy"
+  ansible.builtin.import_tasks: derive_effective_ssh_policy.yml
+
+- name: "Assert | Collect Existing Human Admin Account Entries For SSH Management"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ item.user }}"
+  register: user_ssh_assert_passwd_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ user_ssh_users }}"
+  loop_control:
+    label: "{{ item.user }}"
+
+- name: "Assert | Validate Human Admin Accounts Exist Before SSH Management"
+  vars:
+    user_ssh_assert_passwd_entries: "{{ item.ansible_facts.getent_passwd | default({}) }}"
+    user_ssh_assert_passwd_entry: "{{ user_ssh_assert_passwd_entries.get(item.item.user, []) }}"
+    user_ssh_assert_requested_home: >-
+      {{
+        item.item.home
+        | regex_replace('//+', '/')
+        | regex_replace('/+$', '')
+      }}
+    user_ssh_assert_passwd_home: >-
+      {{
+        (
+          user_ssh_assert_passwd_entry[4]
+          if (user_ssh_assert_passwd_entry | length) > 4
+          else ''
+        )
+        | regex_replace('//+', '/')
+        | regex_replace('/+$', '')
+      }}
+  ansible.builtin.assert:
+    that:
+      - item.item.user in user_ssh_assert_passwd_entries
+      - user_ssh_assert_passwd_home == user_ssh_assert_requested_home
+    fail_msg: >-
+      Every user_ssh user must already exist and the requested home path must
+      match the current passwd entry before managed SSH files are written
+    quiet: true
+  loop: "{{ user_ssh_assert_passwd_lookup.results }}"
+  loop_control:
+    label: "{{ item.item.user }}"
+
+- name: "Assert | Stat Existing Human Admin Home Directories"
+  ansible.builtin.stat:
+    path: "{{ item.home }}"
+  register: user_ssh_assert_home_stats
+  changed_when: false
+  loop: "{{ user_ssh_users }}"
+  loop_control:
+    label: "{{ item.home }}"
+
+- name: "Assert | Validate Human Admin Home Directories Exist"
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+      - item.stat.isdir
+    fail_msg: >-
+      Every user_ssh home path must already exist as a directory before the
+      role manages `.ssh` content
+    quiet: true
+  loop: "{{ user_ssh_assert_home_stats.results }}"
+  loop_control:
+    label: "{{ item.stat.path | default(item.item.home) }}"
+
+- name: "Assert | Collect Human Admin SSH Groups"
+  ansible.builtin.getent:
+    database: group
+    key: "{{ item }}"
+  register: user_ssh_assert_group_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ user_ssh_users | map(attribute='group') | unique | list }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: "Assert | Validate Human Admin SSH Groups Exist"
+  ansible.builtin.assert:
+    that:
+      - item.item in (item.ansible_facts.getent_group | default({}))
+    fail_msg: >-
+      Every requested user_ssh group must already exist before the role
+      manages SSH-file ownership
+    quiet: true
+  loop: "{{ user_ssh_assert_group_lookup.results }}"
+  loop_control:
+    label: "{{ item.item }}"

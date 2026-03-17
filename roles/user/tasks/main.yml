@@ -40,6 +40,16 @@
   when: user_include_password | default(false)
   tags: [user, user_password, assert, config, validate, user_password_assert, user_password_config, user_password_validate]
 
+- name: "User | Include optional user_ssh role"
+  ansible.builtin.include_role:
+    name: user_ssh
+    apply:
+      tags: [user, user_ssh]
+  when:
+    - user_include_ssh | default(false)
+    - (user_account_state | default('present')) == 'present'
+  tags: [user, user_ssh, assert, config, validate, user_ssh_assert, user_ssh_config, user_ssh_validate]
+
 - name: "User | Include optional user_zshell role"
   ansible.builtin.include_role:
     name: user_zshell

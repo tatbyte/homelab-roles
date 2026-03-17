@@ -1,0 +1,7 @@
+{# roles/user_ssh/templates/user_ssh_authorized_keys.j2 #}
+{# Template for the managed `authorized_keys` file in the `user_ssh` role. #}
+# Managed by Ansible: user_ssh
+# Source: roles/user_ssh/templates/user_ssh_authorized_keys.j2
+{% for authorized_key in user_ssh_effective_user.authorized_keys %}
+{{ authorized_key }}
+{% endfor %}

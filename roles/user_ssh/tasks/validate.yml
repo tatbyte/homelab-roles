@@ -1,0 +1,318 @@
+---
+# roles/user_ssh/tasks/validate.yml
+# Validate phase tasks for the `user_ssh` role.
+# Verifies the resulting managed `.ssh` directory plus authorized_keys and
+# optional SSH client file state after configuration.
+
+- name: "Validate | Derive Effective Human Admin SSH Policy"
+  ansible.builtin.import_tasks: derive_effective_ssh_policy.yml
+
+- name: "Validate | Stat Managed Human Admin .ssh Directories"
+  ansible.builtin.stat:
+    path: "{{ item.ssh_directory_path }}"
+  register: user_ssh_validate_directory_stats
+  changed_when: false
+  loop: "{{ user_ssh_effective_users }}"
+  loop_control:
+    label: "{{ item.ssh_directory_path }}"
+
+- name: "Validate | Verify Managed Human Admin .ssh Directories"
+  vars:
+    user_ssh_expected_user: "{{ item.item }}"
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+      - item.stat.isdir
+      - item.stat.pw_name == user_ssh_expected_user.user
+      - item.stat.gr_name == user_ssh_expected_user.group
+      - item.stat.mode == user_ssh_expected_user.ssh_directory_mode
+    fail_msg: >-
+      Validate | Managed `.ssh` directory state does not match the requested
+      user_ssh policy
+    quiet: true
+  loop: "{{ user_ssh_validate_directory_stats.results }}"
+  loop_control:
+    label: "{{ item.item.ssh_directory_path }}"
+
+- name: "Validate | Stat Managed Human Admin authorized_keys Files"
+  ansible.builtin.stat:
+    path: "{{ item.authorized_keys_path }}"
+  register: user_ssh_validate_authorized_keys_stats
+  changed_when: false
+  loop: "{{ user_ssh_effective_users }}"
+  loop_control:
+    label: "{{ item.authorized_keys_path }}"
+
+- name: "Validate | Read Managed Human Admin authorized_keys Files"
+  ansible.builtin.slurp:
+    path: "{{ item.authorized_keys_path }}"
+  register: user_ssh_validate_authorized_keys_slurps
+  changed_when: false
+  loop: "{{ user_ssh_effective_users }}"
+  loop_control:
+    label: "{{ item.authorized_keys_path }}"
+
+- name: "Validate | Verify Managed Human Admin authorized_keys Files"
+  vars:
+    user_ssh_expected_user: "{{ item.item }}"
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+      - item.stat.isreg
+      - item.stat.pw_name == user_ssh_expected_user.user
+      - item.stat.gr_name == user_ssh_expected_user.group
+      - item.stat.mode == user_ssh_expected_user.authorized_keys_mode
+    fail_msg: >-
+      Validate | Managed `authorized_keys` state does not match the requested
+      user_ssh policy
+    quiet: true
+  loop: "{{ user_ssh_validate_authorized_keys_stats.results }}"
+  loop_control:
+    label: "{{ item.item.authorized_keys_path }}"
+
+- name: "Validate | Verify Managed Human Admin authorized_keys Content"
+  vars:
+    user_ssh_effective_user: "{{ item.item }}"
+    user_ssh_expected_authorized_keys_content: >-
+      {{ lookup('template', role_path ~ '/templates/user_ssh_authorized_keys.j2') }}
+  ansible.builtin.assert:
+    that:
+      - (item.content | b64decode) == user_ssh_expected_authorized_keys_content
+    fail_msg: >-
+      Validate | Managed `authorized_keys` content does not match the
+      requested user_ssh policy
+    quiet: true
+  loop: "{{ user_ssh_validate_authorized_keys_slurps.results }}"
+  loop_control:
+    label: "{{ item.item.authorized_keys_path }}"
+
+- name: "Validate | Stat Human Admin SSH Config Files"
+  ansible.builtin.stat:
+    path: "{{ item.config_path }}"
+  register: user_ssh_validate_config_stats
+  changed_when: false
+  loop: "{{ user_ssh_effective_users }}"
+  loop_control:
+    label: "{{ item.config_path }}"
+
+- name: "Validate | Read Existing Human Admin SSH Config Files"
+  ansible.builtin.slurp:
+    path: "{{ item.item.config_path }}"
+  register: user_ssh_validate_config_slurps
+  changed_when: false
+  loop: "{{ user_ssh_validate_config_stats.results | selectattr('stat.exists', 'equalto', true) | list }}"
+  loop_control:
+    label: "{{ item.item.config_path }}"
+
+- name: "Validate | Verify Human Admin SSH Config File State"
+  vars:
+    user_ssh_expected_user: "{{ item.item }}"
+    user_ssh_validate_existing_config: >-
+      {{
+        (
+          user_ssh_validate_config_slurps.results
+          | selectattr('item.item.user', 'equalto', item.item.user)
+          | first
+        ) | default({})
+      }}
+    user_ssh_validate_existing_config_content: >-
+      {{
+        (
+          user_ssh_validate_existing_config.content
+          if (user_ssh_validate_existing_config | length) > 0
+          else ''
+        ) | b64decode
+      }}
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          user_ssh_expected_user.manage_config
+          and item.stat.exists
+          and item.stat.isreg
+          and item.stat.pw_name == user_ssh_expected_user.user
+          and item.stat.gr_name == user_ssh_expected_user.group
+          and item.stat.mode == user_ssh_expected_user.config_mode
+        )
+        or
+        (
+          (not user_ssh_expected_user.manage_config)
+          and (
+            (not item.stat.exists)
+            or
+            (
+              'Managed by Ansible: user_ssh'
+              not in user_ssh_validate_existing_config_content
+            )
+          )
+        )
+    fail_msg: >-
+      Validate | Managed SSH config state does not match the requested
+      user_ssh policy
+    quiet: true
+  loop: "{{ user_ssh_validate_config_stats.results }}"
+  loop_control:
+    label: "{{ item.item.config_path }}"
+
+- name: "Validate | Verify Managed Human Admin SSH Config Content"
+  vars:
+    user_ssh_effective_user: "{{ item.item.item }}"
+    user_ssh_expected_config_content: >-
+      {{ lookup('template', role_path ~ '/templates/user_ssh_config.j2') }}
+  ansible.builtin.assert:
+    that:
+      - (item.content | b64decode) == user_ssh_expected_config_content
+    fail_msg: >-
+      Validate | Managed SSH config content does not match the requested
+      user_ssh policy
+    quiet: true
+  loop: >-
+    {{
+      user_ssh_validate_config_slurps.results
+      | selectattr('item.item.manage_config', 'equalto', true)
+      | list
+    }}
+  loop_control:
+    label: "{{ item.item.item.config_path }}"
+
+- name: "Validate | Stat Human Admin known_hosts Files"
+  ansible.builtin.stat:
+    path: "{{ item.known_hosts_path }}"
+  register: user_ssh_validate_known_hosts_stats
+  changed_when: false
+  loop: "{{ user_ssh_effective_users }}"
+  loop_control:
+    label: "{{ item.known_hosts_path }}"
+
+- name: "Validate | Read Existing Human Admin known_hosts Files"
+  ansible.builtin.slurp:
+    path: "{{ item.item.known_hosts_path }}"
+  register: user_ssh_validate_known_hosts_slurps
+  changed_when: false
+  loop: "{{ user_ssh_validate_known_hosts_stats.results | selectattr('stat.exists', 'equalto', true) | list }}"
+  loop_control:
+    label: "{{ item.item.known_hosts_path }}"
+
+- name: "Validate | Verify Human Admin known_hosts File State"
+  vars:
+    user_ssh_expected_user: "{{ item.item }}"
+    user_ssh_validate_existing_known_hosts: >-
+      {{
+        (
+          user_ssh_validate_known_hosts_slurps.results
+          | selectattr('item.item.user', 'equalto', item.item.user)
+          | first
+        ) | default({})
+      }}
+    user_ssh_validate_existing_known_hosts_content: >-
+      {{
+        (
+          user_ssh_validate_existing_known_hosts.content
+          if (user_ssh_validate_existing_known_hosts | length) > 0
+          else ''
+        ) | b64decode
+      }}
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          user_ssh_expected_user.manage_known_hosts
+          and item.stat.exists
+          and item.stat.isreg
+          and item.stat.pw_name == user_ssh_expected_user.user
+          and item.stat.gr_name == user_ssh_expected_user.group
+          and item.stat.mode == user_ssh_expected_user.known_hosts_mode
+        )
+        or
+        (
+          (not user_ssh_expected_user.manage_known_hosts)
+          and (
+            (not item.stat.exists)
+            or
+            (
+              'Managed by Ansible: user_ssh'
+              not in user_ssh_validate_existing_known_hosts_content
+            )
+          )
+        )
+    fail_msg: >-
+      Validate | Managed known_hosts state does not match the requested
+      user_ssh policy
+    quiet: true
+  loop: "{{ user_ssh_validate_known_hosts_stats.results }}"
+  loop_control:
+    label: "{{ item.item.known_hosts_path }}"
+
+- name: "Validate | Verify Managed Human Admin known_hosts Content"
+  vars:
+    user_ssh_effective_user: "{{ item.item.item }}"
+    user_ssh_expected_known_hosts_content: >-
+      {{ lookup('template', role_path ~ '/templates/user_ssh_known_hosts.j2') }}
+  ansible.builtin.assert:
+    that:
+      - (item.content | b64decode) == user_ssh_expected_known_hosts_content
+    fail_msg: >-
+      Validate | Managed known_hosts content does not match the requested
+      user_ssh policy
+    quiet: true
+  loop: >-
+    {{
+      user_ssh_validate_known_hosts_slurps.results
+      | selectattr('item.item.manage_known_hosts', 'equalto', true)
+      | list
+    }}
+  loop_control:
+    label: "{{ item.item.item.known_hosts_path }}"
+
+- name: "Validate | Stat Removed Human Admin Managed SSH Files"
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+  register: user_ssh_validate_removed_file_stats
+  changed_when: false
+  loop: "{{ user_ssh_cleanup_effective_files }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: "Validate | Read Existing Removed Human Admin Managed SSH Files"
+  ansible.builtin.slurp:
+    path: "{{ item.item.path }}"
+  register: user_ssh_validate_removed_file_slurps
+  changed_when: false
+  loop: "{{ user_ssh_validate_removed_file_stats.results | selectattr('stat.exists', 'equalto', true) | list }}"
+  loop_control:
+    label: "{{ item.item.path }}"
+
+- name: "Validate | Verify Removed Human Admin Managed SSH Files Are Gone"
+  vars:
+    user_ssh_validate_removed_file: >-
+      {{
+        (
+          user_ssh_validate_removed_file_slurps.results
+          | selectattr('item.item.path', 'equalto', item.item.path)
+          | first
+        ) | default({})
+      }}
+    user_ssh_validate_removed_file_content: >-
+      {{
+        (
+          user_ssh_validate_removed_file.content
+          if (user_ssh_validate_removed_file | length) > 0
+          else ''
+        ) | b64decode
+      }}
+  ansible.builtin.assert:
+    that:
+      - >-
+        (not item.stat.exists)
+        or
+        (
+          'Managed by Ansible: user_ssh'
+          not in user_ssh_validate_removed_file_content
+        )
+    fail_msg: >-
+      Validate | Removed-user SSH cleanup targets still contain managed
+      user_ssh content
+    quiet: true
+  loop: "{{ user_ssh_validate_removed_file_stats.results }}"
+  loop_control:
+    label: "{{ item.item.path }}"

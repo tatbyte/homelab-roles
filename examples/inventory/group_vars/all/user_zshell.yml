@@ -2,7 +2,8 @@
 # examples/inventory/group_vars/all/user_zshell.yml
 # Shared human admin zsh variables for the example lab.
 # Defines the managed zsh login shell and `.zshrc` baseline enforced after
-# account, auth, and password setup through the aggregate `user` role.
+# account, auth, password, and SSH-access setup through the aggregate `user`
+# role.
 
 # Existing human admin account whose zsh login shell and `.zshrc` are managed.
 user_zshell_user: "{{ user_account_name }}"

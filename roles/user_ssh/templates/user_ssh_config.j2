@@ -1,0 +1,7 @@
+{# roles/user_ssh/templates/user_ssh_config.j2 #}
+{# Template for the managed SSH client `config` file in the `user_ssh` role. #}
+# Managed by Ansible: user_ssh
+# Source: roles/user_ssh/templates/user_ssh_config.j2
+{% for config_line in user_ssh_effective_user.config_lines %}
+{{ config_line }}
+{% endfor %}

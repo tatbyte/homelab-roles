@@ -1,0 +1,7 @@
+{# roles/user_ssh/templates/user_ssh_known_hosts.j2 #}
+{# Template for the managed `known_hosts` file in the `user_ssh` role. #}
+# Managed by Ansible: user_ssh
+# Source: roles/user_ssh/templates/user_ssh_known_hosts.j2
+{% for known_hosts_line in user_ssh_effective_user.known_hosts_lines %}
+{{ known_hosts_line }}
+{% endfor %}

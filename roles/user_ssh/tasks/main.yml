@@ -1,0 +1,16 @@
+---
+# roles/user_ssh/tasks/main.yml
+# Task entrypoint for the `user_ssh` role.
+# Imports the assert, config, and validate phase files in order.
+
+- name: Assert
+  ansible.builtin.import_tasks: assert.yml
+  tags: [user_ssh, assert, user_ssh_assert]
+
+- name: Config
+  ansible.builtin.import_tasks: config.yml
+  tags: [user_ssh, config, user_ssh_config]
+
+- name: Validate
+  ansible.builtin.import_tasks: validate.yml
+  tags: [user_ssh, validate, user_ssh_validate]
