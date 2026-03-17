@@ -24,3 +24,11 @@ bootstrap_user_shell: /bin/bash             # default shell for the ansible user
 # Public SSH key added to authorized_keys for passwordless admin access.
 # Store only the public key here, never a private key.
 bootstrap_authorized_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAn7kkLsf1GYLBmx4D3R4t/C3H7eWStv9u8vXJdc3LYr ansible-test"  # ansible SSH public key
+
+# Initial bootstrap login used before the managed automation account takes over.
+# Keep the example-wide login here and pull passwords from Vault-backed vars so
+# the playbook can connect non-interactively.
+bootstrap_login_user: admin
+bootstrap_login_password: "{{ vault_bootstrap_login_password }}"
+bootstrap_login_become_password: >-
+  {{ vault_bootstrap_login_become_password | default(vault_bootstrap_login_password) }}

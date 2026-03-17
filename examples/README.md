@@ -34,6 +34,17 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/bootstra
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/site.yml
 ```
 
+The example `bootstrap.yml` playbook does not prompt for credentials.
+It expects the bootstrap login user and other non-secret bootstrap inputs to
+come from `inventory/group_vars/all/bootstrap.yml`, with the bootstrap login
+password coming from Vault-backed vars in
+`inventory/group_vars/all/bootstrap.yml`, and with `examples/ansible.cfg`
+explicitly pointing at `~/.config/ansible/vault/password.txt`.
+Keep only the real encrypted `vault.yml` inside `inventory/group_vars/all/`;
+store any checked-in example copy outside that directory.
+`bootstrap.yml` and `vault.yml` are both loaded and merged, so keep public
+inputs in `bootstrap.yml` and secret values in `vault.yml`.
+
 Direct phase runs:
 
 ```sh

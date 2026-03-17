@@ -1,0 +1,15 @@
+---
+# examples/inventory/examples/vault.yml.example
+# Example secret-bearing variables for the local lab.
+# Copy this to `examples/inventory/group_vars/all/vault.yml` and encrypt it
+# with `ansible-vault` for local use.
+
+# Password used for the initial bootstrap SSH login.
+vault_bootstrap_login_password: "replace-me"
+
+# Optional separate sudo password for the bootstrap login account.
+# Omit this key entirely when SSH and sudo share the same password.
+vault_bootstrap_login_become_password: "replace-me"
+
+# Example hashed password input for the managed human admin account.
+vault_user_password_hash: "$6$replace-me"

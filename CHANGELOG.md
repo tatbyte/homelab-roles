@@ -3,6 +3,12 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v2.1.0]
+### Added
+- Implemented Vault-backed credentials for the bootstrap process, enabling secure handling of sensitive data during initial setup.
+### Changed
+- Updated bootstrap role to integrate Vault for credential management, improving automation reliability and security.
+
 ## [v2.0.1]
 ### Fixed
 - Fixed the `user_vim` derive/assert/render path by removing mixed inline-expression syntax in task loops and replacing unsupported `loop` usage on a block with valid per-task loop placement.

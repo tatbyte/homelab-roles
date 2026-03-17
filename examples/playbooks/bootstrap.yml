@@ -1,21 +1,17 @@
 ---
 # examples/playbooks/bootstrap.yml
 # Bootstrap phase playbook for the example lab.
-# Prompts once for the bootstrap password, connects with the initial admin account, and applies the `bootstrap` role.
+# Uses inventory- and Vault-backed bootstrap login credentials, connects with
+# the initial admin account, and applies the `bootstrap` role.
 
 - name: Bootstrap hosts using the initial admin account
   hosts: bootstrap
   become: true
 
-  vars_prompt:
-    - name: bootstrap_admin_password
-      prompt: SSH password for bootstrap admin
-      private: true
-
   vars:
     ansible_user: "{{ bootstrap_login_user }}"
-    ansible_password: "{{ bootstrap_admin_password }}"
-    ansible_become_password: "{{ bootstrap_admin_password }}"
+    ansible_password: "{{ bootstrap_login_password }}"
+    ansible_become_password: "{{ bootstrap_login_become_password }}"
   roles:
     - role: bootstrap
       tags: [bootstrap]
