@@ -1,0 +1,31 @@
+---
+# examples/inventory/group_vars/all/user_ssh.yml
+# Shared human admin SSH variables for the example lab.
+# Defines the managed `.ssh` baseline enforced after account, sudo, and local
+# password setup through the aggregate `user` role.
+
+# Keep the example SSH baseline scoped to the same human admin account managed
+# earlier in `user_account.yml`.
+# Replace the demo key material before using this pattern on a real host.
+user_ssh_users:
+  - user: "{{ user_account_name }}"
+    group: "{{ user_account_primary_group }}"
+    home: "{{ user_account_home }}"
+    authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleHumanAdminPublicKeyMaterial00000000000000000000 human-user@example.invalid
+    manage_config: true
+    config_lines:
+      - Host git-lab
+      - "  HostName git.example.invalid"
+      - "  User git"
+      - "  IdentityFile ~/.ssh/id_ed25519"
+      - "  IdentitiesOnly yes"
+    manage_known_hosts: true
+    known_hosts_lines:
+      - git.example.invalid ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKnownHostKeyMaterial00000000000000000000
+
+# If you later remove a user from `user_ssh_users`, add one temporary cleanup
+# entry here for a follow-up run so previously managed SSH files are revoked.
+user_ssh_cleanup_removed_users: []
+#  - user: old-admin
+#    home: /home/old-admin

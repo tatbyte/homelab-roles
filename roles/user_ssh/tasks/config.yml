@@ -1,0 +1,147 @@
+---
+# roles/user_ssh/tasks/config.yml
+# Config phase tasks for the `user_ssh` role.
+# Writes the requested managed `.ssh` directory plus authorized_keys and
+# optional SSH client baseline files for one or more human admin users.
+
+- name: "Config | Derive Effective Human Admin SSH Policy"
+  ansible.builtin.import_tasks: derive_effective_ssh_policy.yml
+
+- name: "Config | Ensure Managed Human Admin .ssh Directories Exist"
+  ansible.builtin.file:
+    path: "{{ item.ssh_directory_path }}"
+    state: directory
+    owner: "{{ item.user }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.ssh_directory_mode }}"
+  loop: "{{ user_ssh_effective_users }}"
+  loop_control:
+    label: "{{ item.ssh_directory_path }}"
+  when: user_ssh_effective_users | length > 0
+
+- name: "Config | Ensure Managed Human Admin authorized_keys Files Exist"
+  ansible.builtin.template:
+    src: user_ssh_authorized_keys.j2
+    dest: "{{ item.authorized_keys_path }}"
+    owner: "{{ item.user }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.authorized_keys_mode }}"
+  vars:
+    user_ssh_effective_user: "{{ item }}"
+  loop: "{{ user_ssh_effective_users }}"
+  loop_control:
+    label: "{{ item.authorized_keys_path }}"
+  when: user_ssh_effective_users | length > 0
+
+- name: "Config | Ensure Managed Human Admin SSH Config Files Exist When Requested"
+  ansible.builtin.template:
+    src: user_ssh_config.j2
+    dest: "{{ item.config_path }}"
+    owner: "{{ item.user }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.config_mode }}"
+  vars:
+    user_ssh_effective_user: "{{ item }}"
+  loop: "{{ user_ssh_effective_users }}"
+  loop_control:
+    label: "{{ item.config_path }}"
+  when:
+    - user_ssh_effective_users | length > 0
+    - item.manage_config
+
+- name: "Config | Stat Unmanaged Human Admin SSH Config Files"
+  ansible.builtin.stat:
+    path: "{{ item.config_path }}"
+  register: user_ssh_config_unmanaged_config_stats
+  changed_when: false
+  loop: "{{ user_ssh_effective_users | rejectattr('manage_config', 'equalto', true) | list }}"
+  loop_control:
+    label: "{{ item.config_path }}"
+
+- name: "Config | Read Existing Unmanaged Human Admin SSH Config Files"
+  ansible.builtin.slurp:
+    path: "{{ item.item.config_path }}"
+  register: user_ssh_config_unmanaged_config_slurps
+  changed_when: false
+  loop: "{{ user_ssh_config_unmanaged_config_stats.results | selectattr('stat.exists', 'equalto', true) | list }}"
+  loop_control:
+    label: "{{ item.item.config_path }}"
+
+- name: "Config | Remove Stale Managed Human Admin SSH Config Files"
+  ansible.builtin.file:
+    path: "{{ item.item.item.config_path }}"
+    state: absent
+  when: "'Managed by Ansible: user_ssh' in (item.content | b64decode)"
+  loop: "{{ user_ssh_config_unmanaged_config_slurps.results }}"
+  loop_control:
+    label: "{{ item.item.item.config_path }}"
+
+- name: "Config | Ensure Managed Human Admin known_hosts Files Exist When Requested"
+  ansible.builtin.template:
+    src: user_ssh_known_hosts.j2
+    dest: "{{ item.known_hosts_path }}"
+    owner: "{{ item.user }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.known_hosts_mode }}"
+  vars:
+    user_ssh_effective_user: "{{ item }}"
+  loop: "{{ user_ssh_effective_users }}"
+  loop_control:
+    label: "{{ item.known_hosts_path }}"
+  when:
+    - user_ssh_effective_users | length > 0
+    - item.manage_known_hosts
+
+- name: "Config | Stat Unmanaged Human Admin known_hosts Files"
+  ansible.builtin.stat:
+    path: "{{ item.known_hosts_path }}"
+  register: user_ssh_config_unmanaged_known_hosts_stats
+  changed_when: false
+  loop: "{{ user_ssh_effective_users | rejectattr('manage_known_hosts', 'equalto', true) | list }}"
+  loop_control:
+    label: "{{ item.known_hosts_path }}"
+
+- name: "Config | Read Existing Unmanaged Human Admin known_hosts Files"
+  ansible.builtin.slurp:
+    path: "{{ item.item.known_hosts_path }}"
+  register: user_ssh_config_unmanaged_known_hosts_slurps
+  changed_when: false
+  loop: "{{ user_ssh_config_unmanaged_known_hosts_stats.results | selectattr('stat.exists', 'equalto', true) | list }}"
+  loop_control:
+    label: "{{ item.item.known_hosts_path }}"
+
+- name: "Config | Remove Stale Managed Human Admin known_hosts Files"
+  ansible.builtin.file:
+    path: "{{ item.item.item.known_hosts_path }}"
+    state: absent
+  when: "'Managed by Ansible: user_ssh' in (item.content | b64decode)"
+  loop: "{{ user_ssh_config_unmanaged_known_hosts_slurps.results }}"
+  loop_control:
+    label: "{{ item.item.item.known_hosts_path }}"
+
+- name: "Config | Stat Removed Human Admin Managed SSH Files"
+  ansible.builtin.stat:
+    path: "{{ item.path }}"
+  register: user_ssh_config_removed_file_stats
+  changed_when: false
+  loop: "{{ user_ssh_cleanup_effective_files }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: "Config | Read Existing Removed Human Admin Managed SSH Files"
+  ansible.builtin.slurp:
+    path: "{{ item.item.path }}"
+  register: user_ssh_config_removed_file_slurps
+  changed_when: false
+  loop: "{{ user_ssh_config_removed_file_stats.results | selectattr('stat.exists', 'equalto', true) | list }}"
+  loop_control:
+    label: "{{ item.item.path }}"
+
+- name: "Config | Remove Stale Managed SSH Files For Removed Human Admin Users"
+  ansible.builtin.file:
+    path: "{{ item.item.item.path }}"
+    state: absent
+  when: "'Managed by Ansible: user_ssh' in (item.content | b64decode)"
+  loop: "{{ user_ssh_config_removed_file_slurps.results }}"
+  loop_control:
+    label: "{{ item.item.item.path }}"

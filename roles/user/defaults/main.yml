@@ -7,6 +7,7 @@ user_include_groups: false
 user_include_sudo: false
 user_cleanup_disabled_sudo_drop_in: false
 user_include_password: false
+user_include_ssh: false
 user_include_zshell: false
 user_include_profile: false
 user_include_directories: false

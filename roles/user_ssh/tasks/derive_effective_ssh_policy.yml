@@ -1,0 +1,74 @@
+---
+# roles/user_ssh/tasks/derive_effective_ssh_policy.yml
+# Shared derived-state tasks for the `user_ssh` role.
+# Builds deterministic managed `.ssh` state from the requested human admin SSH
+# access policy.
+
+- name: "Derive | Build Effective Human Admin SSH Policy"
+  ansible.builtin.set_fact:
+    user_ssh_effective_users: >-
+      {%- set effective_users = [] -%}
+      {%- for user_entry in user_ssh_users -%}
+        {%- set normalized_home = user_entry.home | regex_replace('//+', '/') | regex_replace('/+$', '') -%}
+        {%- set merged_authorized_keys = user_ssh_default_authorized_keys + (user_entry.authorized_keys | default([])) -%}
+        {%- set merged_config_lines = user_ssh_default_config_lines + (user_entry.config_lines | default([])) -%}
+        {%- set merged_known_hosts_lines = user_ssh_default_known_hosts_lines + (user_entry.known_hosts_lines | default([])) -%}
+        {%- set ssh_directory_path = normalized_home ~ '/.ssh' -%}
+        {%- set _ = effective_users.append({
+          'user': user_entry.user,
+          'group': user_entry.group,
+          'home': normalized_home,
+          'authorized_keys': merged_authorized_keys,
+          'manage_config': user_entry.manage_config | default(false),
+          'config_lines': merged_config_lines,
+          'manage_known_hosts': user_entry.manage_known_hosts | default(false),
+          'known_hosts_lines': merged_known_hosts_lines,
+          'ssh_directory_mode': user_entry.ssh_directory_mode | default(user_ssh_default_ssh_directory_mode),
+          'authorized_keys_mode': user_entry.authorized_keys_mode | default(user_ssh_default_authorized_keys_mode),
+          'config_mode': user_entry.config_mode | default(user_ssh_default_config_mode),
+          'known_hosts_mode': user_entry.known_hosts_mode | default(user_ssh_default_known_hosts_mode),
+          'ssh_directory_path': ssh_directory_path,
+          'authorized_keys_path': ssh_directory_path ~ '/authorized_keys',
+          'config_path': ssh_directory_path ~ '/config',
+          'known_hosts_path': ssh_directory_path ~ '/known_hosts',
+        }) -%}
+      {%- endfor -%}
+      {{ effective_users }}
+    user_ssh_cleanup_effective_users: >-
+      {%- set cleanup_users = [] -%}
+      {%- for cleanup_entry in user_ssh_cleanup_removed_users -%}
+        {%- set normalized_home = cleanup_entry.home | regex_replace('//+', '/') | regex_replace('/+$', '') -%}
+        {%- set ssh_directory_path = normalized_home ~ '/.ssh' -%}
+        {%- set _ = cleanup_users.append({
+          'user': cleanup_entry.user,
+          'home': normalized_home,
+          'ssh_directory_path': ssh_directory_path,
+          'authorized_keys_path': ssh_directory_path ~ '/authorized_keys',
+          'config_path': ssh_directory_path ~ '/config',
+          'known_hosts_path': ssh_directory_path ~ '/known_hosts',
+        }) -%}
+      {%- endfor -%}
+      {{ cleanup_users }}
+    user_ssh_cleanup_effective_files: >-
+      {%- set cleanup_files = [] -%}
+      {%- for cleanup_entry in user_ssh_cleanup_removed_users -%}
+        {%- set normalized_home = cleanup_entry.home | regex_replace('//+', '/') | regex_replace('/+$', '') -%}
+        {%- set ssh_directory_path = normalized_home ~ '/.ssh' -%}
+        {%- set _ = cleanup_files.append({
+          'user': cleanup_entry.user,
+          'path': ssh_directory_path ~ '/authorized_keys',
+          'kind': 'authorized_keys',
+        }) -%}
+        {%- set _ = cleanup_files.append({
+          'user': cleanup_entry.user,
+          'path': ssh_directory_path ~ '/config',
+          'kind': 'config',
+        }) -%}
+        {%- set _ = cleanup_files.append({
+          'user': cleanup_entry.user,
+          'path': ssh_directory_path ~ '/known_hosts',
+          'kind': 'known_hosts',
+        }) -%}
+      {%- endfor -%}
+      {{ cleanup_files }}
+  changed_when: false

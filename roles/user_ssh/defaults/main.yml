@@ -1,0 +1,25 @@
+---
+# roles/user_ssh/defaults/main.yml
+# Default variables for the `user_ssh` role.
+# Defines the default human admin SSH access policy enforced after account
+# management in this repository.
+
+user_ssh_default_ssh_directory_mode: "0700"
+user_ssh_default_authorized_keys_mode: "0600"
+user_ssh_default_config_mode: "0600"
+user_ssh_default_known_hosts_mode: "0644"
+
+user_ssh_default_authorized_keys: []
+user_ssh_default_config_lines: []
+user_ssh_default_known_hosts_lines: []
+user_ssh_cleanup_removed_users: []
+
+user_ssh_users:
+  - user: "{{ user_account_name | default('admin') }}"
+    group: "{{ user_account_primary_group | default(user_account_name | default('admin')) }}"
+    home: "{{ user_account_home | default('/home/' ~ (user_account_name | default('admin'))) }}"
+    authorized_keys: "{{ user_ssh_default_authorized_keys }}"
+    manage_config: false
+    config_lines: "{{ user_ssh_default_config_lines }}"
+    manage_known_hosts: false
+    known_hosts_lines: "{{ user_ssh_default_known_hosts_lines }}"

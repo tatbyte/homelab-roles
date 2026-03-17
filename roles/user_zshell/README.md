@@ -66,6 +66,7 @@ When `user_include_zshell: true`, the aggregate `user` role disables direct shel
 The managed zsh policy file path is always `.zshrc`.
 Because the role updates the passwd login shell to zsh, interactive SSH sessions for the managed user land in zsh and use the managed `.zshrc`.
 `user_shell` is intentionally retired in favor of this `user_zshell` role namespace. Use `user_zshell_*` variables and `user_include_zshell` with the aggregate role.
+Prefer the new `user_ssh` role for managed `authorized_keys`, optional `~/.ssh/config`, and optional known-hosts baselines so SSH access state stays separate from interactive shell behavior.
 Prefer the new `user_profile` role for shared login/session defaults such as `.profile`, `.bash_profile`, common exports, and PATH bootstrap that should stay separate from interactive zsh-rc behavior.
 The managed `.zshrc` sources `.profile` when it exists, then applies any zsh-specific overrides from `user_zshell`.
 Keep prompt, completion, aliases, and other zsh-specific interactive shell behavior in `user_zshell`.

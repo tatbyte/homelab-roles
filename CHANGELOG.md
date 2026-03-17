@@ -3,6 +3,19 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v1.9.0]
+### Added
+- Added the standalone `user_ssh` role for managing per-user `.ssh` baselines for one or more existing human admin users, including `authorized_keys`, optional `~/.ssh/config`, optional `~/.ssh/known_hosts`, permission enforcement, and exact file validation.
+- Added the example `user_ssh.yml` inventory file plus the aggregate `user_include_ssh` toggle used to exercise the new role in the local lab.
+
+### Changed
+- Updated the aggregate `user` role so `user_ssh` is an explicit opt-in follow-up role that runs after the optional `user_password` role and before the optional `user_zshell` role, keeping admin SSH access separate from shell and profile concerns.
+- Updated the example user stack so the human admin account now gets a managed `.ssh` baseline before the optional zsh shell layer.
+- Extended `user_ssh` with an explicit removed-user cleanup list so stale previously managed `authorized_keys`, `~/.ssh/config`, and `~/.ssh/known_hosts` files can be revoked safely after a user is removed from the active SSH policy.
+
+### Documentation
+- Updated repository, workflow, role, and example documentation to describe the new `user_ssh` role, the expanded aggregate ordering, and the example admin SSH-access baseline.
+
 ## [v1.8.0]
 ### Added
 - Added the standalone `user_profile` role for managing per-user `.profile` files plus optional `.bash_profile` files for one or more existing human admin users, with inventory-driven environment variables, PATH additions, and login/session defaults.
