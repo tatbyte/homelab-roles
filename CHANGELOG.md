@@ -3,6 +3,16 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v2.0.1]
+### Fixed
+- Fixed the `user_vim` derive/assert/render path by removing mixed inline-expression syntax in task loops and replacing unsupported `loop` usage on a block with valid per-task loop placement.
+- Fixed template-path validation behavior so local filesystem checks run on localhost without privilege prompts, removing module failures caused by interactive sudo.
+- Fixed `.vimrc` rendering output so managed-file metadata comments are rendered in comments (not Vim commands), preventing `E488` errors when opening generated files.
+- Fixed changelog-adjacent pre-commit failures by addressing YAML/Ansible line-length and mixed syntax issues introduced during the user_vim refactor.
+
+### Changed
+- Generalized and shortened role docs/readmes that previously hardcoded role orders and complete lists, reducing future documentation churn when adding new roles.
+
 ## [v2.0.0]
 ### Added
 - Added the standalone `user_vim` role for managing per-user `.vimrc` files for one or more existing human admin users, including defaults, assert/install/config/validate phases, optional template overrides, and optional Vim package handling.

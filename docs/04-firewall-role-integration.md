@@ -81,22 +81,13 @@ Example task:
 
 The registration task must run before `base_firewall` enforces UFW state.
 
-Inside the aggregate `base` role, `base_firewall` runs after:
-
-1. `base_packages`
-2. `base_locale`
-3. `base_timezone`
-4. `base_ntp`
-5. `base_hostname`
-6. optional `base_hosts`
-7. optional `base_dns`
-8. `base_sudo`
-9. `base_sshd`
-
 If a future application role lives outside that aggregate order, either:
 
 - run that role earlier in the same play before `base_firewall`
 - or run `base_firewall` in a later play after the role has registered rules
+
+Use `roles/base/tasks/main.yml` as the source of truth for the current aggregate
+order instead of duplicating role-by-role sequencing in documentation.
 
 ## Stale Rule Cleanup
 

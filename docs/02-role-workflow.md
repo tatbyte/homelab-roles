@@ -1,37 +1,26 @@
 # docs/02-role-workflow.md
 
 Reference for the shared role lifecycle used in this repository.
-Explains the standard phase order and how role task files are expected to map to that workflow in this Debian-family repository.
+Explains the standard phase model and aggregate-role conventions in a maintenance-friendly way.
+
+## Standard Phases
 
 1. `assert`
 2. `install`
 3. `config`
 4. `validate`
 
-> **Note:** Not all phases are required in every role. For example, some roles may not need an `install` phase if no packages or dependencies are installed. Include only the phases relevant to your role.
-> Repository roles currently target Debian-family hosts such as Debian and Ubuntu, so install and config tasks may assume APT and Debian-family file locations.
+Not every role needs every phase.
+Use only the phases that make sense, but keep `tasks/main.yml` as the stable phase entrypoint when phases are present.
 
-## Phase Purpose
+## Phase Intent
 
-- `assert`
-Validate role inputs before changing system state.
-Fail early when required variables or value formats are invalid.
+- `assert`: validate inputs and fail early.
+- `install`: install prerequisites needed before configuration.
+- `config`: enforce desired state idempotently.
+- `validate`: verify resulting state explicitly.
 
-- `install`
-Install packages, dependencies, users, directories, or service units required by the role.
-This phase prepares everything needed before configuration is applied.
-
-- `config`
-Apply desired configuration and enforce final state for managed resources.
-Keep tasks idempotent so reruns are safe.
-
-- `validate`
-Verify the resulting state matches expectations after configuration.
-Use explicit checks and assertions so failures are clear and actionable.
-
-## Recommended Task Structure
-
-Use one `tasks/main.yml` entrypoint that imports phase files in order.
+## Recommended Task Entrypoint
 
 ```yaml
 ---
@@ -52,80 +41,28 @@ Use one `tasks/main.yml` entrypoint that imports phase files in order.
   tags: [validate]
 ```
 
-## Compact Roles
+## Aggregate Role Conventions
 
-Simple roles do not need many tasks per phase.
+For aggregate roles such as `base` and `user`:
 
-If a role manages one narrow piece of state, keep the phase structure but reduce output noise by:
+- Keep execution order explicit with `ansible.builtin.include_role` in `tasks/main.yml`.
+- Keep required baseline roles first, then optional follow-up roles.
+- Gate optional child roles with aggregate toggles (`base_include_*`, `user_include_*`).
+- Keep include-task tags aligned with child role phase tags and role-specific tags.
+- Treat aggregate `tasks/main.yml` as the source of truth for current order.
 
-- omitting unused phases such as `install`
-- collecting facts in one task, then asserting them in one follow-up task
-- combining related validation checks into a single `ansible.builtin.assert`
-- keeping `tasks/main.yml` as the stable phase entrypoint
+This avoids frequent documentation churn when new child roles are introduced.
 
-Use this compact style when it improves readability and reduces task noise without hiding important state changes.
+## Adding A New Optional Child Role
 
-## Aggregate Base Order
-
-The aggregate `base` role in this repository applies its component roles in a stable order.
-`roles/base/tasks/main.yml` is the single source of truth and uses explicit `ansible.builtin.include_role` entries for the aggregate sequence.
-Its include-task tags should mirror the generic phase tags plus the child role's role-specific tags so both broad and narrow tagged runs behave predictably.
-
-Current order:
-
-1. `base_packages`
-2. `base_locale`
-3. `base_timezone`
-4. `base_ntp`
-5. `base_hostname`
-6. `base_hosts` when `base_include_hosts: true`
-7. `base_dns` when `base_include_dns: true`
-8. `base_sudo`
-9. `base_sshd`
-
-Use this sequence to keep foundational packages and environment settings first, then time synchronization, then final host identity plus optional hosts-file and DNS resolver baselines, then sudo policy and SSH daemon policy.
-
-Optional current follow-up:
-
-1. `base_firewall` when `base_include_firewall: true`
-2. `base_fail2ban` when `base_include_fail2ban: true`
-3. `base_logging` when `base_include_logging: true`
-4. `base_updates` when `base_include_updates: true`
-5. `base_apparmor` when `base_include_apparmor: true`
-6. `base_auditd` when `base_include_auditd: true`
-7. `base_upgrade` when `base_include_upgrade: true`
-8. `base_needrestart` when `base_include_needrestart: true`
-
-Future optional follow-up roles should also be included explicitly from `roles/base/tasks/main.yml` and gated only by aggregate include flags.
-
-## Aggregate User Order
-
-The aggregate `user` role in this repository applies its human-admin user roles in a stable order.
-`roles/user/tasks/main.yml` is the single source of truth and uses explicit `ansible.builtin.include_role` entries for the aggregate sequence.
-Its include-task tags should mirror the generic phase tags plus the child role's role-specific tags so both broad and narrow tagged runs behave predictably.
-
-Current order:
-
-1. `user_account`
-2. `user_groups` when `user_include_groups: true`
-3. `user_sudo` when `user_include_sudo: true`
-4. `user_password` when `user_include_password: true`
-5. `user_ssh` when `user_include_ssh: true`
-6. `user_zshell` when `user_include_zshell: true`
-7. `user_profile` when `user_include_profile: true`
-8. `user_directories` when `user_include_directories: true`
-9. `user_git` when `user_include_git: true`
-10. `user_vim` when `user_include_vim: true`
-
-Use this sequence to keep human-admin account creation and adoption explicit first, then optional supplementary-group policy, then optional user-level sudo policy, then optional secret-backed local password management, then optional managed SSH access state, then optional zsh policy, then optional login/session profile policy, then optional home-directory standardization, then optional Git identity and behavior policy, then optional Vim RC policy, before any future user-environment roles such as tmux or file deployment.
-When `user_include_sudo: false` and `user_cleanup_disabled_sudo_drop_in: true`, the aggregate still includes `user_sudo` in `absent` mode so a previously managed drop-in can be removed without re-enabling ongoing sudo management.
-When `user_include_ssh: true`, the aggregate applies managed `.ssh` access state before the optional zsh layer so SSH access and interactive shell behavior stay separated cleanly.
-When `user_include_zshell: true`, `user_account` still runs first but skips direct shell ownership so `user_zshell` becomes the single owner of the zsh login shell and managed `.zshrc` file.
-When `user_include_vim: true`, the aggregate keeps `.vimrc` policy in a lightweight final editor layer after shell/profile and Git policy so each layer remains focused.
+1. Add an explicit `include_role` entry in the aggregate `tasks/main.yml`.
+2. Add one aggregate toggle in aggregate defaults (`<aggregate>_include_<role>`).
+3. Add or update one role-scoped vars file in examples (`<role>.yml`).
+4. Keep docs generic and link to source-of-truth files instead of listing every child role by name.
 
 ## Tag Usage
 
-Run specific phases during development or troubleshooting:
+Use generic phase tags during development:
 
 ```bash
 ansible-playbook ... --tags assert
@@ -134,21 +71,13 @@ ansible-playbook ... --tags config
 ansible-playbook ... --tags validate
 ```
 
-For aggregate roles that use explicit `include_role` orchestration, tag the include tasks with the same generic phase tags and role-specific tags exposed by the child roles.
-This keeps `--tags validate` working across the aggregate stack and also allows targeted runs such as `--tags base_packages_validate` without entering unrelated roles.
-When you add a new aggregate child role or change a child role's tags, update the parent include-task tags to match so targeted execution keeps working as documented.
+Use role-specific tags for narrower runs through aggregate stacks.
+If child-role tags change, update aggregate include-task tags in the same change so targeted execution remains predictable.
 
-Run the full workflow by running the playbook with no tag filter.
+## Toggle Naming Convention
 
-## Optional Role Toggle Convention
+- Use `base_include_<role>` when a child role is optional in `base`.
+- Use `user_include_<role>` when a child role is optional in `user`.
+- Use `<role>_enabled` only for installable services where disabled is a supported steady state.
 
-Use a consistent toggle pattern when you add new optional roles to an aggregate stack.
-
-- Keep aggregate include toggles in aggregate-scoped variables such as `base.yml` or `user.yml`.
-- Keep child-role inputs in the matching child-role file such as `base_firewall.yml` or `user_password.yml`.
-- Use `base_include_<role>` when the whole role is optional in the aggregate `base` role.
-- Use `user_include_<role>` when the whole role is optional in the aggregate `user` role.
-- Use `<role>_enabled` only when the role manages a service and an installed-but-disabled state is a valid supported outcome.
-- Do not add `enabled` flags to roles that only enforce static configuration or one-time state.
-
-This keeps aggregate role selection separate from service state management and helps avoid unnecessary toggle sprawl across narrow configuration roles.
+Keep aggregate toggles separate from child-role behavior inputs.

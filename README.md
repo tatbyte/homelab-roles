@@ -29,21 +29,11 @@ Role implementations, package-management tasks, and example configuration assume
 ```text
 homelab-roles/
 ├── roles/
-│   ├── base/
-│   ├── bootstrap/
-│   ├── monitoring/
-│   ├── monitoring_authorized_key/
-│   ├── user/
-│   ├── user_account/
-│   ├── user_directories/
-│   ├── user_git/
-│   ├── user_groups/
-│   ├── user_profile/
-│   ├── user_vim/
-│   ├── user_ssh/
-│   ├── user_sudo/
-│   ├── user_password/
-│   └── user_zshell/
+│   ├── base/                  # aggregate base workflow
+│   ├── user/                  # aggregate human-admin workflow
+│   ├── bootstrap/             # bootstrap-phase automation account setup
+│   ├── monitoring/            # aggregate monitoring workflow
+│   └── <role_name>/           # standalone and aggregate child roles
 ├── examples/
 │   ├── ansible.cfg
 │   ├── inventory/
@@ -54,37 +44,14 @@ homelab-roles/
 ```
 
 ## Available Roles
-- `bootstrap`: Creates and validates the automation account used after the bootstrap phase.
-- `base`: Aggregates recurring base-phase configuration for Debian-family hosts through explicit `include_role` ordering in `roles/base/tasks/main.yml` for `base_packages`, `base_locale`, `base_timezone`, `base_ntp`, `base_hostname`, optional `base_hosts`, optional `base_dns`, `base_sudo`, and `base_sshd`, with optional follow-up inclusion for `base_firewall`, `base_fail2ban`, `base_logging`, `base_updates`, `base_apparmor`, `base_auditd`, `base_upgrade`, and `base_needrestart`.
-- `base_apparmor`: Enforces a minimal AppArmor package and service baseline on Debian-family hosts during the base phase.
-- `base_auditd`: Enforces a minimal Linux audit daemon package, service, and baseline configuration on Debian-family hosts during the base phase.
-- `base_dns`: Enforces a minimal DNS resolver baseline through `systemd-resolved` on Debian-family hosts during the base phase.
-- `base_fail2ban`: Enforces a minimal Fail2ban package, service, and SSH jail baseline on Debian-family hosts during the base phase.
-- `base_firewall`: Enforces an additive UFW baseline with managed default policies, aggregated base plus role-declared plus explicit rules, and stale cleanup for `managed:`-prefixed role-owned UFW rules on Debian-family hosts during the base phase, with an optional purge mode for exact rebuilds.
-- `base_hosts`: Enforces inventory-driven and optional manual cluster host mappings through a managed `/etc/hosts` block on Debian-family hosts during the base phase.
-- `base_logging`: Enforces a persistent local journald baseline on Debian-family hosts during the base phase, with an optional volatile mode for non-persistent logs.
-- `base_needrestart`: Runs `needrestart` in non-interactive batch mode and exposes pending service-restart or reboot follow-up state on Debian-family hosts during the base phase, while skipping the check automatically only when the same run's `base_upgrade` role reported no package-maintenance changes and no reboot-required follow-up.
-- `base_upgrade`: Applies an explicit APT upgrade pass with optional autoremove and reboot handling on Debian-family hosts during the base phase, and exposes package-maintenance change facts for downstream roles.
-- `base_updates`: Enforces a minimal unattended-upgrades baseline on Debian-family hosts during the base phase through managed APT periodic policy files.
-- `base_hostname`: Enforces the system hostname on Debian-family hosts during the base phase.
-- `base_locale`: Ensures requested locales exist and configures the system default locale on Debian-family hosts during the base phase.
-- `base_ntp`: Configures system time synchronization through `systemd-timesyncd` on Debian-family hosts during the base phase.
-- `base_sudo`: Enforces recurring sudo-group membership and a managed passwordless sudo policy on Debian-family hosts during the base phase.
-- `base_sshd`: Enforces a managed SSH daemon baseline through a dedicated `sshd_config.d` drop-in on Debian-family hosts during the base phase.
-- `base_timezone`: Enforces the system timezone on Debian-family hosts during the base phase.
-- `monitoring`: Aggregates monitoring-related configuration through dependency roles such as `monitoring_authorized_key`.
-- `monitoring_authorized_key`: Installs an SSH authorized key for monitoring-style inter-host access.
-- `user`: Aggregates recurring human admin user configuration through explicit `include_role` ordering in `roles/user/tasks/main.yml` for `user_account` plus optional `user_groups`, optional `user_sudo`, optional `user_password`, optional `user_ssh`, optional `user_zshell`, optional `user_profile`, optional `user_directories`, optional `user_git`, and optional `user_vim`, with an optional cleanup path for stale managed human-admin sudo drop-ins.
-- `user_account`: Creates and validates one human admin account with explicit primary-group, home-directory, and basic account-state enforcement after the base phase, while optionally managing only a minimal fallback shell.
-- `user_directories`: Standardizes common home-directory paths such as `.local/bin`, `scripts`, `.config`, and `projects` for one or more existing human admin users after account creation, with per-user directory lists plus owner/group/mode enforcement.
-- `user_git`: Manages per-user `~/.gitconfig` files for one or more existing human admin users after account creation, with inventory-driven identity, aliases, simple `section.option` settings, optional Git package prerequisite handling, and entry-level validation.
-- `user_vim`: Manages per-user `.vimrc` files for one or more existing human admin users after account creation, with inventory-driven line baselines, optional template overrides, and optional Vim package prerequisite handling.
-- `user_groups`: Enforces supplementary group membership for one or more existing human admin accounts after account creation, with aggregated base plus role-declared plus explicit inventory inputs and per-user append-versus-explicit behavior.
-- `user_profile`: Manages per-user `.profile` files plus optional `.bash_profile` files for one or more existing human admin users after account creation, with inventory-driven environment variables, PATH additions, and login/session defaults.
-- `user_ssh`: Manages per-user `~/.ssh` baselines for one or more existing human admin users after account creation, with inventory-driven `authorized_keys`, optional `config`, optional `known_hosts`, permission enforcement, and exact file validation.
-- `user_zshell`: Enforces one human admin zsh login shell plus a managed `.zshrc` after account creation, with inventory-driven aliases and zsh-shell behavior, while the new `user_profile` role owns shared login/session defaults in the example stack.
-- `user_sudo`: Enforces explicit sudoers policy for one existing human admin account after account and optional group setup, with inventory-driven user-versus-group policy, optional passwordless sudo, and explicit absent-state cleanup for a previously managed drop-in.
-- `user_password`: Manages Vault-friendly hashed local password state and optional password locking for one existing human admin account after the base phase.
+- `bootstrap`: standalone bootstrap role for initial automation-account setup.
+- `base`: aggregate base-phase role with required foundation plus optional hardening and maintenance child roles.
+- `user`: aggregate human-admin role with account baseline plus optional user-environment child roles.
+- `monitoring`: aggregate monitoring namespace currently delegating to focused monitoring child roles.
+- `base_*`, `user_*`, and other standalone roles: focused capabilities grouped by domain and consumed either directly or via aggregate roles.
+
+Role details live in each role README under `roles/<role>/README.md`.
+Aggregate execution order is documented by, and sourced from, `roles/base/tasks/main.yml` and `roles/user/tasks/main.yml`.
 
 ## Consume From Another Repo
 Recommended pattern: add this repository to your infra repository (submodule or vendored checkout), then point `roles_path` to `homelab-roles/roles`.
@@ -162,7 +129,7 @@ ansible-playbook playbooks/site.yml
 
 See [examples/README.md](examples/README.md) and [docs/01-examples.md](docs/01-examples.md) for lab details.
 The current example lab intentionally keeps `base_upgrade` and strict `base_needrestart` follow-up enabled, so a base run may fail when pending reboot or service-restart work is detected after upgrades.
-The current example lab also enables `user_groups` for a documented supplementary admin-group baseline, `user_sudo` for an explicit human-admin sudoers drop-in, `user_password` with a demo hash for the plaintext test password `password`, `user_ssh` for a managed admin `.ssh` baseline including `authorized_keys` plus optional client config files, `user_zshell` for a managed zsh login shell plus `.zshrc`, `user_profile` for managed login/session defaults in `.profile` and `.bash_profile`, `user_directories` for common personal workspace paths such as `.local/bin`, `scripts`, `.config`, and `projects`, `user_git` for a small managed Git identity plus alias baseline, and `user_vim` for a managed `.vimrc` baseline, so replace the example identity values, password, and demo SSH key material before copying the pattern to a real host.
+The current example lab also enables a representative set of optional `user_*` roles so the human-admin layer exercises account access, shell/profile, workspace, and editor/Git workflows; replace example identity values, password material, and demo SSH keys before using the pattern on real hosts.
 
 ## Linting
 Pre-commit and linting are configured in this repository.
