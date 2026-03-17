@@ -21,13 +21,3 @@ user_zshell_aliases:
   ll: ls -alF
   la: ls -A
   l: ls -CF
-
-# Keep the example zsh environment small and obvious.
-user_zshell_environment:
-  EDITOR: vim
-  VISUAL: vim
-  PAGER: less
-
-# Add user-level binaries from the managed account's local cache.
-user_zshell_path_additions:
-  - "{{ user_zshell_home }}/.local/bin"

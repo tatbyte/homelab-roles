@@ -11,7 +11,7 @@ Explains how the role manages one human admin zsh login shell and managed
 - Renders the managed `.zshrc` file from a Jinja2 template (`user_zshell_zshrc.j2`)
 - Accepts either `/usr/bin/zsh` or `/bin/zsh` as the effective binary; if the configured login shell path is unavailable, the role checks both canonical locations automatically
 - Sets the account login shell in passwd, so SSH logins for the managed user use zsh
-- Supports inventory-driven aliases, environment variables, and PATH additions in the managed `.zshrc`
+- Supports inventory-driven aliases plus optional zsh-specific environment variables and PATH additions in the managed `.zshrc`
 - Verifies the resulting passwd shell entry and managed `.zshrc` content after configuration
 
 ## Variables
@@ -66,6 +66,9 @@ When `user_include_zshell: true`, the aggregate `user` role disables direct shel
 The managed zsh policy file path is always `.zshrc`.
 Because the role updates the passwd login shell to zsh, interactive SSH sessions for the managed user land in zsh and use the managed `.zshrc`.
 `user_shell` is intentionally retired in favor of this `user_zshell` role namespace. Use `user_zshell_*` variables and `user_include_zshell` with the aggregate role.
+Prefer the new `user_profile` role for shared login/session defaults such as `.profile`, `.bash_profile`, common exports, and PATH bootstrap that should stay separate from interactive zsh-rc behavior.
+The managed `.zshrc` sources `.profile` when it exists, then applies any zsh-specific overrides from `user_zshell`.
+Keep prompt, completion, aliases, and other zsh-specific interactive shell behavior in `user_zshell`.
 
 ### `.zshrc` Template Override Contract
 

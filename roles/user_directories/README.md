@@ -69,8 +69,8 @@ Example aggregate-role usage:
 ```
 
 Keep directory paths relative to the selected user's home so the role stays focused on personal workspace layout rather than arbitrary filesystem management.
-The default `.local/bin` path matches the example `user_zshell` PATH convention, so user-level executables and the managed shell profile stay aligned by default.
-The aggregate `user` role includes `user_directories` after the optional `user_zshell` role so shell policy can settle first and directory standardization follows the current shell-layer ordering.
+The default `.local/bin` path matches the example `user_profile` PATH convention, so user-level executables and the managed login/session profile stay aligned by default.
+The aggregate `user` role includes `user_directories` after the optional `user_profile` role so login/session defaults can settle first and directory standardization follows the current user-environment ordering.
 The role intentionally manages directories only.
 Keep shell RC content, profile files, and arbitrary file deployment in dedicated future roles unless they are directly coupled to directory creation.
 

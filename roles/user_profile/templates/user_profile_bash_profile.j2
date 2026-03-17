@@ -1,0 +1,16 @@
+{# roles/user_profile/templates/user_profile_bash_profile.j2 #}
+{# Template for the managed `.bash_profile` file in the `user_profile` role. #}
+# Managed by Ansible: user_profile
+# Source: roles/user_profile/templates/user_profile_bash_profile.j2
+{% if user_profile_effective_user.bash_profile_sources_profile %}
+if [ -f "$HOME/.profile" ]; then
+  . "$HOME/.profile"
+fi
+{% endif %}
+{% if user_profile_effective_user.bash_profile_lines | length > 0 %}
+
+# ----- Bash login defaults -----
+{% for user_profile_line in user_profile_effective_user.bash_profile_lines %}
+{{ user_profile_line }}
+{% endfor %}
+{% endif %}

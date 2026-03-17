@@ -50,6 +50,16 @@
     - (user_account_state | default('present')) == 'present'
   tags: [user, user_zshell, assert, config, validate, user_zshell_assert, user_zshell_config, user_zshell_validate]
 
+- name: "User | Include optional user_profile role"
+  ansible.builtin.include_role:
+    name: user_profile
+    apply:
+      tags: [user, user_profile]
+  when:
+    - user_include_profile | default(false)
+    - (user_account_state | default('present')) == 'present'
+  tags: [user, user_profile, assert, config, validate, user_profile_assert, user_profile_config, user_profile_validate]
+
 - name: "User | Include optional user_directories role"
   ansible.builtin.include_role:
     name: user_directories

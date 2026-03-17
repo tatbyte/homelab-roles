@@ -1,0 +1,65 @@
+---
+# roles/user_profile/tasks/config.yml
+# Config phase tasks for the `user_profile` role.
+# Writes the requested managed login and session profile files for one or more
+# human admin users.
+
+- name: "Config | Derive Effective Human Admin Profile Policy"
+  ansible.builtin.import_tasks: derive_effective_profile_policy.yml
+
+- name: "Config | Ensure Managed Human Admin .profile Exists"
+  ansible.builtin.template:
+    src: user_profile_profile.j2
+    dest: "{{ item.profile_path }}"
+    owner: "{{ item.user }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.profile_mode }}"
+  vars:
+    user_profile_effective_user: "{{ item }}"
+  loop: "{{ user_profile_effective_users }}"
+  loop_control:
+    label: "{{ item.profile_path }}"
+  when: user_profile_effective_users | length > 0
+
+- name: "Config | Ensure Managed Human Admin .bash_profile Exists When Requested"
+  ansible.builtin.template:
+    src: user_profile_bash_profile.j2
+    dest: "{{ item.bash_profile_path }}"
+    owner: "{{ item.user }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.bash_profile_mode }}"
+  vars:
+    user_profile_effective_user: "{{ item }}"
+  loop: "{{ user_profile_effective_users }}"
+  loop_control:
+    label: "{{ item.bash_profile_path }}"
+  when:
+    - user_profile_effective_users | length > 0
+    - item.manage_bash_profile
+
+- name: "Config | Stat Unmanaged Human Admin .bash_profile Files"
+  ansible.builtin.stat:
+    path: "{{ item.bash_profile_path }}"
+  register: user_profile_config_unmanaged_bash_profile_stats
+  changed_when: false
+  loop: "{{ user_profile_effective_users | rejectattr('manage_bash_profile', 'equalto', true) | list }}"
+  loop_control:
+    label: "{{ item.bash_profile_path }}"
+
+- name: "Config | Read Existing Unmanaged Human Admin .bash_profile Files"
+  ansible.builtin.slurp:
+    path: "{{ item.item.bash_profile_path }}"
+  register: user_profile_config_unmanaged_bash_profile_slurps
+  changed_when: false
+  loop: "{{ user_profile_config_unmanaged_bash_profile_stats.results | selectattr('stat.exists', 'equalto', true) | list }}"
+  loop_control:
+    label: "{{ item.item.bash_profile_path }}"
+
+- name: "Config | Remove Stale Managed Human Admin .bash_profile Files"
+  ansible.builtin.file:
+    path: "{{ item.item.item.bash_profile_path }}"
+    state: absent
+  when: "'Managed by Ansible: user_profile' in (item.content | b64decode)"
+  loop: "{{ user_profile_config_unmanaged_bash_profile_slurps.results }}"
+  loop_control:
+    label: "{{ item.item.item.bash_profile_path }}"

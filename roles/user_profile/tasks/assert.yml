@@ -1,0 +1,386 @@
+---
+# roles/user_profile/tasks/assert.yml
+# Assert phase tasks for the `user_profile` role.
+# Validates the requested human admin login and session profile policy before
+# managed profile files are written.
+
+- name: "Assert | Validate user_profile variable structure"
+  ansible.builtin.assert:
+    that:
+      - user_profile_default_profile_mode is string
+      - user_profile_default_profile_mode is match('^[0-7]{4}$')
+      - user_profile_default_bash_profile_mode is string
+      - user_profile_default_bash_profile_mode is match('^[0-7]{4}$')
+      - user_profile_default_environment is mapping
+      - user_profile_default_path_additions is sequence
+      - user_profile_default_path_additions is not string
+      - user_profile_default_profile_lines is sequence
+      - user_profile_default_profile_lines is not string
+      - user_profile_default_bash_profile_sources_profile is boolean
+      - user_profile_default_bash_profile_lines is sequence
+      - user_profile_default_bash_profile_lines is not string
+      - user_profile_users is sequence
+      - user_profile_users is not string
+      - >-
+        (
+          user_profile_default_environment
+          | dict2items
+          | rejectattr('key', 'match', '^[A-Za-z_][A-Za-z0-9_]*$')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_profile_default_environment
+          | dict2items
+          | rejectattr('value', 'string')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_profile_default_path_additions
+          | reject('string')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_profile_default_path_additions
+          | select('match', '^/')
+          | list
+          | length
+        ) == (user_profile_default_path_additions | length)
+      - >-
+        (
+          user_profile_default_path_additions
+          | select('match', '^\\S+$')
+          | list
+          | length
+        ) == (user_profile_default_path_additions | length)
+      - >-
+        (
+          user_profile_default_profile_lines
+          | reject('string')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_profile_default_profile_lines
+          | reject('match', '^[^\\r\\n]*$')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_profile_default_bash_profile_lines
+          | reject('string')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_profile_default_bash_profile_lines
+          | reject('match', '^[^\\r\\n]*$')
+          | list
+          | length
+        ) == 0
+    fail_msg: >-
+      user_profile default modes must be four-digit octal strings, default
+      environment values must be a mapping of valid variable names to strings,
+      default PATH additions must be absolute string paths without whitespace,
+      default profile line lists must contain strings without embedded newlines,
+      user_profile_default_bash_profile_sources_profile must be boolean, and
+      user_profile_users must be a list
+    quiet: true
+
+- name: "Assert | Validate requested human admin profile policies"
+  ansible.builtin.assert:
+    that:
+      - item is mapping
+      - >-
+        (
+          item.keys()
+          | difference([
+            'user',
+            'group',
+            'home',
+            'environment',
+            'path_additions',
+            'profile_lines',
+            'manage_bash_profile',
+            'bash_profile_sources_profile',
+            'bash_profile_lines',
+            'profile_mode',
+            'bash_profile_mode'
+          ])
+          | length
+        ) == 0
+      - item.user is defined
+      - item.user is string
+      - item.user | trim | length > 0
+      - item.user == (item.user | trim)
+      - item.user is not match('.*\\s+.*')
+      - item.group is defined
+      - item.group is string
+      - item.group | trim | length > 0
+      - item.group == (item.group | trim)
+      - item.group is not match('.*\\s+.*')
+      - item.home is defined
+      - item.home is string
+      - item.home | trim | length > 0
+      - item.home == (item.home | trim)
+      - item.home.startswith('/')
+      - item.home is not match('.*\\s+.*')
+      - (item.environment is not defined) or (item.environment is mapping)
+      - (item.path_additions is not defined) or (item.path_additions is sequence and item.path_additions is not string)
+      - (item.profile_lines is not defined) or (item.profile_lines is sequence and item.profile_lines is not string)
+      - (item.manage_bash_profile is not defined) or (item.manage_bash_profile is boolean)
+      - >-
+        (
+          item.bash_profile_sources_profile is not defined
+        ) or (
+          item.bash_profile_sources_profile is boolean
+        )
+      - >-
+        (
+          item.bash_profile_lines is not defined
+        ) or (
+          item.bash_profile_lines is sequence
+          and item.bash_profile_lines is not string
+        )
+      - >-
+        (
+          item.profile_mode is not defined
+        ) or (
+          item.profile_mode is string
+          and item.profile_mode is match('^[0-7]{4}$')
+        )
+      - >-
+        (
+          item.bash_profile_mode is not defined
+        ) or (
+          item.bash_profile_mode is string
+          and item.bash_profile_mode is match('^[0-7]{4}$')
+        )
+    fail_msg: >-
+      Each user_profile_users item must be a mapping with only user, group,
+      home, environment, path_additions, profile_lines, manage_bash_profile,
+      bash_profile_sources_profile, bash_profile_lines, profile_mode, and
+      bash_profile_mode keys. user/group/home must be valid non-empty values,
+      optional environment values must be a mapping, optional path and line
+      inputs must be lists, optional bash-profile booleans must be booleans,
+      and optional modes must be four-digit octal strings
+    quiet: true
+  loop: "{{ user_profile_users }}"
+  loop_control:
+    label: "{{ item.user | default('user-profile') }}"
+
+- name: "Assert | Validate User Names Are Unique Across Profile Policies"
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          user_profile_users
+          | map(attribute='user')
+          | list
+          | unique
+          | length
+        ) == (user_profile_users | length)
+    fail_msg: >-
+      Each user_profile_users item must target a unique user
+    quiet: true
+
+- name: "Assert | Validate requested human admin profile environment and lines"
+  vars:
+    user_profile_requested_environment: >-
+      {{
+        user_profile_default_environment
+        | combine(item.environment | default({}))
+      }}
+    user_profile_requested_path_additions: >-
+      {{
+        (
+          user_profile_default_path_additions
+          + (item.path_additions | default([]))
+        ) | unique | list
+      }}
+    user_profile_requested_profile_lines: >-
+      {{
+        user_profile_default_profile_lines
+        + (item.profile_lines | default([]))
+      }}
+    user_profile_requested_bash_profile_lines: >-
+      {{
+        user_profile_default_bash_profile_lines
+        + (item.bash_profile_lines | default([]))
+      }}
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          user_profile_requested_environment
+          | dict2items
+          | rejectattr('key', 'match', '^[A-Za-z_][A-Za-z0-9_]*$')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_profile_requested_environment
+          | dict2items
+          | rejectattr('value', 'string')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_profile_requested_path_additions
+          | reject('string')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_profile_requested_path_additions
+          | select('match', '^/')
+          | list
+          | length
+        ) == (user_profile_requested_path_additions | length)
+      - >-
+        (
+          user_profile_requested_path_additions
+          | select('match', '^\\S+$')
+          | list
+          | length
+        ) == (user_profile_requested_path_additions | length)
+      - >-
+        (
+          user_profile_requested_profile_lines
+          | reject('string')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_profile_requested_profile_lines
+          | reject('match', '^[^\\r\\n]*$')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_profile_requested_bash_profile_lines
+          | reject('string')
+          | list
+          | length
+        ) == 0
+      - >-
+        (
+          user_profile_requested_bash_profile_lines
+          | reject('match', '^[^\\r\\n]*$')
+          | list
+          | length
+        ) == 0
+    fail_msg: >-
+      Merged user_profile environment values must use valid variable names with
+      string values, merged PATH additions must be absolute string paths
+      without whitespace, and merged profile line lists must contain strings
+      without embedded newlines
+    quiet: true
+  loop: "{{ user_profile_users }}"
+  loop_control:
+    label: "{{ item.user }}"
+
+- name: "Assert | Derive Effective Human Admin Profile Policy"
+  ansible.builtin.import_tasks: derive_effective_profile_policy.yml
+
+- name: "Assert | Collect Existing Human Admin Account Entries For Profile Management"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ item.user }}"
+  register: user_profile_assert_passwd_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ user_profile_users }}"
+  loop_control:
+    label: "{{ item.user }}"
+
+- name: "Assert | Validate Human Admin Accounts Exist Before Profile Management"
+  vars:
+    user_profile_assert_passwd_entries: "{{ item.ansible_facts.getent_passwd | default({}) }}"
+    user_profile_assert_passwd_entry: "{{ user_profile_assert_passwd_entries.get(item.item.user, []) }}"
+    user_profile_assert_requested_home: >-
+      {{
+        item.item.home
+        | regex_replace('//+', '/')
+        | regex_replace('/+$', '')
+      }}
+    user_profile_assert_passwd_home: >-
+      {{
+        (
+          user_profile_assert_passwd_entry[4]
+          if (user_profile_assert_passwd_entry | length) > 4
+          else ''
+        )
+        | regex_replace('//+', '/')
+        | regex_replace('/+$', '')
+      }}
+  ansible.builtin.assert:
+    that:
+      - item.item.user in user_profile_assert_passwd_entries
+      - user_profile_assert_passwd_home == user_profile_assert_requested_home
+    fail_msg: >-
+      Every user_profile user must already exist and the requested home path
+      must match the current passwd entry before managed profile files are
+      written
+    quiet: true
+  loop: "{{ user_profile_assert_passwd_lookup.results }}"
+  loop_control:
+    label: "{{ item.item.user }}"
+
+- name: "Assert | Stat Existing Human Admin Home Directories"
+  ansible.builtin.stat:
+    path: "{{ item.home }}"
+  register: user_profile_assert_home_stats
+  changed_when: false
+  loop: "{{ user_profile_users }}"
+  loop_control:
+    label: "{{ item.home }}"
+
+- name: "Assert | Validate Human Admin Home Directories Exist"
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+      - item.stat.isdir
+    fail_msg: >-
+      Every user_profile home path must already exist as a directory before
+      the role manages `.profile` or `.bash_profile`
+    quiet: true
+  loop: "{{ user_profile_assert_home_stats.results }}"
+  loop_control:
+    label: "{{ item.stat.path | default(item.item.home) }}"
+
+- name: "Assert | Collect Human Admin Profile Groups"
+  ansible.builtin.getent:
+    database: group
+    key: "{{ item }}"
+  register: user_profile_assert_group_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ user_profile_users | map(attribute='group') | unique | list }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: "Assert | Validate Human Admin Profile Groups Exist"
+  ansible.builtin.assert:
+    that:
+      - item.item in (item.ansible_facts.getent_group | default({}))
+    fail_msg: >-
+      Every requested user_profile group must already exist before the role
+      manages profile-file ownership
+    quiet: true
+  loop: "{{ user_profile_assert_group_lookup.results }}"
+  loop_control:
+    label: "{{ item.item }}"
