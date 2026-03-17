@@ -1,0 +1,30 @@
+---
+# roles/user_vim/tasks/assert_render_template.yml
+# Per-user template rendering checks for the `user_vim` assert phase.
+
+- name: "Assert | Render Human Admin Vim RC Template Content"
+  vars:
+    user_vim_effective_user: "{{ item }}"
+  block:
+    - name: "Assert | Render Human Admin Vim RC Template Content"
+      ansible.builtin.set_fact:
+        user_vim_assert_vimrc_content: "{{ lookup('template', item.vimrc_template_name) }}"
+  rescue:
+    - name: "Assert | Report Human Admin Vim RC Template Render Failure"
+      ansible.builtin.fail:
+        msg: >-
+          user_vim vimrc template could not be rendered for user {{ item.user }}.
+          Checked template: {{ item.vimrc_template_name }}.
+          Template render error: {{ ansible_failed_result.msg | default('unknown error') }}
+
+- name: "Assert | Verify Human Admin Vim RC Template Content"
+  vars:
+    user_vim_effective_user: "{{ item }}"
+  ansible.builtin.assert:
+    that:
+      - user_vim_assert_vimrc_content is string
+      - user_vim_assert_vimrc_content | trim | length > 0
+    fail_msg: >-
+      user_vim vimrc template must resolve to non-empty renderable content for every
+      target user. Checked template: {{ item.vimrc_template_name }}
+    quiet: true

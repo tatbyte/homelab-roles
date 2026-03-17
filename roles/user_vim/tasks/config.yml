@@ -1,0 +1,20 @@
+---
+# roles/user_vim/tasks/config.yml
+# Config phase tasks for the `user_vim` role.
+# Ensures managed `.vimrc` files for one or more human admin users.
+
+- name: "Config | Derive Effective Human Admin Vim Policy"
+  ansible.builtin.import_tasks: derive_effective_vim_policy.yml
+
+- name: "Config | Ensure Managed Human Admin Vim RC Files Exist"
+  ansible.builtin.template:
+    src: "{{ item.vimrc_template_name }}"
+    dest: "{{ item.vimrc_path }}"
+    owner: "{{ item.user }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  vars:
+    user_vim_effective_user: "{{ item }}"
+  loop: "{{ user_vim_effective_users }}"
+  loop_control:
+    label: "{{ item.vimrc_path }}"

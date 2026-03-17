@@ -1,0 +1,40 @@
+---
+# roles/user_vim/defaults/main.yml
+# Default variables for the `user_vim` role.
+# Defines managed human-admin `.vimrc` policy defaults for one or more existing users.
+
+# Keep this enabled when you want Vim itself available before Vim config validation.
+user_vim_install_package: true
+
+# Debian-family package name for the editor binary managed by this role.
+user_vim_package_name: vim
+
+# Binary name checked when package installation is disabled.
+user_vim_binary_name: vim
+
+# Default template used for each managed `.vimrc`.
+user_vim_vimrc_template_name: user_vim_vimrc.j2
+
+# Default mode for managed `.vimrc` files.
+user_vim_default_vimrc_mode: "0644"
+
+# Default `.vimrc` content used as a reusable baseline.
+user_vim_default_vimrc_lines:
+  - "set nocompatible"
+  - "set number"
+  - "set tabstop=4"
+  - "set shiftwidth=4"
+  - "set expandtab"
+  - "set autoindent"
+  - "set smartindent"
+  - "set hlsearch"
+  - "set incsearch"
+
+# Per-user Vim policies managed by this role.
+user_vim_users:
+  - user: "{{ user_account_name | default('admin') }}"
+    group: "{{ user_account_primary_group | default(user_account_name | default('admin')) }}"
+    home: "{{ user_account_home | default('/home/' ~ (user_account_name | default('admin'))) }}"
+    vimrc_lines: []
+    mode: "{{ user_vim_default_vimrc_mode }}"
+    vimrc_template_name: ""

@@ -1,0 +1,223 @@
+---
+# roles/user_vim/tasks/assert.yml
+# Assert phase tasks for the `user_vim` role.
+# Validates the requested human admin Vim policy before `.vimrc` files are managed.
+
+- name: "Assert | Validate user_vim variable structure"
+  ansible.builtin.assert:
+    that:
+      - user_vim_install_package is boolean
+      - user_vim_package_name is string
+      - user_vim_package_name | trim | length > 0
+      - user_vim_package_name == (user_vim_package_name | trim)
+      - user_vim_package_name is not match('.*\\s+.*')
+      - user_vim_binary_name is string
+      - user_vim_binary_name | trim | length > 0
+      - user_vim_binary_name == (user_vim_binary_name | trim)
+      - user_vim_binary_name is not match('.*\\s+.*')
+      - user_vim_vimrc_template_name is string
+      - user_vim_vimrc_template_name is not match('.*\\s+.*')
+      - user_vim_vimrc_template_name | trim | length > 0
+      - user_vim_vimrc_template_name is match('^[A-Za-z0-9._-]+\\.j2$')
+      - user_vim_default_vimrc_mode is string
+      - user_vim_default_vimrc_mode is match('^[0-7]{4}$')
+      - user_vim_default_vimrc_lines is sequence
+      - user_vim_default_vimrc_lines is not string
+      - (user_vim_default_vimrc_lines | reject('string') | list | length) == 0
+      - user_vim_users is sequence
+      - user_vim_users is not string
+    fail_msg: >-
+      user_vim_install_package must be boolean, user_vim_package_name,
+      user_vim_binary_name, and user_vim_vimrc_template_name must be valid
+      values, user_vim_default_vimrc_mode must be a four-digit octal string,
+      and user_vim_default_vimrc_lines plus user_vim_users must be lists with
+      string lines
+    quiet: true
+
+- name: "Assert | Validate requested human admin Vim policies"
+  ansible.builtin.assert:
+    that:
+      - item is mapping
+      - (item.keys() | difference(['user', 'group', 'home', 'vimrc_lines', 'mode', 'vimrc_template_name']) | length) == 0
+      - item.user is defined
+      - item.user is string
+      - item.user | trim | length > 0
+      - item.user == (item.user | trim)
+      - item.user is not match('.*\\s+.*')
+      - item.group is defined
+      - item.group is string
+      - item.group | trim | length > 0
+      - item.group == (item.group | trim)
+      - item.group is not match('.*\\s+.*')
+      - item.home is defined
+      - item.home is string
+      - item.home | trim | length > 0
+      - item.home == (item.home | trim)
+      - item.home.startswith('/')
+      - item.home is not match('.*\\s+.*')
+      - (item.mode is not defined) or (item.mode is string and item.mode is match('^[0-7]{4}$'))
+      - (item.vimrc_lines is not defined) or (item.vimrc_lines is sequence and item.vimrc_lines is not string)
+      - (item.vimrc_lines | default([]) | reject('string') | list | length) == 0
+      - >-
+        (
+          item.vimrc_template_name is not defined
+        ) or (
+          item.vimrc_template_name is string
+          and item.vimrc_template_name is match('^$|^[A-Za-z0-9._-]+\\.j2$')
+        )
+    fail_msg: >-
+      Each user_vim_users item must be a mapping with only user, group, home,
+      vimrc_lines, mode, and optional vimrc_template_name keys. user, group,
+      and home must be valid non-empty values, home must be an absolute path,
+      mode must be a four-digit octal string when set, and vimrc_lines must be
+      a list of strings.
+    quiet: true
+  loop: "{{ user_vim_users }}"
+  loop_control:
+    label: "{{ item.user | default('user-vim') }}"
+
+- name: "Assert | Validate User Names Are Unique Across Vim Policies"
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          user_vim_users
+          | map(attribute='user')
+          | list
+          | unique
+          | length
+        ) == (user_vim_users | length)
+    fail_msg: >-
+      Each user_vim_users item must target a unique user
+    quiet: true
+
+- name: "Assert | Derive Effective Human Admin Vim Policy"
+  ansible.builtin.import_tasks: derive_effective_vim_policy.yml
+
+- name: "Assert | Collect Existing Human Admin Account Entries For Vim Management"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ item.user }}"
+  register: user_vim_assert_passwd_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ user_vim_effective_users }}"
+  loop_control:
+    label: "{{ item.user }}"
+
+- name: "Assert | Validate Human Admin Accounts Exist Before Vim Management"
+  vars:
+    user_vim_assert_requested_home: >-
+      {{
+        item.item.home
+        | regex_replace('//+', '/')
+        | regex_replace('/+$', '')
+      }}
+    user_vim_assert_passwd_entry: "{{ item.ansible_facts.getent_passwd[item.item.user] | default([]) }}"
+    user_vim_assert_passwd_home: >-
+      {{
+        (
+          user_vim_assert_passwd_entry[4]
+          if (user_vim_assert_passwd_entry | length) > 4
+          else ''
+        )
+        | regex_replace('//+', '/')
+        | regex_replace('/+$', '')
+      }}
+  ansible.builtin.assert:
+    that:
+      - item.item.user in (item.ansible_facts.getent_passwd | default({}))
+      - user_vim_assert_passwd_entry | length > 0
+      - user_vim_assert_passwd_home == user_vim_assert_requested_home
+    fail_msg: >-
+      Every user_vim user must already exist and the requested home path must
+      match the current passwd entry before `.vimrc` management
+    quiet: true
+  loop: "{{ user_vim_assert_passwd_lookup.results }}"
+  loop_control:
+    label: "{{ item.item.user }}"
+
+- name: "Assert | Stat Existing Human Admin Home Directories"
+  ansible.builtin.stat:
+    path: "{{ item.home }}"
+  register: user_vim_assert_home_stats
+  changed_when: false
+  loop: "{{ user_vim_effective_users }}"
+  loop_control:
+    label: "{{ item.home }}"
+
+- name: "Assert | Validate Human Admin Home Directories Exist"
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+      - item.stat.isdir
+    fail_msg: >-
+      Every user_vim home path must already exist as a directory before `.vimrc`
+      files are managed
+    quiet: true
+  loop: "{{ user_vim_assert_home_stats.results }}"
+  loop_control:
+    label: "{{ item.stat.path | default(item.item.home) }}"
+
+- name: "Assert | Collect Human Admin Vim Groups"
+  ansible.builtin.getent:
+    database: group
+    key: "{{ item }}"
+  register: user_vim_assert_group_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ user_vim_effective_users | map(attribute='group') | unique | list }}"
+  loop_control:
+    label: "{{ item }}"
+
+- name: "Assert | Validate Human Admin Vim Groups Exist"
+  ansible.builtin.assert:
+    that:
+      - item.item in (item.ansible_facts.getent_group | default({}))
+    fail_msg: >-
+      Every user_vim group must already exist before `.vimrc` management
+    quiet: true
+  loop: "{{ user_vim_assert_group_lookup.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+
+- name: "Assert | Resolve Vim Binary Availability When Install Handling Is Disabled"
+  ansible.builtin.command:
+    argv: [sh, -c, "command -v {{ user_vim_binary_name }}"]
+  register: user_vim_assert_vim_binary
+  changed_when: false
+  failed_when: false
+  when: not user_vim_install_package | bool
+
+- name: "Assert | Validate Vim Binary Exists When Install Handling Is Disabled"
+  ansible.builtin.assert:
+    that:
+      - user_vim_assert_vim_binary.rc == 0
+      - user_vim_assert_vim_binary.stdout | trim | length > 0
+    fail_msg: >-
+      Vim must already be available when user_vim_install_package is false
+    quiet: true
+  when: not user_vim_install_package | bool
+
+- name: "Assert | Collect Human Admin Vim RC Template Source"
+  vars:
+    user_vim_assert_vimrc_template_path: "{{ role_path ~ '/templates/' ~ item.vimrc_template_name }}"
+    user_vim_assert_vimrc_template_source: >-
+      {{ lookup('file', user_vim_assert_vimrc_template_path, errors='ignore') }}
+  ansible.builtin.assert:
+    that:
+      - user_vim_assert_vimrc_template_source is string
+      - user_vim_assert_vimrc_template_source | length > 0
+    fail_msg: >-
+      user_vim vimrc template must exist as a readable file for every target user.
+      Checked template: {{ item.vimrc_template_name }}
+    quiet: true
+  loop: "{{ user_vim_effective_users }}"
+  loop_control:
+    label: "{{ item.user }}"
+
+- name: "Assert | Verify Human Admin Vim RC Template Content"
+  ansible.builtin.include_tasks: assert_render_template.yml
+  loop: "{{ user_vim_effective_users }}"
+  loop_control:
+    label: "{{ item.user }}"

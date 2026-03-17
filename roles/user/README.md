@@ -1,7 +1,8 @@
 # roles/user/README.md
 
 Reference for the `user` role.
-Explains how the aggregate user role delegates recurring human admin account configuration after the base phase through explicit role includes.
+Explains how the aggregate user role delegates recurring human admin account
+configuration after the base phase through explicit role includes.
 
 ## Features
 - Runs the recurring human-admin user configuration on every `user` execution
@@ -16,10 +17,12 @@ Explains how the aggregate user role delegates recurring human admin account con
 - Can include `user_profile` as an explicit opt-in login/profile follow-up role when `user_include_profile: true`
 - Can include `user_directories` as an explicit opt-in home-directory standardization follow-up role when `user_include_directories: true`
 - Can include `user_git` as an explicit opt-in Git-configuration follow-up role when `user_include_git: true`
+- Can include `user_vim` as an explicit opt-in Vim RC follow-up role when `user_include_vim: true`
 - Keeps aggregate include-task tags aligned with the child role's phase tags and role-specific tags so targeted runs such as `--tags validate` or `--tags user_account_validate` stay predictable
 
 ## Usage
-Use `user` on Debian-family hosts after the `base` role has already applied the base host baseline:
+Use `user` on Debian-family hosts after the `base` role has already applied the
+base host baseline:
 
 ```yaml
 - hosts: all
@@ -29,7 +32,14 @@ Use `user` on Debian-family hosts after the `base` role has already applied the 
     - role: user
 ```
 
-Role-specific inputs for `user` currently come from `user_account_*`, plus optional `user_include_groups` and `user_groups_*`, plus optional `user_include_sudo`, `user_cleanup_disabled_sudo_drop_in`, and `user_sudo_*`, plus optional `user_include_password` and `user_password_*`, plus optional `user_include_ssh` and `user_ssh_*`, plus optional `user_include_zshell` and `user_zshell_*`, plus optional `user_include_profile` and `user_profile_*`, plus optional `user_include_directories` and `user_directories_*`, plus optional `user_include_git` and `user_git_*`.
+Role-specific inputs for `user` currently come from `user_account_*`, plus optional
+`user_include_groups` and `user_groups_*`, plus optional `user_include_sudo`,
+`user_cleanup_disabled_sudo_drop_in`, and `user_sudo_*`, plus optional
+`user_include_password` and `user_password_*`, plus optional `user_include_ssh` and
+`user_ssh_*`, plus optional `user_include_zshell` and `user_zshell_*`, plus optional
+`user_include_profile` and `user_profile_*`, plus optional `user_include_directories`
+and `user_directories_*`, plus optional `user_include_git` and `user_git_*`, plus optional
+`user_include_vim` and `user_vim_*`.
 
 Current include order in `user` is:
 
@@ -42,16 +52,35 @@ Current include order in `user` is:
 7. `user_profile` when `user_include_profile: true`
 8. `user_directories` when `user_include_directories: true`
 9. `user_git` when `user_include_git: true`
+10. `user_vim` when `user_include_vim: true`
 
 `roles/user/tasks/main.yml` is the single source of truth for this sequence.
-This keeps the human-admin account layer explicit and leaves future `user_*` roles room to be added in a stable order.
-When `user_include_sudo: false` and `user_cleanup_disabled_sudo_drop_in: true`, the aggregate still includes `user_sudo` in `absent` mode so a previously managed human-admin sudoers drop-in can be removed cleanly.
-When `user_include_ssh: true`, the aggregate applies managed `.ssh` access state before the optional zsh layer so admin SSH access and interactive shell behavior stay separate.
-When `user_include_zshell: true`, the aggregate disables direct shell management in `user_account` first so `user_zshell` becomes the single owner of the zsh login shell and `.zshrc` file.
-When `user_include_profile: true`, the aggregate keeps login/session defaults in managed `.profile`-style files after the shell layer so interactive zsh behavior and login defaults stay modular.
+This keeps the human-admin account layer explicit and leaves future `user_*` roles room
+to be added in a stable order.
+When `user_include_sudo: false` and `user_cleanup_disabled_sudo_drop_in: true`, the
+aggregate still includes `user_sudo` in `absent` mode so a previously managed human-admin
+sudoers drop-in can be removed cleanly.
+When `user_include_ssh: true`, the aggregate applies managed `.ssh` access state before
+the optional zsh layer so SSH access and interactive shell behavior stay separate.
+When `user_include_zshell: true`, the aggregate disables direct shell management in
+`user_account` first so `user_zshell` becomes the single owner of the zsh login shell and
+`.zshrc` file.
+When `user_include_profile: true`, the aggregate keeps login/session defaults in managed
+`.profile`-style files after the shell layer so interactive zsh behavior and login defaults
+stay modular.
+When `user_include_vim: true`, the aggregate keeps editor `.vimrc` policy in a small
+final editor layer after login/profile and Git policy so the stack stays easy to scan.
 
-Aggregate include-task tags in `roles/user/tasks/main.yml` intentionally mirror the child role phase tags and role-specific tags.
-This keeps broad phase runs such as `--tags validate` working across the user stack while also allowing narrow runs such as `--tags user_account`, `--tags user_groups`, `--tags user_sudo`, `--tags user_password`, `--tags user_ssh`, `--tags user_zshell`, `--tags user_profile`, `--tags user_directories`, `--tags user_git`, `--tags user_account_validate`, `--tags user_groups_validate`, `--tags user_sudo_validate`, `--tags user_password_validate`, `--tags user_ssh_validate`, `--tags user_zshell_validate`, `--tags user_profile_validate`, `--tags user_directories_validate`, or `--tags user_git_validate` without unrelated role execution.
+Aggregate include-task tags in `roles/user/tasks/main.yml` intentionally mirror the child
+role phase tags and role-specific tags.
+This keeps broad phase runs such as `--tags validate` working across the user stack while
+also allowing narrow runs such as `--tags user_account`, `--tags user_groups`, `--tags
+user_sudo`, `--tags user_password`, `--tags user_ssh`, `--tags user_zshell`, `--tags
+user_profile`, `--tags user_directories`, `--tags user_vim`, `--tags user_git`, `--tags
+user_account_validate`, `--tags user_groups_validate`, `--tags user_sudo_validate`, `--tags
+user_password_validate`, `--tags user_ssh_validate`, `--tags user_zshell_validate`, `--tags
+user_profile_validate`, `--tags user_directories_validate`, `--tags user_vim_validate`,
+or `--tags user_git_validate` without unrelated role execution.
 
 ## Dependencies
 None

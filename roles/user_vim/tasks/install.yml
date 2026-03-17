@@ -1,0 +1,12 @@
+---
+# roles/user_vim/tasks/install.yml
+# Install phase tasks for the `user_vim` role.
+# Ensures Vim is available before managed `.vimrc` validation and configuration.
+
+- name: "Install | Ensure Vim package is present"
+  ansible.builtin.apt:
+    name: "{{ user_vim_package_name }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: user_vim_install_package | bool
