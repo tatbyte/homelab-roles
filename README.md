@@ -102,6 +102,11 @@ Run bootstrap first from repo root:
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/bootstrap.yml
 ```
 
+The example bootstrap flow expects its login password to come from
+Vault-backed variables in inventory YAML, and the example Ansible config
+explicitly uses `~/.config/ansible/vault/password.txt` as the Vault password
+file path.
+
 Then run the full post-bootstrap stack:
 
 ```sh
