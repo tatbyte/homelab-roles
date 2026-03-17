@@ -56,10 +56,12 @@ user_password_password_hash: "{{ vault_user_password_hash }}"
 
 ## Which Roles Use Vault Well
 
-- `user_password`: best current fit, because it manages `user_password_password_hash`, which is secret-bearing and should not live in plain inventory.
-
-Today, `user_account`, `user_groups`, `base_*`, and `monitoring_authorized_key` do not need Vault for their normal role inputs.
-The example `bootstrap` flow also prompts for the initial password instead of storing it in inventory.
+- Any role input that carries secret-bearing values (password hashes, private
+  keys, API tokens, or credentials) is a good Vault candidate.
+- In this repository today, the most common example is hashed password input
+  for user management.
+- Treat role names here as examples, not a fixed list, so new secret-bearing
+  roles can adopt Vault without needing this doc rewritten.
 
 ## Why
 

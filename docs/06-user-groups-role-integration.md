@@ -85,19 +85,14 @@ Example task:
 The registration task must run before `user_groups` enforces supplementary-group
 state.
 
-Inside the aggregate `user` role, `user_groups` runs after:
-
-1. `user_account`
-
-and before:
-
-1. optional `user_password`
-
 If a future application role lives outside that aggregate order, either:
 
 - run that role earlier in the same play before `user_groups`
 - or run `user_groups` in a later play after the role has registered its
   memberships
+
+Use `roles/user/tasks/main.yml` as the source of truth for current aggregate
+ordering instead of maintaining role-by-role order copies in docs.
 
 ## When To Use Additional Memberships Instead
 

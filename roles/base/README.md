@@ -1,69 +1,49 @@
 # roles/base/README.md
 
 Reference for the `base` role.
-Explains how the aggregate base role delegates recurring Debian-family host configuration through explicit role includes.
+Explains how the aggregate base role orchestrates recurring Debian-family host baseline roles.
 
 ## Features
-- Runs the recurring base configuration on every `base` execution
-- Keeps the aggregate base-role execution order in `roles/base/tasks/main.yml`
-- Includes `base_packages`, `base_locale`, `base_timezone`, `base_ntp`, `base_hostname`, `base_sudo`, and `base_sshd` through explicit `ansible.builtin.include_role` entries
-- Can insert `base_hosts` after `base_hostname` as an explicit opt-in identity-and-resolution step when `base_include_hosts: true`
-- Can insert `base_dns` after `base_hosts` as an explicit opt-in resolver baseline when `base_include_dns: true`
-- Keeps aggregate include-task tags aligned with each child role's phase tags and role-specific tags so targeted runs such as `--tags validate` or `--tags base_packages_validate` stay predictable
-- Can include `base_firewall` as an explicit opt-in follow-up role when `base_include_firewall: true`
-- Can include `base_fail2ban` as an explicit opt-in follow-up role when `base_include_fail2ban: true`
-- Can include `base_logging` as an explicit opt-in follow-up role when `base_include_logging: true`
-- Can include `base_updates` as an explicit opt-in follow-up role when `base_include_updates: true`
-- Can include `base_apparmor` as an explicit opt-in follow-up role when `base_include_apparmor: true`
-- Can include `base_auditd` as an explicit opt-in follow-up role when `base_include_auditd: true`
-- Can include `base_upgrade` as an explicit opt-in follow-up role when `base_include_upgrade: true`
-- Can include `base_needrestart` as an explicit opt-in follow-up role when `base_include_needrestart: true`
+
+- Runs a stable base-phase workflow through explicit `include_role` tasks.
+- Keeps required baseline components first, then optional follow-up components.
+- Uses aggregate toggles (`base_include_*`) to enable optional child roles.
+- Keeps aggregate include tags aligned with child role tags for predictable targeted runs.
 
 ## Usage
-Use `base` on Debian-family hosts after the bootstrap phase has already created the automation account:
+
+Use `base` after bootstrap has created the automation account:
 
 ```yaml
 - hosts: all
   become: true
-  vars:
-    base_include_firewall: true
   roles:
-    - base
+    - role: base
 ```
 
-Bootstrap is handled separately by the standalone `bootstrap` role/playbook.
-Role-specific inputs for `base` currently come from `base_packages_*`, `base_locale_*`, `base_timezone_*`, `base_ntp_*`, `base_hostname_*`, optional `base_include_hosts` plus `base_hosts_*`, optional `base_include_dns` plus `base_dns_*`, `base_sudo_*`, `base_sshd_*`, optional `base_include_firewall` plus `base_firewall_*`, optional `base_include_fail2ban` plus `base_fail2ban_*`, optional `base_include_logging` plus `base_logging_*`, optional `base_include_updates` plus `base_updates_*`, optional `base_include_apparmor` plus `base_apparmor_*`, optional `base_include_auditd` plus `base_auditd_*`, optional `base_include_upgrade` plus `base_upgrade_*`, and optional `base_include_needrestart` plus `base_needrestart_*`.
-Keep aggregate role toggles such as `base_include_firewall` in aggregate-scoped variables such as `base.yml`, and keep child-role inputs such as `base_firewall_*` in the matching child-role file such as `base_firewall.yml`.
-If you want `base_firewall` to consume `base_firewall_role_declared_rules` registered by roles outside this aggregate stack, run those roles before `base_firewall` in the same play or run `base_firewall` again in a later play after they have registered their rules.
+To enable optional child roles, set aggregate toggles in aggregate-scoped vars:
 
-Current include order in `base` is:
+```yaml
+base_include_<role>: true
+```
 
-1. `base_packages`
-2. `base_locale`
-3. `base_timezone`
-4. `base_ntp`
-5. `base_hostname`
-6. `base_hosts` when `base_include_hosts: true`
-7. `base_dns` when `base_include_dns: true`
-8. `base_sudo`
-9. `base_sshd`
+Keep child-role inputs in matching role-scoped vars using `<role>_*`.
 
-`roles/base/tasks/main.yml` is the single source of truth for this sequence.
-This keeps foundational packages and system environment first, then time synchronization, then final host identity plus optional hosts-file and DNS resolver baselines, then sudo policy and SSH daemon policy.
+## Ordering and Source Of Truth
 
-Aggregate include-task tags in `roles/base/tasks/main.yml` intentionally mirror the child role phase tags and role-specific tags.
-This keeps broad phase runs such as `--tags validate` working across the full base stack while also allowing narrow runs such as `--tags base_packages` or `--tags base_packages_validate` without noisy unrelated role execution.
+- Current include order is defined in `roles/base/tasks/main.yml`.
+- Keep this README general; update `tasks/main.yml` when adding or reordering child roles.
+- Preserve the broad shape: foundation first, then identity/access baseline, then optional hardening and maintenance follow-up roles.
 
-Optional follow-up role:
+## Tag Behavior
 
-1. `base_firewall` when `base_include_firewall: true`
-2. `base_fail2ban` when `base_include_fail2ban: true`
-3. `base_logging` when `base_include_logging: true`
-4. `base_updates` when `base_include_updates: true`
-5. `base_apparmor` when `base_include_apparmor: true`
-6. `base_auditd` when `base_include_auditd: true`
-7. `base_upgrade` when `base_include_upgrade: true`
-8. `base_needrestart` when `base_include_needrestart: true`
+Aggregate include tasks should expose:
+
+- generic phase tags (`assert`, `install`, `config`, `validate`)
+- aggregate tag (`base`)
+- child-role tags (`<child_role>`, `<child_role>_validate`, etc.)
+
+This keeps both broad and narrow tagged runs predictable.
 
 ## License
 MIT

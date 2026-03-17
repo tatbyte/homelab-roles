@@ -1,28 +1,19 @@
 # roles/user/README.md
 
 Reference for the `user` role.
-Explains how the aggregate user role delegates recurring human admin account
-configuration after the base phase through explicit role includes.
+Explains how the aggregate user role orchestrates recurring human-admin account and user-environment roles.
 
 ## Features
-- Runs the recurring human-admin user configuration on every `user` execution
-- Keeps the aggregate user-role execution order in `roles/user/tasks/main.yml`
-- Includes `user_account` through an explicit `ansible.builtin.include_role` entry
-- Can include `user_groups` as an explicit opt-in follow-up role when `user_include_groups: true`
-- Can include `user_sudo` as an explicit opt-in follow-up role when `user_include_sudo: true`
-- Can run `user_sudo` in cleanup mode when `user_include_sudo: false` and `user_cleanup_disabled_sudo_drop_in: true`
-- Can include `user_password` as an explicit opt-in follow-up role when `user_include_password: true`
-- Can include `user_ssh` as an explicit opt-in SSH-access follow-up role when `user_include_ssh: true`
-- Can include `user_zshell` as an explicit opt-in zsh-policy follow-up role when `user_include_zshell: true`
-- Can include `user_profile` as an explicit opt-in login/profile follow-up role when `user_include_profile: true`
-- Can include `user_directories` as an explicit opt-in home-directory standardization follow-up role when `user_include_directories: true`
-- Can include `user_git` as an explicit opt-in Git-configuration follow-up role when `user_include_git: true`
-- Can include `user_vim` as an explicit opt-in Vim RC follow-up role when `user_include_vim: true`
-- Keeps aggregate include-task tags aligned with the child role's phase tags and role-specific tags so targeted runs such as `--tags validate` or `--tags user_account_validate` stay predictable
+
+- Runs a stable user-phase workflow through explicit `include_role` tasks.
+- Keeps account baseline first, then optional user-environment follow-up roles.
+- Uses aggregate toggles (`user_include_*`) to enable optional child roles.
+- Supports explicit cleanup behavior for disabled sudo drop-ins.
+- Keeps aggregate include tags aligned with child role tags for predictable targeted runs.
 
 ## Usage
-Use `user` on Debian-family hosts after the `base` role has already applied the
-base host baseline:
+
+Use `user` after `base`:
 
 ```yaml
 - hosts: all
@@ -32,55 +23,34 @@ base host baseline:
     - role: user
 ```
 
-Role-specific inputs for `user` currently come from `user_account_*`, plus optional
-`user_include_groups` and `user_groups_*`, plus optional `user_include_sudo`,
-`user_cleanup_disabled_sudo_drop_in`, and `user_sudo_*`, plus optional
-`user_include_password` and `user_password_*`, plus optional `user_include_ssh` and
-`user_ssh_*`, plus optional `user_include_zshell` and `user_zshell_*`, plus optional
-`user_include_profile` and `user_profile_*`, plus optional `user_include_directories`
-and `user_directories_*`, plus optional `user_include_git` and `user_git_*`, plus optional
-`user_include_vim` and `user_vim_*`.
+Enable optional child roles with aggregate toggles:
 
-Current include order in `user` is:
+```yaml
+user_include_<role>: true
+```
 
-1. `user_account`
-2. `user_groups` when `user_include_groups: true`
-3. `user_sudo` when `user_include_sudo: true`
-4. `user_password` when `user_include_password: true`
-5. `user_ssh` when `user_include_ssh: true`
-6. `user_zshell` when `user_include_zshell: true`
-7. `user_profile` when `user_include_profile: true`
-8. `user_directories` when `user_include_directories: true`
-9. `user_git` when `user_include_git: true`
-10. `user_vim` when `user_include_vim: true`
+Keep child-role inputs in matching role-scoped vars using `<role>_*`.
 
-`roles/user/tasks/main.yml` is the single source of truth for this sequence.
-This keeps the human-admin account layer explicit and leaves future `user_*` roles room
-to be added in a stable order.
-When `user_include_sudo: false` and `user_cleanup_disabled_sudo_drop_in: true`, the
-aggregate still includes `user_sudo` in `absent` mode so a previously managed human-admin
-sudoers drop-in can be removed cleanly.
-When `user_include_ssh: true`, the aggregate applies managed `.ssh` access state before
-the optional zsh layer so SSH access and interactive shell behavior stay separate.
-When `user_include_zshell: true`, the aggregate disables direct shell management in
-`user_account` first so `user_zshell` becomes the single owner of the zsh login shell and
-`.zshrc` file.
-When `user_include_profile: true`, the aggregate keeps login/session defaults in managed
-`.profile`-style files after the shell layer so interactive zsh behavior and login defaults
-stay modular.
-When `user_include_vim: true`, the aggregate keeps editor `.vimrc` policy in a small
-final editor layer after login/profile and Git policy so the stack stays easy to scan.
+## Ordering and Source Of Truth
 
-Aggregate include-task tags in `roles/user/tasks/main.yml` intentionally mirror the child
-role phase tags and role-specific tags.
-This keeps broad phase runs such as `--tags validate` working across the user stack while
-also allowing narrow runs such as `--tags user_account`, `--tags user_groups`, `--tags
-user_sudo`, `--tags user_password`, `--tags user_ssh`, `--tags user_zshell`, `--tags
-user_profile`, `--tags user_directories`, `--tags user_vim`, `--tags user_git`, `--tags
-user_account_validate`, `--tags user_groups_validate`, `--tags user_sudo_validate`, `--tags
-user_password_validate`, `--tags user_ssh_validate`, `--tags user_zshell_validate`, `--tags
-user_profile_validate`, `--tags user_directories_validate`, `--tags user_vim_validate`,
-or `--tags user_git_validate` without unrelated role execution.
+- Current include order is defined in `roles/user/tasks/main.yml`.
+- Keep this README general; update `tasks/main.yml` when adding or reordering child roles.
+- Preserve the broad shape: account creation/adoption first, then optional access/policy roles, then optional environment and tooling roles.
+
+Special handling:
+
+- When `user_include_sudo: false` and `user_cleanup_disabled_sudo_drop_in: true`, the aggregate still includes `user_sudo` in cleanup mode (`absent`) to remove a previously managed drop-in.
+- When `user_include_zshell: true`, `user_account` shell ownership is disabled so `user_zshell` becomes the single shell owner.
+
+## Tag Behavior
+
+Aggregate include tasks should expose:
+
+- generic phase tags (`assert`, `install`, `config`, `validate`)
+- aggregate tag (`user`)
+- child-role tags (`<child_role>`, `<child_role>_validate`, etc.)
+
+This keeps both broad and narrow tagged runs predictable.
 
 ## Dependencies
 None
