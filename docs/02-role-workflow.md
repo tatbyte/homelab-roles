@@ -43,7 +43,7 @@ Use only the phases that make sense, but keep `tasks/main.yml` as the stable pha
 
 ## Aggregate Role Conventions
 
-For aggregate roles such as `base` and `user`:
+For aggregate roles such as `base`, `docker`, and `user`:
 
 - Keep execution order explicit with `ansible.builtin.include_role` in `tasks/main.yml`.
 - Keep required baseline roles first, then optional follow-up roles.

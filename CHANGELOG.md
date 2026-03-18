@@ -3,6 +3,20 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v2.2.0]
+### Added
+- Added the aggregate `docker` role with explicit include ordering and toggle-based expansion support for Docker-related child roles.
+- Added the standalone `docker_engine` role with full assert/install/config/validate phases for Debian-family Docker engine package installation and daemon enablement.
+- Added Docker example lab coverage through `examples/playbooks/docker.yml`, `examples/inventory/group_vars/all/docker.yml`, and `examples/inventory/group_vars/all/docker_engine.yml`.
+
+### Changed
+- Updated the example post-bootstrap flow so `examples/playbooks/site.yml` now runs `base`, `user`, then `docker`.
+- Added Docker supplementary-group automation that targets both the bootstrap automation account (`bootstrap_user`) and the managed human admin account (`user_account_name`) when present.
+- Kept direct Docker supplementary-group enforcement as the default behavior and made optional `user_groups` registration opt-in instead of default.
+
+### Documentation
+- Updated repository and example documentation to include the new Docker layer, aggregate role descriptions, and the expanded example phase commands.
+
 ## [v2.1.0]
 ### Added
 - Implemented Vault-backed credentials for the bootstrap process, enabling secure handling of sensitive data during initial setup.

@@ -1,0 +1,76 @@
+---
+# roles/docker_engine/tasks/validate.yml
+# Validate phase tasks for the `docker_engine` role.
+# Verifies Docker package state, service state, and requested supplementary-group membership for existing users when enabled.
+
+- name: "Validate | Gather package facts"
+  ansible.builtin.package_facts:
+    manager: auto
+  when: docker_engine_enabled | bool
+
+- name: "Validate | Gather service facts"
+  ansible.builtin.service_facts:
+  when: docker_engine_enabled | bool
+
+- name: "Validate | Collect existing user entries for Docker group validation"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ item }}"
+  register: docker_engine_validate_passwd_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ docker_engine_group_members }}"
+  loop_control:
+    label: "{{ item }}"
+  when:
+    - docker_engine_enabled | bool
+    - docker_engine_manage_group_memberships | bool
+    - docker_engine_group_members | length > 0
+
+- name: "Validate | Collect effective group lists for Docker-managed existing users"
+  ansible.builtin.command:
+    cmd: "id -Gn {{ item.item }}"
+  register: docker_engine_validate_groups
+  changed_when: false
+  failed_when: false
+  loop: "{{ docker_engine_validate_passwd_lookup.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when:
+    - docker_engine_enabled | bool
+    - docker_engine_manage_group_memberships | bool
+    - item.item in (item.ansible_facts.getent_passwd | default({}))
+
+- name: "Validate | Assert Docker engine state"
+  vars:
+    docker_engine_service_unit: >-
+      {{
+        docker_engine_service_name
+        if docker_engine_service_name.endswith('.service')
+        else (docker_engine_service_name ~ '.service')
+      }}
+  ansible.builtin.assert:
+    that:
+      - (docker_engine_packages | difference(ansible_facts.packages.keys() | list) | length) == 0
+      - docker_engine_service_unit in ansible_facts.services
+      - ansible_facts.services[docker_engine_service_unit].status in ['enabled', 'enabled-runtime']
+      - ansible_facts.services[docker_engine_service_unit].state == 'running'
+    fail_msg: >-
+      Configured Docker engine state does not match the requested docker_engine values
+    quiet: true
+  when: docker_engine_enabled | bool
+
+- name: "Validate | Assert Docker supplementary-group membership for existing users"
+  ansible.builtin.assert:
+    that:
+      - docker_engine_group_name in (item.stdout | trim | split())
+    fail_msg: >-
+      Docker supplementary-group membership does not match requested docker_engine_group_members
+    quiet: true
+  loop: "{{ docker_engine_validate_groups.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.item }}"
+  when:
+    - docker_engine_enabled | bool
+    - docker_engine_manage_group_memberships | bool
+    - item.rc == 0

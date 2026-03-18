@@ -1,0 +1,10 @@
+---
+# examples/playbooks/docker.yml
+# Docker phase playbook for the example lab.
+# Connects as the automation account after the user phase and applies the aggregate `docker` role.
+
+- name: Apply docker role after user
+  hosts: all
+  become: true
+  roles:
+    - role: docker

@@ -1,0 +1,6 @@
+---
+# roles/docker/meta/main.yml
+# Role metadata for `docker`.
+# Leaves dependencies empty because aggregate Docker-role ordering is defined in `roles/docker/tasks/main.yml`.
+
+dependencies: []

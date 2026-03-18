@@ -1,0 +1,57 @@
+---
+# roles/docker_engine/tasks/config.yml
+# Config phase tasks for the `docker_engine` role.
+# Ensures the Docker group exists, registers user_groups memberships, applies direct group membership for existing users, and enables the Docker service.
+
+- name: "Config | Ensure Docker supplementary group exists"
+  ansible.builtin.group:
+    name: "{{ docker_engine_group_name }}"
+    state: present
+  when: docker_engine_enabled | bool
+
+- name: "Config | Register user supplementary groups" # noqa: var-naming[no-role-prefix]
+  ansible.builtin.set_fact:
+    user_groups_role_declared_memberships: >-
+      {{
+        (user_groups_role_declared_memberships | default([]))
+        + (docker_engine_user_group_memberships | default([]))
+      }}
+  when:
+    - docker_engine_enabled | bool
+    - docker_engine_register_user_groups_memberships | bool
+
+- name: "Config | Collect existing user entries for Docker supplementary-group management"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ item }}"
+  register: docker_engine_config_passwd_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ docker_engine_group_members }}"
+  loop_control:
+    label: "{{ item }}"
+  when:
+    - docker_engine_enabled | bool
+    - docker_engine_manage_group_memberships | bool
+    - docker_engine_group_members | length > 0
+
+- name: "Config | Ensure Docker supplementary-group membership for existing users"
+  ansible.builtin.user:
+    name: "{{ item.item }}"
+    state: present
+    groups: "{{ docker_engine_group_name }}"
+    append: true
+  loop: "{{ docker_engine_config_passwd_lookup.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when:
+    - docker_engine_enabled | bool
+    - docker_engine_manage_group_memberships | bool
+    - item.item in (item.ansible_facts.getent_passwd | default({}))
+
+- name: "Config | Ensure Docker engine service is enabled and running"
+  ansible.builtin.service:
+    name: "{{ docker_engine_service_name }}"
+    enabled: true
+    state: started
+  when: docker_engine_enabled | bool

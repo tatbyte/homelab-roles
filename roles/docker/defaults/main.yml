@@ -1,0 +1,6 @@
+---
+# roles/docker/defaults/main.yml
+# Default variables for the `docker` role.
+# Defines optional aggregate-role toggles that extend the Docker layer without changing existing consumers by default.
+
+docker_include_engine: true

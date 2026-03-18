@@ -1,0 +1,14 @@
+---
+# roles/docker_engine/tasks/install.yml
+# Install phase tasks for the `docker_engine` role.
+# Ensures the requested Docker engine packages are installed with APT when Docker is enabled.
+
+- name: "Install | Ensure requested Docker engine packages are present"
+  ansible.builtin.apt:
+    name: "{{ docker_engine_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when:
+    - docker_engine_enabled | bool
+    - docker_engine_packages | length > 0
