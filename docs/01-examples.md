@@ -23,12 +23,13 @@ The example assumes Debian-family hosts.
 - `examples/playbooks/bootstrap.yml`: bootstrap-phase playbook.
 - `examples/playbooks/base.yml`: base-phase playbook.
 - `examples/playbooks/user.yml`: user-phase playbook.
-- `examples/playbooks/site.yml`: post-bootstrap entrypoint (`base` then `user`).
+- `examples/playbooks/docker.yml`: Docker-phase playbook.
+- `examples/playbooks/site.yml`: post-bootstrap entrypoint (`base`, `user`, then `docker`).
 - `examples/playbooks/tests/`: optional integration test playbooks.
 
 ## Variable Layout Convention
 
-- Keep aggregate toggles in aggregate files such as `base.yml` and `user.yml`.
+- Keep aggregate toggles in aggregate files such as `base.yml`, `docker.yml`, and `user.yml`.
 - Keep child role inputs in role-scoped files named `<role>.yml`.
 - Use this split consistently so adding a role usually means:
 1. add one toggle in an aggregate file
@@ -53,6 +54,7 @@ Equivalent direct phase runs:
 
 ```bash
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/base.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/docker.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/user.yml
 ```
 

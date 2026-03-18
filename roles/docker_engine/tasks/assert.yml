@@ -1,0 +1,59 @@
+---
+# roles/docker_engine/tasks/assert.yml
+# Assert phase tasks for the `docker_engine` role.
+# Validates Docker package, service, group, and supplementary-group registration inputs before setup starts.
+
+- name: "Assert | Validate docker_engine variable structure"
+  ansible.builtin.assert:
+    that:
+      - docker_engine_enabled is boolean
+      - docker_engine_packages is sequence
+      - docker_engine_packages is not string
+      - docker_engine_service_name is string
+      - docker_engine_service_name | trim | length > 0
+      - docker_engine_group_name is string
+      - docker_engine_group_name | trim | length > 0
+      - docker_engine_manage_group_memberships is boolean
+      - docker_engine_group_members is sequence
+      - docker_engine_group_members is not string
+      - docker_engine_register_user_groups_memberships is boolean
+      - docker_engine_user_group_memberships is sequence
+      - docker_engine_user_group_memberships is not string
+      - (docker_engine_packages | map('string') | list | length) == (docker_engine_packages | length)
+      - (docker_engine_packages | map('trim') | reject('equalto', '') | list | length) == (docker_engine_packages | length)
+      - (docker_engine_group_members | map('string') | list | length) == (docker_engine_group_members | length)
+      - (docker_engine_group_members | map('trim') | reject('equalto', '') | list | length) == (docker_engine_group_members | length)
+      - (docker_engine_group_members | unique | list | length) == (docker_engine_group_members | length)
+      - >-
+        (
+          docker_engine_user_group_memberships | length
+        ) == 0 or (
+          (docker_engine_user_group_memberships | map('type_debug') | unique | list) == ['dict']
+        )
+    fail_msg: >-
+      docker_engine_enabled and docker_engine_manage_group_memberships must be booleans,
+      docker_engine_packages and docker_engine_group_members must be lists of unique
+      non-empty strings, docker_engine_service_name and docker_engine_group_name must
+      be non-empty strings, and docker_engine_user_group_memberships must be a list of mappings
+    quiet: true
+
+- name: "Assert | Validate requested user_groups registration structure"
+  ansible.builtin.assert:
+    that:
+      - item.user is defined
+      - item.user is string
+      - item.user | trim | length > 0
+      - item.groups is defined
+      - item.groups is sequence
+      - item.groups is not string
+      - (item.groups | map('string') | list | length) == (item.groups | length)
+      - (item.groups | map('trim') | reject('equalto', '') | list | length) == (item.groups | length)
+      - (item.groups | unique | list | length) == (item.groups | length)
+      - item.append is not defined or item.append is boolean
+    fail_msg: >-
+      Each docker_engine_user_group_memberships entry must include a non-empty user,
+      a list of unique non-empty groups, and optional boolean append
+    quiet: true
+  loop: "{{ docker_engine_user_group_memberships }}"
+  loop_control:
+    label: "{{ item.user | default('docker-membership') }}"

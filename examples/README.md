@@ -16,12 +16,13 @@ Variables and defaults are intentionally simple and should be adapted before pro
 - `playbooks/bootstrap.yml`: bootstrap phase.
 - `playbooks/base.yml`: base phase.
 - `playbooks/user.yml`: user phase.
-- `playbooks/site.yml`: post-bootstrap entrypoint (`base` then `user`).
+- `playbooks/docker.yml`: Docker phase.
+- `playbooks/site.yml`: post-bootstrap entrypoint (`base`, `user`, then `docker`).
 - `playbooks/tests/`: optional integration tests.
 
 ## Variable Conventions
 
-- Keep aggregate toggles in aggregate files (`base.yml`, `user.yml`).
+- Keep aggregate toggles in aggregate files (`base.yml`, `docker.yml`, `user.yml`).
 - Keep role-specific inputs in `<role>.yml`.
 - Add new role coverage by adding a role-scoped file and a toggle, not by rewriting this README.
 
@@ -49,6 +50,7 @@ Direct phase runs:
 
 ```sh
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/base.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/docker.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/user.yml
 ```
 

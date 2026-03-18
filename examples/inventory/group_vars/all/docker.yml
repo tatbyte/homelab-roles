@@ -1,0 +1,8 @@
+---
+# examples/inventory/group_vars/all/docker.yml
+# Shared aggregate Docker-role variables for the example lab.
+# Defines the optional aggregate-role toggles for the example Docker layer.
+
+# Keep Docker engine enabled in the example lab so the Docker role installs
+# and configures the engine plus Docker supplementary-group access.
+docker_include_engine: true

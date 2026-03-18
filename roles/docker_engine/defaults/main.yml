@@ -1,0 +1,31 @@
+---
+# roles/docker_engine/defaults/main.yml
+# Default variables for the `docker_engine` role.
+# Defines Docker engine package, service, and user-group integration inputs for Debian-family hosts.
+
+docker_engine_enabled: true
+
+docker_engine_packages:
+  - docker.io
+
+docker_engine_service_name: docker
+docker_engine_group_name: docker
+
+# If true, ensure Docker supplementary-group membership for existing users.
+docker_engine_manage_group_memberships: true
+docker_engine_group_members: >-
+  {{
+    [
+      (bootstrap_user | default('admin')),
+      (user_account_name | default('admin'))
+    ]
+    | map('trim')
+    | reject('equalto', '')
+    | unique
+    | list
+  }}
+
+# If true, register Docker group memberships for `user_groups` instead of
+# relying only on direct group enforcement in this role.
+docker_engine_register_user_groups_memberships: false
+docker_engine_user_group_memberships: []

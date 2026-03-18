@@ -1,0 +1,24 @@
+---
+# roles/docker/tasks/main.yml
+# Task entrypoint for the `docker` role.
+# Defines the aggregate Docker-role execution order through explicit role includes.
+
+- name: "Docker | Include optional docker_engine role"
+  ansible.builtin.include_role:
+    name: docker_engine
+    apply:
+      tags: [docker, docker_engine]
+  when: docker_include_engine | default(true)
+  tags:
+    [
+      docker,
+      docker_engine,
+      assert,
+      install,
+      config,
+      validate,
+      docker_engine_assert,
+      docker_engine_install,
+      docker_engine_config,
+      docker_engine_validate,
+    ]

@@ -15,6 +15,7 @@ The current role set is centered on:
 
 - bootstrap access for the automation account
 - recurring base host configuration and hardening
+- recurring Docker engine setup and access policy
 - recurring human admin account management
 - monitoring-related access primitives
 
@@ -30,6 +31,7 @@ Role implementations, package-management tasks, and example configuration assume
 homelab-roles/
 ├── roles/
 │   ├── base/                  # aggregate base workflow
+│   ├── docker/                # aggregate Docker workflow
 │   ├── user/                  # aggregate human-admin workflow
 │   ├── bootstrap/             # bootstrap-phase automation account setup
 │   ├── monitoring/            # aggregate monitoring workflow
@@ -46,12 +48,13 @@ homelab-roles/
 ## Available Roles
 - `bootstrap`: standalone bootstrap role for initial automation-account setup.
 - `base`: aggregate base-phase role with required foundation plus optional hardening and maintenance child roles.
+- `docker`: aggregate Docker-phase role with Docker-related child roles such as `docker_engine`.
 - `user`: aggregate human-admin role with account baseline plus optional user-environment child roles.
 - `monitoring`: aggregate monitoring namespace currently delegating to focused monitoring child roles.
-- `base_*`, `user_*`, and other standalone roles: focused capabilities grouped by domain and consumed either directly or via aggregate roles.
+- `base_*`, `docker_*`, `user_*`, and other standalone roles: focused capabilities grouped by domain and consumed either directly or via aggregate roles.
 
 Role details live in each role README under `roles/<role>/README.md`.
-Aggregate execution order is documented by, and sourced from, `roles/base/tasks/main.yml` and `roles/user/tasks/main.yml`.
+Aggregate execution order is documented by, and sourced from, `roles/base/tasks/main.yml`, `roles/docker/tasks/main.yml`, and `roles/user/tasks/main.yml`.
 
 ## Consume From Another Repo
 Recommended pattern: add this repository to your infra repository (submodule or vendored checkout), then point `roles_path` to `homelab-roles/roles`.
@@ -86,6 +89,12 @@ Example infra playbook:
   roles:
     - role: user
 
+- name: Apply Docker setup
+  hosts: all
+  become: true
+  roles:
+    - role: docker
+
 - name: Apply monitoring access
   hosts: monitoring_targets
   become: true
@@ -113,9 +122,10 @@ Then run the full post-bootstrap stack:
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/site.yml
 ```
 
-Equivalent direct user-phase command:
+Equivalent direct phase commands:
 
 ```sh
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/docker.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/user.yml
 ```
 
@@ -134,6 +144,7 @@ ansible-playbook playbooks/site.yml
 
 See [examples/README.md](examples/README.md) and [docs/01-examples.md](docs/01-examples.md) for lab details.
 The current example lab intentionally keeps `base_upgrade` and strict `base_needrestart` follow-up enabled, so a base run may fail when pending reboot or service-restart work is detected after upgrades.
+The current example lab enables the aggregate Docker layer after the user phase so Docker engine package, daemon, and group-access behavior are validated once both target accounts exist.
 The current example lab also enables a representative set of optional `user_*` roles so the human-admin layer exercises account access, shell/profile, workspace, and editor/Git workflows; replace example identity values, password material, and demo SSH keys before using the pattern on real hosts.
 
 ## Linting
@@ -159,7 +170,7 @@ See [docs/00-pre-commit.mb](docs/00-pre-commit.mb) for full setup details.
 Core repository docs:
 
 - [docs/01-examples.md](docs/01-examples.md): Example lab layout and execution flow
-- [docs/02-role-workflow.md](docs/02-role-workflow.md): Shared role phase structure and aggregate base-role plus user-role ordering
+- [docs/02-role-workflow.md](docs/02-role-workflow.md): Shared role phase structure and aggregate base-role plus Docker-role plus user-role ordering
 - [docs/03-file-consistency.md](docs/03-file-consistency.md): File header and wording consistency rules
 - [docs/04-firewall-role-integration.md](docs/04-firewall-role-integration.md): How future roles should register firewall rules for `base_firewall`
 - [docs/05-vault.md](docs/05-vault.md): Short Vault guidance for secret-bearing inventory values such as `user_password`
