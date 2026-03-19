@@ -42,3 +42,23 @@
       docker_traefik_config,
       docker_traefik_validate,
     ]
+
+- name: "Docker | Include optional docker_adguard role"
+  ansible.builtin.include_role:
+    name: docker_adguard
+    apply:
+      tags: [docker, docker_adguard]
+  when: docker_include_adguard | default(false)
+  tags:
+    [
+      docker,
+      docker_adguard,
+      assert,
+      install,
+      config,
+      validate,
+      docker_adguard_assert,
+      docker_adguard_install,
+      docker_adguard_config,
+      docker_adguard_validate,
+    ]

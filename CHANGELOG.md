@@ -3,15 +3,25 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
-## [v2.3.0]
+## [v2.4.0]
 ### Added
-- Added managed Docker daemon JSON defaults (`/etc/docker/daemon.json`), `srv_traefik`/`access_traefik` conventions, `/srv/<service>/data` backup paths, and standalone `docker_traefik` with Compose-managed Traefik, dashboard-only dynamic config, DNS-01 ACME, and Vault-based scaffolding.
+- Added standalone `docker_adguard` with Compose-managed AdGuard Home, Traefik proxy-network integration, role-owned service/access identities, Vault-backed admin inputs, and backup-friendly `/srv/adguard` host paths.
 
 ### Changed
-- Added `docker_traefik` service user/group behavior, aligned engine/Traefik example vars with the new defaults, added a base-firewall managed-rule cleanup guard (`base_firewall_remove_stale_managed_rules: false`), and moved the example Docker playbook flow to support reapplying firewall after Docker service declarations.
+- Updated the example Docker layer to include AdGuard coverage, moved the example AdGuard lab to a non-default host DNS port, split host-published versus container-internal DNS listener ports for Traefik-backed downstream services, and changed AdGuard config handling to merge role-owned settings into the live config while preserving AdGuard-managed fields for idempotent reruns.
 
 ### Documentation
-- Updated Docker role docs and example docs for daemon JSON management, Traefik access-group behavior, and standardized external Vault workflow (`~/.config/ansible/vault.yml` + `~/.config/ansible/vault.pass`).
+- Added Docker downstream-service guidance for Traefik-connected services and updated Docker docs/examples to cover the AdGuard role, Compose-label routing, and host-versus-container port modeling.
+
+## [v2.3.0]
+### Added
+- Added managed Docker daemon JSON defaults (`/etc/docker/daemon.json`), `srv_*`/`access_*` Docker service conventions, `/srv/<service>/data` backup paths, and standalone `docker_traefik` with Compose-managed Traefik integration over the shared proxy network.
+
+### Changed
+- Added service user/group behavior for the Docker service roles, aligned engine and Traefik example vars with the new defaults, added a base-firewall managed-rule cleanup guard (`base_firewall_remove_stale_managed_rules: false`), and kept the Docker playbook flow ready to reapply firewall state after Docker service declarations.
+
+### Documentation
+- Updated Docker role docs and example docs for daemon JSON management, Traefik proxy-network behavior, and standardized external Vault workflow (`~/.config/ansible/vault.yml` + `~/.config/ansible/vault.pass`).
 
 ## [v2.2.0]
 ### Added

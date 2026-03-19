@@ -72,6 +72,9 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/<t
 - The Docker example keeps service projects under `/srv/<service>` and
   persistent service data under `/srv/<service>/data` so backup-friendly host
   restores stay predictable.
+- The Docker example can optionally layer downstream services onto the shared
+  Traefik proxy network, so roles such as `docker_adguard` can publish web UIs
+  through Compose labels without adding more Traefik file-provider config.
 - Replace demo identity, password, and SSH key values before using these patterns outside a lab.
 
 ## Extending

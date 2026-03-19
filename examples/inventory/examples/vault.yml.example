@@ -39,3 +39,14 @@ vault_docker_traefik_dns_api_token: "replace-me"
 # Generate hashes with `htpasswd -nB <user>`.
 vault_docker_traefik_dashboard_basic_auth_users:
   - "admin:replace-me-with-htpasswd-hash"
+
+# ---------------------------------------------------------------------------
+# docker_adguard
+# ---------------------------------------------------------------------------
+
+# Example host name used by the AdGuard web router.
+vault_docker_adguard_host: "adguard.example.com"
+
+# Example AdGuard Home admin password hash.
+# Use an AdGuard-compatible bcrypt hash here.
+vault_docker_adguard_admin_password_hash: "$2a$10$replace-me"

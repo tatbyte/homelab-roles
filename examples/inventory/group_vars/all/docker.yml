@@ -10,3 +10,8 @@ docker_include_engine: true
 # Keep the Traefik reverse proxy enabled in the example lab so the Docker role
 # also exercises a Compose-managed service workload.
 docker_include_traefik: true
+
+# Keep AdGuard enabled in the example lab so the Docker layer also exercises a
+# Traefik-connected downstream service that binds the host DNS port and joins
+# the shared proxy network after Traefik.
+docker_include_adguard: true

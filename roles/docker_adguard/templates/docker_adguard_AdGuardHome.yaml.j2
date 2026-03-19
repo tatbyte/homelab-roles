@@ -1,0 +1,40 @@
+{# roles/docker_adguard/templates/docker_adguard_AdGuardHome.yaml.j2 #}
+{# Template for the managed AdGuard Home configuration file in the `docker_adguard` role. #}
+# Managed by Ansible: docker_adguard
+# Source: roles/docker_adguard/templates/docker_adguard_AdGuardHome.yaml.j2
+http:
+  address: "0.0.0.0:{{ docker_adguard_container_web_port }}"
+  session_ttl: "{{ docker_adguard_http_session_ttl }}"
+
+users:
+  - name: "{{ docker_adguard_admin_user }}"
+    password: "{{ docker_adguard_admin_password_hash }}"
+
+dns:
+  bind_hosts:
+    - 0.0.0.0
+  port: {{ docker_adguard_container_dns_port }}
+  upstream_dns:
+{% for item in docker_adguard_upstream_dns %}
+    - "{{ item }}"
+{% endfor %}
+  bootstrap_dns:
+{% for item in docker_adguard_bootstrap_dns %}
+    - "{{ item }}"
+{% endfor %}
+
+querylog:
+  enabled: true
+
+statistics:
+  enabled: true
+
+filters:
+{% for item in docker_adguard_filters %}
+  - enabled: {{ 'true' if item.enabled | default(true) else 'false' }}
+    url: "{{ item.url }}"
+    name: "{{ item.name }}"
+{% endfor %}
+
+theme: "{{ docker_adguard_theme }}"
+schema_version: 28

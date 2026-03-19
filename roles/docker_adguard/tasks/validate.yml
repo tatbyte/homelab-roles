@@ -1,0 +1,229 @@
+---
+# roles/docker_adguard/tasks/validate.yml
+# Validate phase tasks for the `docker_adguard` role.
+# Verifies package state, identities, rendered files, Docker network state, and
+# the running Docker Compose AdGuard service.
+
+- name: "Validate | Gather package facts"
+  ansible.builtin.package_facts:
+    manager: auto
+  when: docker_adguard_enabled | bool
+
+- name: "Validate | Derive effective Compose support packages"
+  ansible.builtin.import_tasks: derive_effective_packages.yml
+  when: docker_adguard_enabled | bool
+
+- name: "Validate | Collect AdGuard service-user entry"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ docker_adguard_service_user }}"
+  register: docker_adguard_validate_service_user
+  changed_when: false
+  when: docker_adguard_enabled | bool
+
+- name: "Validate | Collect AdGuard access-group entry"
+  ansible.builtin.getent:
+    database: group
+    key: "{{ docker_adguard_access_group }}"
+  register: docker_adguard_validate_access_group
+  changed_when: false
+  when: docker_adguard_enabled | bool
+
+- name: "Validate | Collect existing user entries for AdGuard access-group validation"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ item }}"
+  register: docker_adguard_validate_passwd_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ docker_adguard_access_group_members }}"
+  loop_control:
+    label: "{{ item }}"
+  when:
+    - docker_adguard_enabled | bool
+    - docker_adguard_manage_access_group_memberships | bool
+    - docker_adguard_access_group_members | length > 0
+
+- name: "Validate | Collect effective group lists for AdGuard-managed existing users"
+  ansible.builtin.command:
+    cmd: "id -Gn {{ item.item }}"
+  register: docker_adguard_validate_groups
+  changed_when: false
+  failed_when: false
+  loop: "{{ docker_adguard_validate_passwd_lookup.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when:
+    - docker_adguard_enabled | bool
+    - docker_adguard_manage_access_group_memberships | bool
+    - item.item in (item.ansible_facts.getent_passwd | default({}))
+
+- name: "Validate | Read Docker Compose file"
+  ansible.builtin.slurp:
+    path: "{{ docker_adguard_compose_file_path }}"
+  register: docker_adguard_validate_compose_file
+  when: docker_adguard_enabled | bool
+
+- name: "Validate | Read AdGuard Home configuration"
+  ansible.builtin.slurp:
+    path: "{{ docker_adguard_config_path }}"
+  register: docker_adguard_validate_config_file
+  when: docker_adguard_enabled | bool
+
+- name: "Validate | Gather service facts"
+  ansible.builtin.service_facts:
+  when: docker_adguard_enabled | bool
+
+- name: "Validate | Inspect Docker proxy network"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - network
+      - inspect
+      - "{{ docker_adguard_proxy_network_name }}"
+  register: docker_adguard_validate_proxy_network
+  changed_when: false
+  when: docker_adguard_enabled | bool
+
+- name: "Validate | Read Docker Compose running services"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-name
+      - "{{ docker_adguard_compose_project_name }}"
+      - --file
+      - "{{ docker_adguard_compose_file_path }}"
+      - ps
+      - --services
+      - --status
+      - running
+  register: docker_adguard_validate_compose_ps
+  changed_when: false
+  when: docker_adguard_enabled | bool
+
+- name: "Validate | Check Docker Compose availability"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - version
+  register: docker_adguard_validate_compose_version
+  changed_when: false
+  when: docker_adguard_enabled | bool
+
+- name: "Validate | Assert Docker AdGuard state"
+  vars:
+    docker_adguard_expected_compose: "{{ lookup('template', 'docker_adguard_compose.yml.j2') }}"
+    docker_adguard_live_config: >-
+      {{
+        (docker_adguard_validate_config_file.content | b64decode | from_yaml)
+      }}
+    docker_adguard_live_admin_matches: >-
+      {{
+        docker_adguard_live_config.users | default([])
+        | selectattr('name', 'equalto', docker_adguard_admin_user)
+        | selectattr('password', 'equalto', docker_adguard_admin_password_hash)
+        | list
+      }}
+    docker_adguard_desired_filters: >-
+      {%- set result = [] -%}
+      {%- for item in docker_adguard_filters -%}
+      {%-   set _ = result.append(
+              {
+                'name': item.name,
+                'url': item.url,
+                'enabled': item.enabled | default(true),
+              }
+            ) -%}
+      {%- endfor -%}
+      {{ result | sort(attribute='name') | sort(attribute='url') }}
+    docker_adguard_live_filters: >-
+      {%- set result = [] -%}
+      {%- for item in (docker_adguard_live_config.filters | default([])) -%}
+      {%-   set _ = result.append(
+              {
+                'name': item.name,
+                'url': item.url,
+                'enabled': item.enabled | default(true),
+              }
+            ) -%}
+      {%- endfor -%}
+      {{ result | sort(attribute='name') | sort(attribute='url') }}
+    docker_adguard_service_unit: >-
+      {{
+        docker_adguard_docker_service_name
+        if docker_adguard_docker_service_name.endswith('.service')
+        else (docker_adguard_docker_service_name ~ '.service')
+      }}
+  ansible.builtin.assert:
+    that:
+      - (docker_adguard_effective_packages | difference(ansible_facts.packages.keys() | list) | length) == 0
+      - docker_adguard_service_user in (docker_adguard_validate_service_user.ansible_facts.getent_passwd | default({}))
+      - docker_adguard_access_group in (docker_adguard_validate_access_group.ansible_facts.getent_group | default({}))
+      - (docker_adguard_validate_compose_file.content | b64decode) == docker_adguard_expected_compose
+      - docker_adguard_live_config.http.address == ('0.0.0.0:' ~ (docker_adguard_container_web_port | string))
+      - docker_adguard_live_config.http.session_ttl == docker_adguard_http_session_ttl
+      - docker_adguard_live_config.users is sequence
+      - docker_adguard_live_config.users | length > 0
+      - (docker_adguard_live_admin_matches | length) > 0
+      - docker_adguard_live_config.dns.port == docker_adguard_container_dns_port
+      - >-
+        (
+          docker_adguard_live_config.dns.upstream_dns | default([])
+          | difference(docker_adguard_upstream_dns)
+          | length
+        ) == 0
+      - >-
+        (
+          docker_adguard_upstream_dns
+          | difference(docker_adguard_live_config.dns.upstream_dns | default([]))
+          | length
+        ) == 0
+      - >-
+        (
+          docker_adguard_live_config.dns.bootstrap_dns | default([])
+          | difference(docker_adguard_bootstrap_dns)
+          | length
+        ) == 0
+      - >-
+        (
+          docker_adguard_bootstrap_dns
+          | difference(docker_adguard_live_config.dns.bootstrap_dns | default([]))
+          | length
+        ) == 0
+      - docker_adguard_live_config.theme == docker_adguard_theme
+      - docker_adguard_live_filters | to_json == docker_adguard_desired_filters | to_json
+      - docker_adguard_validate_compose_version.rc == 0
+      - docker_adguard_docker_service_name in ansible_facts.services or docker_adguard_service_unit in ansible_facts.services
+      - >-
+        (
+          docker_adguard_service_unit in ansible_facts.services
+          and ansible_facts.services[docker_adguard_service_unit].state == 'running'
+        ) or (
+          docker_adguard_docker_service_name in ansible_facts.services
+          and ansible_facts.services[docker_adguard_docker_service_name].state == 'running'
+        )
+      - docker_adguard_validate_proxy_network.rc == 0
+      - docker_adguard_compose_service_name in (docker_adguard_validate_compose_ps.stdout_lines | default([]))
+    fail_msg: >-
+      Configured Docker AdGuard state does not match the requested
+      docker_adguard values
+    quiet: true
+  when: docker_adguard_enabled | bool
+
+- name: "Validate | Assert AdGuard access-group membership for existing users"
+  ansible.builtin.assert:
+    that:
+      - docker_adguard_access_group in (item.stdout | trim | split())
+    fail_msg: >-
+      AdGuard access-group membership does not match requested
+      docker_adguard_access_group_members
+    quiet: true
+  loop: "{{ docker_adguard_validate_groups.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.item }}"
+  when:
+    - docker_adguard_enabled | bool
+    - docker_adguard_manage_access_group_memberships | bool
+    - item.rc == 0
