@@ -113,7 +113,7 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/bootstra
 
 The example bootstrap flow expects its login password to come from
 Vault-backed variables in inventory YAML, and the example Ansible config
-explicitly uses `~/.config/ansible/vault/password.txt` as the Vault password
+explicitly uses `~/.config/ansible/vault.pass` as the Vault password
 file path.
 
 Then run the full post-bootstrap stack:
@@ -175,6 +175,7 @@ Core repository docs:
 - [docs/04-firewall-role-integration.md](docs/04-firewall-role-integration.md): How future roles should register firewall rules for `base_firewall`
 - [docs/05-vault.md](docs/05-vault.md): Short Vault guidance for secret-bearing inventory values such as `user_password`
 - [docs/06-user-groups-role-integration.md](docs/06-user-groups-role-integration.md): How future roles should register human admin supplementary-group needs for `user_groups`
+- [docs/07-docker-role-conventions.md](docs/07-docker-role-conventions.md): Shared Docker daemon, access-group, and backup-path conventions
 
 ## License
 MIT

@@ -26,6 +26,7 @@ Explains how the role manages a UFW baseline on Debian-family hosts during the b
 | `base_firewall_default_incoming_policy` | `deny` | no | Default UFW policy for incoming traffic |
 | `base_firewall_default_outgoing_policy` | `allow` | no | Default UFW policy for outgoing traffic |
 | `base_firewall_purge_unmanaged_rules` | `false` | no | When `true`, reset UFW and rebuild only the managed rules when the current added-rule list no longer matches `base_firewall_rules` |
+| `base_firewall_remove_stale_managed_rules` | `false` | no | When `true`, remove live role-managed rules whose managed comments are no longer present in `base_firewall_rules` |
 | `base_firewall_state_checksum_path` | `/etc/ufw/.base_firewall_state.sha256` | no | Path used to store the checksum of the requested managed firewall state after configuration |
 | `base_firewall_managed_comment_prefix` | `managed:` | no | Comment prefix used to identify role-managed firewall rules that may be cleaned up automatically |
 | `base_firewall_base_rules` | SSH rate-limit rule on `base_sshd_port` | no | Baseline rules managed by the role for every host |
@@ -60,6 +61,7 @@ base_include_firewall: true
 base_firewall_default_incoming_policy: deny
 base_firewall_default_outgoing_policy: allow
 base_firewall_purge_unmanaged_rules: false
+base_firewall_remove_stale_managed_rules: false
 base_firewall_role_declared_rules: []
 base_firewall_additional_rules:
   - rule: allow
@@ -72,11 +74,12 @@ base_firewall_additional_rules:
 
 This role applies an additive firewall baseline by default, so it ensures the requested rules exist while leaving unrelated or manually added UFW rules in place.
 Set `base_firewall_purge_unmanaged_rules: true` when you want the role to reset UFW and rebuild only the managed rules from `base_firewall_rules`.
+Set `base_firewall_remove_stale_managed_rules: true` when you want additive mode to also delete live role-managed rules whose managed comments are no longer declared in the current effective ruleset.
 Use `base_firewall_base_rules` for the shared baseline, `base_firewall_role_declared_rules` for rules registered by other enabled roles, and `base_firewall_additional_rules` for explicit host- or group-level additions.
 If you set `base_firewall_default_incoming_policy` to `deny` or `reject`, keep at least one incoming `allow` or `limit` rule for the SSH or Ansible management port in the effective `base_firewall_rules` list or the role will fail early.
 Keep `base_firewall_rules` ordered for readability and stable `ufw show added` output.
 Rule directions use `in` and `out` so the stored commands match the long-form syntax used by the Ansible UFW module.
-When additive mode is active, `base_firewall` also removes live UFW rules whose comments start with `base_firewall_managed_comment_prefix` when those rules are no longer present in `base_firewall_rules`.
+When additive mode is active, `base_firewall` only removes live UFW rules whose comments start with `base_firewall_managed_comment_prefix` when `base_firewall_remove_stale_managed_rules: true`.
 Manual rules without that prefix are left untouched unless `base_firewall_purge_unmanaged_rules: true`.
 
 ## Role Integration
@@ -108,7 +111,7 @@ docker_traefik_firewall_rules:
     comment: "managed:docker_traefik:dashboard"
 ```
 
-If a role is later disabled and stops declaring that rule, `base_firewall` removes the stale managed rule automatically during the next run.
+If a role is later disabled and stops declaring that rule, `base_firewall` removes the stale managed rule automatically only when `base_firewall_remove_stale_managed_rules: true`.
 If you rely on role-declared rules from roles outside the aggregate `base` stack, make sure those roles run earlier in the same play than `base_firewall`, or run `base_firewall` in a later play after they have registered their rules.
 See [docs/04-firewall-role-integration.md](../../docs/04-firewall-role-integration.md) for a repository-level guide you can reuse when adding future app roles.
 

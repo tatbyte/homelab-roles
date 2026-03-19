@@ -22,3 +22,23 @@
       docker_engine_config,
       docker_engine_validate,
     ]
+
+- name: "Docker | Include optional docker_traefik role"
+  ansible.builtin.include_role:
+    name: docker_traefik
+    apply:
+      tags: [docker, docker_traefik]
+  when: docker_include_traefik | default(false)
+  tags:
+    [
+      docker,
+      docker_traefik,
+      assert,
+      install,
+      config,
+      validate,
+      docker_traefik_assert,
+      docker_traefik_install,
+      docker_traefik_config,
+      docker_traefik_validate,
+    ]

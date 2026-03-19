@@ -1,0 +1,80 @@
+---
+# roles/docker_traefik/defaults/main.yml
+# Default variables for the `docker_traefik` role.
+# Defines Docker Compose, Traefik, ACME DNS challenge, service-identity, and optional firewall inputs for a Debian-family host.
+
+docker_traefik_enabled: true
+
+docker_traefik_packages: []
+docker_traefik_compose_package_candidates:
+  - docker-compose-plugin
+  - docker-compose-v2
+
+docker_traefik_project_dir: /srv/traefik
+docker_traefik_data_dir: "{{ docker_traefik_project_dir }}/data"
+docker_traefik_compose_project_name: traefik
+docker_traefik_compose_service_name: traefik
+docker_traefik_container_name: traefik
+docker_traefik_image: traefik:v3.0
+docker_traefik_docker_service_name: "{{ docker_engine_service_name | default('docker') }}"
+docker_traefik_service_user: srv_traefik
+docker_traefik_service_uid: 1150
+docker_traefik_access_group: access_traefik
+docker_traefik_access_gid: 1150
+docker_traefik_service_user_shell: /usr/sbin/nologin
+docker_traefik_manage_access_group_memberships: true
+docker_traefik_access_group_members: >-
+  {{
+    [
+      (bootstrap_user | default('admin')),
+      (user_account_name | default('admin'))
+    ]
+    | map('trim')
+    | reject('equalto', '')
+    | unique
+    | list
+  }}
+
+docker_traefik_compose_file_path: "{{ docker_traefik_project_dir }}/compose.yml"
+docker_traefik_static_config_path: "{{ docker_traefik_project_dir }}/traefik.yml"
+docker_traefik_dynamic_config_dir: "{{ docker_traefik_project_dir }}/dynamic"
+docker_traefik_dashboard_config_path: "{{ docker_traefik_dynamic_config_dir }}/dashboard.yml"
+docker_traefik_env_file_path: "{{ docker_traefik_project_dir }}/traefik.env"
+docker_traefik_letsencrypt_dir: "{{ docker_traefik_data_dir }}/letsencrypt"
+docker_traefik_letsencrypt_storage_path: "{{ docker_traefik_letsencrypt_dir }}/acme.json"
+
+docker_traefik_network_name: traefik_proxy
+
+docker_traefik_certresolver_name: letsencrypt
+docker_traefik_acme_email: admin@example.com
+docker_traefik_dns_challenge_provider: cloudflare
+docker_traefik_dns_challenge_delay_before_check: 0
+docker_traefik_dns_challenge_resolvers: []
+docker_traefik_dns_env: {}
+docker_traefik_additional_env: {}
+docker_traefik_environment: >-
+  {{
+    (docker_traefik_dns_env | default({}))
+    | combine(docker_traefik_additional_env | default({}))
+  }}
+
+docker_traefik_dashboard_enabled: true
+docker_traefik_dashboard_host: traefik.example.com
+docker_traefik_dashboard_entrypoints:
+  - websecure
+docker_traefik_dashboard_tls_certresolver: "{{ docker_traefik_certresolver_name }}"
+docker_traefik_dashboard_basic_auth_users: []
+docker_traefik_effective_dashboard_basic_auth_users: []
+
+docker_traefik_manage_firewall_rules: true
+docker_traefik_firewall_rules:
+  - rule: allow
+    direction: in
+    port: "80"
+    proto: tcp
+    comment: "managed:docker_traefik:http"
+  - rule: allow
+    direction: in
+    port: "443"
+    proto: tcp
+    comment: "managed:docker_traefik:https"

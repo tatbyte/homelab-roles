@@ -13,7 +13,7 @@ to `base_firewall_role_declared_rules` instead of editing
 That gives you:
 
 - automatic port opens when a role is enabled
-- automatic stale-rule removal when a role stops declaring a managed rule
+- optional stale-rule removal when a role stops declaring a managed rule
 - one place where UFW state is ultimately enforced
 
 ## Aggregation Order
@@ -43,7 +43,8 @@ comment: "managed:docker_traefik:dashboard"
 
 `base_firewall` uses that prefix to distinguish role-owned rules from manual
 UFW rules. In additive mode, only managed-prefixed live rules are candidates
-for automatic stale cleanup.
+for stale cleanup, and only when `base_firewall_remove_stale_managed_rules:
+true`.
 
 Manual rules without that prefix are left alone unless
 `base_firewall_purge_unmanaged_rules: true`.
@@ -91,7 +92,7 @@ order instead of duplicating role-by-role sequencing in documentation.
 
 ## Stale Rule Cleanup
 
-In additive mode, `base_firewall`:
+When `base_firewall_remove_stale_managed_rules: true`, additive mode:
 
 1. reads `ufw show added`
 2. finds live rules whose comment starts with the managed prefix

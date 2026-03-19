@@ -38,13 +38,11 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/site.yml
 The example `bootstrap.yml` playbook does not prompt for credentials.
 It expects the bootstrap login user and other non-secret bootstrap inputs to
 come from `inventory/group_vars/all/bootstrap.yml`, with the bootstrap login
-password coming from Vault-backed vars in
-`inventory/group_vars/all/bootstrap.yml`, and with `examples/ansible.cfg`
-explicitly pointing at `~/.config/ansible/vault/password.txt`.
-Keep only the real encrypted `vault.yml` inside `inventory/group_vars/all/`;
-store any checked-in example copy outside that directory.
-`bootstrap.yml` and `vault.yml` are both loaded and merged, so keep public
-inputs in `bootstrap.yml` and secret values in `vault.yml`.
+password coming from `~/.config/ansible/vault.yml`, and with
+`examples/ansible.cfg` explicitly pointing at
+`~/.config/ansible/vault.pass`.
+Keep checked-in examples outside `inventory/group_vars/all/`, and keep the
+real encrypted secret file outside the repo at `~/.config/ansible/vault.yml`.
 
 Direct phase runs:
 
@@ -71,6 +69,9 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/<t
 
 - `playbooks/base.yml` uses `serial: 1` for safer reboot-capable runs.
 - The example may intentionally fail when strict restart/reboot follow-up checks are enabled.
+- The Docker example keeps service projects under `/srv/<service>` and
+  persistent service data under `/srv/<service>/data` so backup-friendly host
+  restores stay predictable.
 - Replace demo identity, password, and SSH key values before using these patterns outside a lab.
 
 ## Extending

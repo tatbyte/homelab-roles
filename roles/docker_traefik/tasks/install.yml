@@ -1,0 +1,18 @@
+---
+# roles/docker_traefik/tasks/install.yml
+# Install phase tasks for the `docker_traefik` role.
+# Ensures the requested Docker Compose support packages are installed with APT when Traefik is enabled.
+
+- name: "Install | Derive effective Compose support packages"
+  ansible.builtin.import_tasks: derive_effective_packages.yml
+  when: docker_traefik_enabled | bool
+
+- name: "Install | Ensure requested Docker Traefik packages are present"
+  ansible.builtin.apt:
+    name: "{{ docker_traefik_effective_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when:
+    - docker_traefik_enabled | bool
+    - docker_traefik_effective_packages | length > 0

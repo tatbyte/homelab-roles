@@ -1,0 +1,231 @@
+---
+# roles/docker_traefik/tasks/config.yml
+# Config phase tasks for the `docker_traefik` role.
+# Creates the Traefik access identities and project files, registers optional firewall rules, and starts the managed Docker Compose project.
+
+- name: "Config | Derive effective dashboard basic-auth users"
+  ansible.builtin.import_tasks: derive_effective_dashboard_auth.yml
+  when: docker_traefik_enabled | bool
+
+- name: "Config | Ensure Traefik access group exists"
+  ansible.builtin.group:
+    name: "{{ docker_traefik_access_group }}"
+    gid: "{{ docker_traefik_access_gid }}"
+    state: present
+  when: docker_traefik_enabled | bool
+
+- name: "Config | Ensure Traefik service user exists"
+  ansible.builtin.user:
+    name: "{{ docker_traefik_service_user }}"
+    uid: "{{ docker_traefik_service_uid }}"
+    group: "{{ docker_traefik_access_group }}"
+    shell: "{{ docker_traefik_service_user_shell }}"
+    home: "{{ docker_traefik_project_dir }}"
+    create_home: false
+    state: present
+    comment: "Traefik service account managed by Ansible"
+  when: docker_traefik_enabled | bool
+
+- name: "Config | Register firewall rules" # noqa: var-naming[no-role-prefix]
+  ansible.builtin.set_fact:
+    base_firewall_role_declared_rules: >-
+      {{
+        (base_firewall_role_declared_rules | default([]))
+        + (docker_traefik_firewall_rules | default([]))
+      }}
+  when:
+    - docker_traefik_enabled | bool
+    - docker_traefik_manage_firewall_rules | bool
+
+- name: "Config | Collect existing user entries for Traefik access-group management"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ item }}"
+  register: docker_traefik_config_passwd_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ docker_traefik_access_group_members }}"
+  loop_control:
+    label: "{{ item }}"
+  when:
+    - docker_traefik_enabled | bool
+    - docker_traefik_manage_access_group_memberships | bool
+    - docker_traefik_access_group_members | length > 0
+
+- name: "Config | Ensure Traefik access-group membership for existing users"
+  ansible.builtin.user:
+    name: "{{ item.item }}"
+    state: present
+    groups: "{{ docker_traefik_access_group }}"
+    append: true
+  loop: "{{ docker_traefik_config_passwd_lookup.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when:
+    - docker_traefik_enabled | bool
+    - docker_traefik_manage_access_group_memberships | bool
+    - item.item in (item.ansible_facts.getent_passwd | default({}))
+
+- name: "Config | Check whether a managed Docker Compose file already exists"
+  ansible.builtin.stat:
+    path: "{{ docker_traefik_compose_file_path }}"
+  register: docker_traefik_compose_file_stat
+  changed_when: false
+
+- name: "Config | Stop managed Docker Compose project when Traefik is disabled"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-name
+      - "{{ docker_traefik_compose_project_name }}"
+      - --file
+      - "{{ docker_traefik_compose_file_path }}"
+      - down
+  register: docker_traefik_compose_down
+  changed_when: docker_traefik_compose_file_stat.stat.exists
+  when:
+    - not docker_traefik_enabled | bool
+    - docker_traefik_compose_file_stat.stat.exists
+
+- name: "Config | Ensure Traefik project directory exists"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - path: "{{ docker_traefik_project_dir }}"
+      owner: root
+      group: "{{ docker_traefik_access_group }}"
+      mode: "0750"
+    - path: "{{ docker_traefik_dynamic_config_dir }}"
+      owner: root
+      group: "{{ docker_traefik_access_group }}"
+      mode: "0750"
+    - path: "{{ docker_traefik_data_dir }}"
+      owner: "{{ docker_traefik_service_user }}"
+      group: "{{ docker_traefik_access_group }}"
+      mode: "0750"
+    - path: "{{ docker_traefik_letsencrypt_dir }}"
+      owner: "{{ docker_traefik_service_user }}"
+      group: "{{ docker_traefik_access_group }}"
+      mode: "0750"
+  loop_control:
+    label: "{{ item.path }}"
+  when: docker_traefik_enabled | bool
+
+- name: "Config | Ensure ACME storage file exists"
+  ansible.builtin.copy:
+    dest: "{{ docker_traefik_letsencrypt_storage_path }}"
+    content: ""
+    force: false
+    owner: "{{ docker_traefik_service_user }}"
+    group: "{{ docker_traefik_access_group }}"
+    mode: "0600"
+  register: docker_traefik_acme_storage_result
+  when: docker_traefik_enabled | bool
+
+- name: "Config | Enforce ACME storage ownership and mode"
+  ansible.builtin.file:
+    path: "{{ docker_traefik_letsencrypt_storage_path }}"
+    state: file
+    owner: "{{ docker_traefik_service_user }}"
+    group: "{{ docker_traefik_access_group }}"
+    mode: "0600"
+  register: docker_traefik_acme_storage_permissions_result
+  when: docker_traefik_enabled | bool
+
+- name: "Config | Render Docker Compose file"
+  ansible.builtin.template:
+    src: docker_traefik_compose.yml.j2
+    dest: "{{ docker_traefik_compose_file_path }}"
+    owner: root
+    group: "{{ docker_traefik_access_group }}"
+    mode: "0640"
+  register: docker_traefik_compose_template_result
+  when: docker_traefik_enabled | bool
+
+- name: "Config | Render Traefik static configuration"
+  ansible.builtin.template:
+    src: docker_traefik_traefik.yml.j2
+    dest: "{{ docker_traefik_static_config_path }}"
+    owner: root
+    group: "{{ docker_traefik_access_group }}"
+    mode: "0640"
+  register: docker_traefik_static_config_result
+  when: docker_traefik_enabled | bool
+
+- name: "Config | Render Traefik dashboard dynamic configuration"
+  ansible.builtin.template:
+    src: docker_traefik_dashboard.yml.j2
+    dest: "{{ docker_traefik_dashboard_config_path }}"
+    owner: root
+    group: "{{ docker_traefik_access_group }}"
+    mode: "0640"
+  register: docker_traefik_dashboard_config_result
+  when: docker_traefik_enabled | bool
+
+- name: "Config | Render Traefik environment file"
+  ansible.builtin.template:
+    src: docker_traefik_env.j2
+    dest: "{{ docker_traefik_env_file_path }}"
+    owner: root
+    group: "{{ docker_traefik_access_group }}"
+    mode: "0640"
+  register: docker_traefik_env_file_result
+  when: docker_traefik_enabled | bool
+
+- name: "Config | Read current Docker Compose running services"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-name
+      - "{{ docker_traefik_compose_project_name }}"
+      - --file
+      - "{{ docker_traefik_compose_file_path }}"
+      - ps
+      - --services
+      - --status
+      - running
+  register: docker_traefik_compose_ps
+  changed_when: false
+  failed_when: false
+  when: docker_traefik_enabled | bool
+
+- name: "Config | Derive whether Docker Compose reconciliation is required"
+  ansible.builtin.set_fact:
+    docker_traefik_requires_compose_up: >-
+      {{
+        docker_traefik_acme_storage_result.changed
+        or docker_traefik_acme_storage_permissions_result.changed
+        or docker_traefik_compose_template_result.changed
+        or docker_traefik_static_config_result.changed
+        or docker_traefik_dashboard_config_result.changed
+        or docker_traefik_env_file_result.changed
+        or (
+          docker_traefik_compose_service_name
+          not in (docker_traefik_compose_ps.stdout_lines | default([]))
+        )
+      }}
+  changed_when: false
+  when: docker_traefik_enabled | bool
+
+- name: "Config | Reconcile Docker Compose project"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-name
+      - "{{ docker_traefik_compose_project_name }}"
+      - --file
+      - "{{ docker_traefik_compose_file_path }}"
+      - up
+      - --detach
+  register: docker_traefik_compose_up
+  changed_when: docker_traefik_requires_compose_up | bool
+  when:
+    - docker_traefik_enabled | bool
+    - docker_traefik_requires_compose_up | bool

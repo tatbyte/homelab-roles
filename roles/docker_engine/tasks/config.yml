@@ -1,7 +1,28 @@
 ---
 # roles/docker_engine/tasks/config.yml
 # Config phase tasks for the `docker_engine` role.
-# Ensures the Docker group exists, registers user_groups memberships, applies direct group membership for existing users, and enables the Docker service.
+# Ensures the Docker daemon config and group exist, registers user_groups
+# memberships, applies direct group membership for existing users, and enables
+# the Docker service.
+
+- name: "Config | Ensure Docker daemon configuration directory exists"
+  ansible.builtin.file:
+    path: "{{ docker_engine_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: docker_engine_enabled | bool
+
+- name: "Config | Render Docker daemon configuration"
+  ansible.builtin.template:
+    src: docker_engine_daemon.json.j2
+    dest: "{{ docker_engine_daemon_config_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  register: docker_engine_daemon_config_result
+  when: docker_engine_enabled | bool
 
 - name: "Config | Ensure Docker supplementary group exists"
   ansible.builtin.group:
@@ -53,5 +74,5 @@
   ansible.builtin.service:
     name: "{{ docker_engine_service_name }}"
     enabled: true
-    state: started
+    state: "{{ 'restarted' if (docker_engine_daemon_config_result.changed | default(false)) else 'started' }}"
   when: docker_engine_enabled | bool

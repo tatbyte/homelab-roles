@@ -8,20 +8,23 @@ Explains where to keep a local Vault password file, how to point Ansible at it, 
 Keep your personal Ansible config and Vault password file under:
 
 - `~/.config/ansible/ansible.cfg`
-- `~/.config/ansible/vault/password.txt`
+- `~/.config/ansible/vault.pass`
+- `~/.config/ansible/vault.yml`
 
 Suggested permissions:
 
 - `~/.config/ansible/`: `0700`
-- `~/.config/ansible/vault/password.txt`: `0600`
+- `~/.config/ansible/vault.pass`: `0600`
+- `~/.config/ansible/vault.yml`: `0600`
 
 Example:
 
 ```sh
-mkdir -p ~/.config/ansible/vault
-chmod 700 ~/.config/ansible ~/.config/ansible/vault
-printf '%s\n' 'your-vault-password' > ~/.config/ansible/vault/password.txt
-chmod 600 ~/.config/ansible/vault/password.txt
+mkdir -p ~/.config/ansible
+chmod 700 ~/.config/ansible
+printf '%s\n' 'your-vault-password' > ~/.config/ansible/vault.pass
+chmod 600 ~/.config/ansible/vault.pass
+ansible-vault create ~/.config/ansible/vault.yml
 ```
 
 ## Ansible Config
@@ -30,7 +33,7 @@ Point Ansible at that file from `~/.config/ansible/ansible.cfg`:
 
 ```ini
 [defaults]
-vault_password_file = ~/.config/ansible/vault/password.txt
+vault_password_file = ~/.config/ansible/vault.pass
 ```
 
 The example lab also sets this directly in `examples/ansible.cfg`, so the
@@ -42,23 +45,24 @@ path.
 Create or edit an encrypted vars file:
 
 ```sh
-ansible-vault create inventory/group_vars/all/vault.yml
-ansible-vault edit inventory/group_vars/all/vault.yml
+ansible-vault create ~/.config/ansible/vault.yml
+ansible-vault edit ~/.config/ansible/vault.yml
 ```
 
-Keep only the real encrypted file in `group_vars/all/`.
-Do not keep example files in that directory, because Ansible loads every file
-it finds there.
-Store any checked-in example outside `group_vars/all/`, for example at
+Keep the real encrypted secret file outside the repo at
+`~/.config/ansible/vault.yml`.
+Do not keep checked-in example files in `group_vars/all/`, because Ansible
+loads every file it finds there.
+Store checked-in examples elsewhere, for example at
 `inventory/examples/vault.yml.example`.
 
-Because the example `ansible.cfg` points at `~/.config/ansible/vault/password.txt`,
+Because the example `ansible.cfg` points at `~/.config/ansible/vault.pass`,
 create that file before running the example playbooks.
 
 Then store secret values there and reference them from normal vars files:
 
 ```yaml
-# inventory/group_vars/all/vault.yml
+# ~/.config/ansible/vault.yml
 vault_user_password_hash: "$6$..."
 vault_bootstrap_login_password: "..."
 ```
@@ -74,15 +78,15 @@ bootstrap_login_user: "admin"
 bootstrap_login_password: "{{ vault_bootstrap_login_password }}"
 ```
 
-## How `bootstrap.yml` And `vault.yml` Work Together
+## How `bootstrap.yml` And The Local Vault File Work Together
 
-Ansible loads both `bootstrap.yml` and `vault.yml` from `group_vars/all/` and
-merges them into the same variable set for the play.
+The example playbooks load non-secret role inputs from `group_vars/all/` and
+load secret values from `~/.config/ansible/vault.yml` separately.
 
 Use this split:
 
 - `bootstrap.yml`: non-secret role inputs and references to secret vars
-- `vault.yml`: raw secret values only
+- `~/.config/ansible/vault.yml`: raw secret values only
 
 Example:
 
@@ -93,13 +97,13 @@ bootstrap_login_password: "{{ vault_bootstrap_login_password }}"
 ```
 
 ```yaml
-# inventory/group_vars/all/vault.yml
+# ~/.config/ansible/vault.yml
 vault_bootstrap_login_password: "admin"
 ```
 
-Do not rely on file order between these files.
-Also make sure `vault.yml` contains YAML, not shell or INI syntax, and keep
-fallback logic in normal vars files rather than inside Vault data.
+Also make sure `~/.config/ansible/vault.yml` contains YAML, not shell or INI
+syntax, and keep fallback logic in normal vars files rather than inside Vault
+data.
 
 Correct:
 

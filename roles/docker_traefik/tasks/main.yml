@@ -1,0 +1,20 @@
+---
+# roles/docker_traefik/tasks/main.yml
+# Task entrypoint for the `docker_traefik` role.
+# Imports the assert, install, config, and validate phase files in order.
+
+- name: Assert
+  ansible.builtin.import_tasks: assert.yml
+  tags: [assert, docker_traefik, docker_traefik_assert]
+
+- name: Install
+  ansible.builtin.import_tasks: install.yml
+  tags: [install, docker_traefik, docker_traefik_install]
+
+- name: Config
+  ansible.builtin.import_tasks: config.yml
+  tags: [config, docker_traefik, docker_traefik_config]
+
+- name: Validate
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate, docker_traefik, docker_traefik_validate]

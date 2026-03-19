@@ -1,0 +1,3 @@
+{# roles/docker_engine/templates/docker_engine_daemon.json.j2 #}
+{# Template for the managed Docker daemon configuration file in the `docker_engine` role. #}
+{{ docker_engine_daemon_config | to_nice_json }}

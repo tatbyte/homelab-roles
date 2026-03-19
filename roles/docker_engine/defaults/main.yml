@@ -1,7 +1,7 @@
 ---
 # roles/docker_engine/defaults/main.yml
 # Default variables for the `docker_engine` role.
-# Defines Docker engine package, service, and user-group integration inputs for Debian-family hosts.
+# Defines Docker engine package, service, daemon, and user-group integration inputs for Debian-family hosts.
 
 docker_engine_enabled: true
 
@@ -10,6 +10,19 @@ docker_engine_packages:
 
 docker_engine_service_name: docker
 docker_engine_group_name: docker
+docker_engine_config_dir: /etc/docker
+docker_engine_daemon_config_path: "{{ docker_engine_config_dir }}/daemon.json"
+docker_engine_log_driver: json-file
+docker_engine_log_opts:
+  max-size: "10m"
+  max-file: "3"
+docker_engine_daemon_config: >-
+  {{
+    {
+      'log-driver': docker_engine_log_driver,
+      'log-opts': docker_engine_log_opts
+    }
+  }}
 
 # If true, ensure Docker supplementary-group membership for existing users.
 docker_engine_manage_group_memberships: true

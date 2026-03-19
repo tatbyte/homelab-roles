@@ -1,0 +1,30 @@
+{# roles/docker_traefik/templates/docker_traefik_dashboard.yml.j2 #}
+{# Template for the managed Traefik dashboard dynamic configuration file in the `docker_traefik` role. #}
+# Managed by Ansible: docker_traefik
+# Source: roles/docker_traefik/templates/docker_traefik_dashboard.yml.j2
+http:
+{% if docker_traefik_dashboard_enabled %}
+  routers:
+    traefik-dashboard:
+      rule: "Host(`{{ docker_traefik_dashboard_host }}`)"
+      entryPoints:
+{% for entrypoint in docker_traefik_dashboard_entrypoints %}
+        - "{{ entrypoint }}"
+{% endfor %}
+      service: api@internal
+      middlewares:
+        - dashboard-auth
+      tls:
+        certResolver: "{{ docker_traefik_dashboard_tls_certresolver }}"
+
+  middlewares:
+    dashboard-auth:
+      basicAuth:
+        users:
+{% for user in docker_traefik_effective_dashboard_basic_auth_users %}
+          - "{{ user }}"
+{% endfor %}
+{% else %}
+  routers: {}
+  middlewares: {}
+{% endif %}
