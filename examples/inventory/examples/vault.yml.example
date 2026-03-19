@@ -1,8 +1,12 @@
 ---
 # examples/inventory/examples/vault.yml.example
 # Example secret-bearing variables for the local lab.
-# Copy this to `examples/inventory/group_vars/all/vault.yml` and encrypt it
-# with `ansible-vault` for local use.
+# Copy this to `~/.config/ansible/vault.yml` and encrypt it with
+# `ansible-vault` for local use.
+
+# ---------------------------------------------------------------------------
+# bootstrap
+# ---------------------------------------------------------------------------
 
 # Password used for the initial bootstrap SSH login.
 vault_bootstrap_login_password: "replace-me"
@@ -11,5 +15,27 @@ vault_bootstrap_login_password: "replace-me"
 # Omit this key entirely when SSH and sudo share the same password.
 vault_bootstrap_login_become_password: "replace-me"
 
+# ---------------------------------------------------------------------------
+# user_password
+# ---------------------------------------------------------------------------
+
 # Example hashed password input for the managed human admin account.
 vault_user_password_hash: "$6$replace-me"
+
+# ---------------------------------------------------------------------------
+# docker_traefik
+# ---------------------------------------------------------------------------
+
+# Example ACME contact email used by Traefik for Let's Encrypt registration.
+vault_docker_traefik_acme_email: "admin@example.com"
+
+# Example host name used by the Traefik dashboard router.
+vault_docker_traefik_dashboard_host: "traefik.example.com"
+
+# Example DNS provider credential used by Traefik for ACME DNS-01.
+vault_docker_traefik_dns_api_token: "replace-me"
+
+# Example Traefik dashboard basic-auth entries in `user:hash` format.
+# Generate hashes with `htpasswd -nB <user>`.
+vault_docker_traefik_dashboard_basic_auth_users:
+  - "admin:replace-me-with-htpasswd-hash"

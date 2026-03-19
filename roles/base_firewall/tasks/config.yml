@@ -212,18 +212,88 @@
         )
         | difference(base_firewall_desired_managed_rule_commands)
       }}
-  when: not base_firewall_purge_unmanaged_rules
+    base_firewall_stale_managed_rule_comments: >-
+      {{
+        (
+          (
+            base_firewall_added_rules.stdout_lines
+            | select('search', base_firewall_managed_comment_search_pattern)
+            | list
+          )
+          | difference(base_firewall_desired_managed_rule_commands)
+        )
+        | map('regex_replace', "^.* comment '([^']+)'.*$", '\\1')
+        | unique
+        | list
+      }}
+  when:
+    - not base_firewall_purge_unmanaged_rules
+    - base_firewall_remove_stale_managed_rules
 
-- name: "Config | Remove stale managed firewall rules"
-  ansible.builtin.command: >-
-    ufw --force delete {{ item | regex_replace('^ufw\\s+', '') }}
-  changed_when: true
-  loop: "{{ base_firewall_stale_managed_rule_commands | default([]) }}"
+- name: "Config | Read numbered firewall status for stale-rule cleanup"
+  ansible.builtin.command: ufw status numbered
+  register: base_firewall_numbered_status
+  changed_when: false
+  when:
+    - not base_firewall_purge_unmanaged_rules
+    - base_firewall_remove_stale_managed_rules
+    - (base_firewall_stale_managed_rule_comments | default([]) | length) > 0
+
+- name: "Config | Initialize stale managed firewall rule numbers"
+  ansible.builtin.set_fact:
+    base_firewall_stale_managed_rule_numbers: []
+  when:
+    - not base_firewall_purge_unmanaged_rules
+    - base_firewall_remove_stale_managed_rules
+    - (base_firewall_stale_managed_rule_comments | default([]) | length) > 0
+
+- name: "Config | Collect stale managed firewall rule numbers"
+  vars:
+    base_firewall_status_comment_pattern: >-
+      {{
+        '# '
+        ~ (item | regex_escape)
+        ~ '$'
+      }}
+    base_firewall_matching_rule_numbers: >-
+      {{
+        base_firewall_numbered_status.stdout_lines
+        | select('search', base_firewall_status_comment_pattern)
+        | map('regex_replace', '^\\[\\s*([0-9]+)\\]\\s+.*$', '\\1')
+        | map('int')
+        | list
+      }}
+  ansible.builtin.set_fact:
+    base_firewall_stale_managed_rule_numbers: >-
+      {{
+        (base_firewall_stale_managed_rule_numbers | default([]))
+        + base_firewall_matching_rule_numbers
+      }}
+  loop: "{{ base_firewall_stale_managed_rule_comments | default([]) }}"
   loop_control:
     label: "{{ item }}"
   when:
     - not base_firewall_purge_unmanaged_rules
-    - (base_firewall_stale_managed_rule_commands | default([]) | length) > 0
+    - base_firewall_remove_stale_managed_rules
+    - (base_firewall_stale_managed_rule_comments | default([]) | length) > 0
+
+- name: "Config | Remove stale managed firewall rules"
+  ansible.builtin.command: >-
+    ufw --force delete {{ item }}
+  changed_when: true
+  loop: >-
+    {{
+      base_firewall_stale_managed_rule_numbers
+      | default([])
+      | unique
+      | sort(reverse=true)
+    }}
+  loop_control:
+    label: "rule {{ item }}"
+  when:
+    - not base_firewall_purge_unmanaged_rules
+    - base_firewall_remove_stale_managed_rules
+    - (base_firewall_stale_managed_rule_numbers | default([]) | length) > 0
 
 - name: "Config | Set firewall logging level"
   community.general.ufw:

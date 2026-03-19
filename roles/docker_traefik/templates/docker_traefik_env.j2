@@ -1,0 +1,7 @@
+{# roles/docker_traefik/templates/docker_traefik_env.j2 #}
+{# Template for the managed Traefik environment file in the `docker_traefik` role. #}
+# Managed by Ansible: docker_traefik
+# Source: roles/docker_traefik/templates/docker_traefik_env.j2
+{% for item in docker_traefik_environment | dict2items | sort(attribute='key') %}
+{{ item.key }}={{ item.value }}
+{% endfor %}

@@ -1,0 +1,189 @@
+---
+# roles/docker_traefik/tasks/validate.yml
+# Validate phase tasks for the `docker_traefik` role.
+# Verifies package state, identities, rendered files, Docker network state, and the running Docker Compose Traefik service.
+
+- name: "Validate | Derive effective dashboard basic-auth users"
+  ansible.builtin.import_tasks: derive_effective_dashboard_auth.yml
+  when: docker_traefik_enabled | bool
+
+- name: "Validate | Gather package facts"
+  ansible.builtin.package_facts:
+    manager: auto
+  when: docker_traefik_enabled | bool
+
+- name: "Validate | Derive effective Compose support packages"
+  ansible.builtin.import_tasks: derive_effective_packages.yml
+  when: docker_traefik_enabled | bool
+
+- name: "Validate | Collect Traefik service-user entry"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ docker_traefik_service_user }}"
+  register: docker_traefik_validate_service_user
+  changed_when: false
+  when: docker_traefik_enabled | bool
+
+- name: "Validate | Collect Traefik access-group entry"
+  ansible.builtin.getent:
+    database: group
+    key: "{{ docker_traefik_access_group }}"
+  register: docker_traefik_validate_access_group
+  changed_when: false
+  when: docker_traefik_enabled | bool
+
+- name: "Validate | Collect existing user entries for Traefik access-group validation"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ item }}"
+  register: docker_traefik_validate_passwd_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ docker_traefik_access_group_members }}"
+  loop_control:
+    label: "{{ item }}"
+  when:
+    - docker_traefik_enabled | bool
+    - docker_traefik_manage_access_group_memberships | bool
+    - docker_traefik_access_group_members | length > 0
+
+- name: "Validate | Collect effective group lists for Traefik-managed existing users"
+  ansible.builtin.command:
+    cmd: "id -Gn {{ item.item }}"
+  register: docker_traefik_validate_groups
+  changed_when: false
+  failed_when: false
+  loop: "{{ docker_traefik_validate_passwd_lookup.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when:
+    - docker_traefik_enabled | bool
+    - docker_traefik_manage_access_group_memberships | bool
+    - item.item in (item.ansible_facts.getent_passwd | default({}))
+
+- name: "Validate | Read Docker Compose file"
+  ansible.builtin.slurp:
+    path: "{{ docker_traefik_compose_file_path }}"
+  register: docker_traefik_validate_compose_file
+  when: docker_traefik_enabled | bool
+
+- name: "Validate | Read Traefik static configuration"
+  ansible.builtin.slurp:
+    path: "{{ docker_traefik_static_config_path }}"
+  register: docker_traefik_validate_static_config
+  when: docker_traefik_enabled | bool
+
+- name: "Validate | Read Traefik dashboard dynamic configuration"
+  ansible.builtin.slurp:
+    path: "{{ docker_traefik_dashboard_config_path }}"
+  register: docker_traefik_validate_dashboard_config
+  when: docker_traefik_enabled | bool
+
+- name: "Validate | Read Traefik environment file"
+  ansible.builtin.slurp:
+    path: "{{ docker_traefik_env_file_path }}"
+  register: docker_traefik_validate_env_file
+  when: docker_traefik_enabled | bool
+
+- name: "Validate | Stat ACME storage file"
+  ansible.builtin.stat:
+    path: "{{ docker_traefik_letsencrypt_storage_path }}"
+  register: docker_traefik_validate_acme_storage
+  when: docker_traefik_enabled | bool
+
+- name: "Validate | Gather service facts"
+  ansible.builtin.service_facts:
+  when: docker_traefik_enabled | bool
+
+- name: "Validate | Inspect Docker proxy network"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - network
+      - inspect
+      - "{{ docker_traefik_network_name }}"
+  register: docker_traefik_validate_network
+  changed_when: false
+  when: docker_traefik_enabled | bool
+
+- name: "Validate | Read Docker Compose running services"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-name
+      - "{{ docker_traefik_compose_project_name }}"
+      - --file
+      - "{{ docker_traefik_compose_file_path }}"
+      - ps
+      - --services
+      - --status
+      - running
+  register: docker_traefik_validate_compose_ps
+  changed_when: false
+  when: docker_traefik_enabled | bool
+
+- name: "Validate | Check Docker Compose availability"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - version
+  register: docker_traefik_validate_compose_version
+  changed_when: false
+  when: docker_traefik_enabled | bool
+
+- name: "Validate | Assert Docker Traefik state"
+  vars:
+    docker_traefik_expected_compose: "{{ lookup('template', 'docker_traefik_compose.yml.j2') }}"
+    docker_traefik_expected_static_config: "{{ lookup('template', 'docker_traefik_traefik.yml.j2') }}"
+    docker_traefik_expected_dashboard_config: "{{ lookup('template', 'docker_traefik_dashboard.yml.j2') }}"
+    docker_traefik_expected_env_file: "{{ lookup('template', 'docker_traefik_env.j2') }}"
+    docker_traefik_service_unit: >-
+      {{
+        docker_traefik_docker_service_name
+        if docker_traefik_docker_service_name.endswith('.service')
+        else (docker_traefik_docker_service_name ~ '.service')
+      }}
+  ansible.builtin.assert:
+    that:
+      - (docker_traefik_effective_packages | difference(ansible_facts.packages.keys() | list) | length) == 0
+      - docker_traefik_service_user in (docker_traefik_validate_service_user.ansible_facts.getent_passwd | default({}))
+      - docker_traefik_access_group in (docker_traefik_validate_access_group.ansible_facts.getent_group | default({}))
+      - (docker_traefik_validate_compose_file.content | b64decode) == docker_traefik_expected_compose
+      - (docker_traefik_validate_static_config.content | b64decode) == docker_traefik_expected_static_config
+      - (docker_traefik_validate_dashboard_config.content | b64decode) == docker_traefik_expected_dashboard_config
+      - (docker_traefik_validate_env_file.content | b64decode) == docker_traefik_expected_env_file
+      - docker_traefik_validate_acme_storage.stat.exists
+      - docker_traefik_validate_acme_storage.stat.mode == '0600'
+      - docker_traefik_validate_compose_version.rc == 0
+      - docker_traefik_docker_service_name in ansible_facts.services or docker_traefik_service_unit in ansible_facts.services
+      - >-
+        (
+          docker_traefik_service_unit in ansible_facts.services
+          and ansible_facts.services[docker_traefik_service_unit].state == 'running'
+        ) or (
+          docker_traefik_docker_service_name in ansible_facts.services
+          and ansible_facts.services[docker_traefik_docker_service_name].state == 'running'
+        )
+      - docker_traefik_validate_network.rc == 0
+      - docker_traefik_compose_service_name in (docker_traefik_validate_compose_ps.stdout_lines | default([]))
+    fail_msg: >-
+      Configured Docker Traefik state does not match the requested docker_traefik values
+    quiet: true
+  when: docker_traefik_enabled | bool
+
+- name: "Validate | Assert Traefik access-group membership for existing users"
+  ansible.builtin.assert:
+    that:
+      - docker_traefik_access_group in (item.stdout | trim | split())
+    fail_msg: >-
+      Traefik access-group membership does not match requested docker_traefik_access_group_members
+    quiet: true
+  loop: "{{ docker_traefik_validate_groups.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.item }}"
+  when:
+    - docker_traefik_enabled | bool
+    - docker_traefik_manage_access_group_memberships | bool
+    - item.rc == 0

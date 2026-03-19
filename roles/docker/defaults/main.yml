@@ -4,3 +4,4 @@
 # Defines optional aggregate-role toggles that extend the Docker layer without changing existing consumers by default.
 
 docker_include_engine: true
+docker_include_traefik: false

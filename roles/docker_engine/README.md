@@ -1,10 +1,12 @@
 # roles/docker_engine/README.md
 
 Reference for the `docker_engine` role.
-Explains how the role installs and validates Docker engine plus Docker supplementary-group access on Debian-family hosts.
+Explains how the role installs and validates Docker engine plus daemon defaults and Docker supplementary-group access on Debian-family hosts.
 
 ## Features
 - Installs requested Docker engine packages with APT
+- Renders `/etc/docker/daemon.json` from role-managed inputs
+- Applies default Docker log-driver and log-rotation settings for all containers
 - Ensures the Docker service is enabled and running
 - Ensures the Docker supplementary group exists
 - Adds requested existing users to the Docker supplementary group
@@ -19,6 +21,9 @@ Explains how the role installs and validates Docker engine plus Docker supplemen
 | `docker_engine_packages` | `['docker.io']` | no | Docker engine package list installed with APT |
 | `docker_engine_service_name` | `docker` | no | Docker service name to enable and start |
 | `docker_engine_group_name` | `docker` | no | Supplementary group used for non-root Docker access |
+| `docker_engine_daemon_config_path` | `/etc/docker/daemon.json` | no | Path of the managed Docker daemon configuration file |
+| `docker_engine_log_driver` | `json-file` | no | Default Docker log driver applied through the daemon |
+| `docker_engine_log_opts` | `{'max-size': '10m', 'max-file': '3'}` | no | Default Docker log rotation options applied through the daemon |
 | `docker_engine_manage_group_memberships` | `true` | no | Whether this role should add existing users to the Docker supplementary group |
 | `docker_engine_group_members` | de-duplicated `bootstrap_user` / `user_account_name` list with `admin` fallback | no | Existing users that should receive Docker supplementary-group access when present; the default falls back safely for standalone use and removes duplicates |
 | `docker_engine_register_user_groups_memberships` | `false` | no | Whether to append role-declared memberships into `user_groups_role_declared_memberships` |
@@ -48,9 +53,21 @@ Example variables:
 docker_engine_enabled: true
 docker_engine_packages:
   - docker.io
-docker_engine_group_members:
-  - "{{ bootstrap_user }}"
-  - "{{ user_account_name }}"
+docker_engine_log_driver: json-file
+docker_engine_log_opts:
+  max-size: "10m"
+  max-file: "3"
+docker_engine_group_members: >-
+  {{
+    [
+      bootstrap_user,
+      user_account_name
+    ]
+    | map('trim')
+    | reject('equalto', '')
+    | unique
+    | list
+  }}
 ```
 
 ## Dependencies

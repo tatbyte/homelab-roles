@@ -1,7 +1,7 @@
 ---
 # roles/docker_engine/tasks/validate.yml
 # Validate phase tasks for the `docker_engine` role.
-# Verifies Docker package state, service state, and requested supplementary-group membership for existing users when enabled.
+# Verifies Docker package state, daemon config state, service state, and requested supplementary-group membership for existing users when enabled.
 
 - name: "Validate | Gather package facts"
   ansible.builtin.package_facts:
@@ -10,6 +10,12 @@
 
 - name: "Validate | Gather service facts"
   ansible.builtin.service_facts:
+  when: docker_engine_enabled | bool
+
+- name: "Validate | Read Docker daemon configuration"
+  ansible.builtin.slurp:
+    path: "{{ docker_engine_daemon_config_path }}"
+  register: docker_engine_validate_daemon_config
   when: docker_engine_enabled | bool
 
 - name: "Validate | Collect existing user entries for Docker group validation"
@@ -43,6 +49,10 @@
 
 - name: "Validate | Assert Docker engine state"
   vars:
+    docker_engine_expected_daemon_config: >-
+      {{
+        lookup('template', 'docker_engine_daemon.json.j2') | from_json
+      }}
     docker_engine_service_unit: >-
       {{
         docker_engine_service_name
@@ -52,6 +62,12 @@
   ansible.builtin.assert:
     that:
       - (docker_engine_packages | difference(ansible_facts.packages.keys() | list) | length) == 0
+      - >-
+        (
+          docker_engine_validate_daemon_config.content
+          | b64decode
+          | from_json
+        ) == docker_engine_expected_daemon_config
       - docker_engine_service_unit in ansible_facts.services
       - ansible_facts.services[docker_engine_service_unit].status in ['enabled', 'enabled-runtime']
       - ansible_facts.services[docker_engine_service_unit].state == 'running'

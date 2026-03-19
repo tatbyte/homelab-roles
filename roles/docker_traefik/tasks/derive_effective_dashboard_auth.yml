@@ -1,0 +1,35 @@
+---
+# roles/docker_traefik/tasks/derive_effective_dashboard_auth.yml
+# Helper tasks for the `docker_traefik` role.
+# Derives the effective dashboard basic-auth user list from either a YAML list
+# or a single `user:hash` string input.
+
+- name: "Derive Dashboard Auth | Normalize dashboard basic-auth users"
+  vars:
+    docker_traefik_dashboard_basic_auth_users_parsed: >-
+      {{
+        (
+          docker_traefik_dashboard_basic_auth_users | from_yaml
+        )
+        if (docker_traefik_dashboard_basic_auth_users is string)
+        else docker_traefik_dashboard_basic_auth_users
+      }}
+    docker_traefik_dashboard_basic_auth_users_trimmed: >-
+      {{
+        docker_traefik_dashboard_basic_auth_users | string | trim
+      }}
+  ansible.builtin.set_fact:
+    docker_traefik_effective_dashboard_basic_auth_users: >-
+      {{
+        docker_traefik_dashboard_basic_auth_users_parsed
+        if (
+          docker_traefik_dashboard_basic_auth_users_parsed is sequence
+          and docker_traefik_dashboard_basic_auth_users_parsed is not string
+        )
+        else (
+          [docker_traefik_dashboard_basic_auth_users_trimmed]
+          if (docker_traefik_dashboard_basic_auth_users_trimmed | length > 0)
+          else []
+        )
+      }}
+  changed_when: false

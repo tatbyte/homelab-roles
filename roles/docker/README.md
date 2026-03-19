@@ -7,6 +7,7 @@ Explains how the aggregate Docker role orchestrates Docker-related host setup ro
 
 - Runs a stable Docker-layer workflow through explicit `include_role` tasks.
 - Uses aggregate toggles (`docker_include_*`) to enable optional child roles.
+- Keeps foundational container runtime setup first, then optional Docker service follow-up roles.
 - Keeps aggregate include tags aligned with child role tags for predictable targeted runs.
 
 ## Usage

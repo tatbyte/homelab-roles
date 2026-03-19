@@ -3,6 +3,16 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v2.3.0]
+### Added
+- Added managed Docker daemon JSON defaults (`/etc/docker/daemon.json`), `srv_traefik`/`access_traefik` conventions, `/srv/<service>/data` backup paths, and standalone `docker_traefik` with Compose-managed Traefik, dashboard-only dynamic config, DNS-01 ACME, and Vault-based scaffolding.
+
+### Changed
+- Added `docker_traefik` service user/group behavior, aligned engine/Traefik example vars with the new defaults, added a base-firewall managed-rule cleanup guard (`base_firewall_remove_stale_managed_rules: false`), and moved the example Docker playbook flow to support reapplying firewall after Docker service declarations.
+
+### Documentation
+- Updated Docker role docs and example docs for daemon JSON management, Traefik access-group behavior, and standardized external Vault workflow (`~/.config/ansible/vault.yml` + `~/.config/ansible/vault.pass`).
+
 ## [v2.2.0]
 ### Added
 - Added the aggregate `docker` role with explicit include ordering and toggle-based expansion support for Docker-related child roles.

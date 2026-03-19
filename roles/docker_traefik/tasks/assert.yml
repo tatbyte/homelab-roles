@@ -1,0 +1,184 @@
+---
+# roles/docker_traefik/tasks/assert.yml
+# Assert phase tasks for the `docker_traefik` role.
+# Validates Docker Compose, Traefik, ACME DNS challenge, identity, dashboard, and firewall inputs before configuration starts.
+
+- name: "Assert | Derive effective dashboard basic-auth users"
+  ansible.builtin.import_tasks: derive_effective_dashboard_auth.yml
+
+- name: "Assert | Validate docker_traefik variable structure"
+  ansible.builtin.assert:
+    that:
+      - docker_traefik_enabled is boolean
+      - docker_traefik_manage_firewall_rules is boolean
+      - docker_traefik_dashboard_enabled is boolean
+      - docker_traefik_packages is sequence
+      - docker_traefik_packages is not string
+      - docker_traefik_compose_package_candidates is sequence
+      - docker_traefik_compose_package_candidates is not string
+      - docker_traefik_dns_challenge_resolvers is sequence
+      - docker_traefik_dns_challenge_resolvers is not string
+      - docker_traefik_dashboard_entrypoints is sequence
+      - docker_traefik_dashboard_entrypoints is not string
+      - docker_traefik_effective_dashboard_basic_auth_users is sequence
+      - docker_traefik_effective_dashboard_basic_auth_users is not string
+      - docker_traefik_firewall_rules is sequence
+      - docker_traefik_firewall_rules is not string
+      - docker_traefik_dns_env is mapping
+      - docker_traefik_additional_env is mapping
+      - docker_traefik_environment is mapping
+      - docker_traefik_manage_access_group_memberships is boolean
+      - docker_traefik_access_group_members is sequence
+      - docker_traefik_access_group_members is not string
+      - docker_traefik_project_dir is string
+      - docker_traefik_project_dir.startswith('/')
+      - docker_traefik_data_dir is string
+      - docker_traefik_data_dir.startswith('/')
+      - docker_traefik_compose_project_name is string
+      - docker_traefik_compose_project_name | trim | length > 0
+      - docker_traefik_compose_service_name is string
+      - docker_traefik_compose_service_name | trim | length > 0
+      - docker_traefik_container_name is string
+      - docker_traefik_container_name | trim | length > 0
+      - docker_traefik_docker_service_name is string
+      - docker_traefik_docker_service_name | trim | length > 0
+      - docker_traefik_service_user is string
+      - docker_traefik_service_user | trim | length > 0
+      - docker_traefik_service_uid is number
+      - docker_traefik_service_uid | int >= 1000
+      - docker_traefik_access_group is string
+      - docker_traefik_access_group | trim | length > 0
+      - docker_traefik_access_gid is number
+      - docker_traefik_access_gid | int >= 1000
+      - docker_traefik_service_user_shell is string
+      - docker_traefik_service_user_shell | trim | length > 0
+      - docker_traefik_image is string
+      - docker_traefik_image | trim | length > 0
+      - docker_traefik_network_name is string
+      - docker_traefik_network_name | trim | length > 0
+      - docker_traefik_certresolver_name is string
+      - docker_traefik_certresolver_name | trim | length > 0
+      - docker_traefik_acme_email is string
+      - docker_traefik_acme_email | trim | length > 0
+      - "'@' in docker_traefik_acme_email"
+      - docker_traefik_dns_challenge_provider is string
+      - docker_traefik_dns_challenge_provider | trim | length > 0
+      - docker_traefik_dns_challenge_delay_before_check is integer
+      - docker_traefik_dns_challenge_delay_before_check >= 0
+      - (docker_traefik_packages | map('string') | list | length) == (docker_traefik_packages | length)
+      - (docker_traefik_packages | map('trim') | reject('equalto', '') | list | length) == (docker_traefik_packages | length)
+      - >-
+        (
+          docker_traefik_compose_package_candidates | map('string') | list | length
+        ) == (docker_traefik_compose_package_candidates | length)
+      - >-
+        (
+          docker_traefik_compose_package_candidates
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_traefik_compose_package_candidates | length)
+      - (docker_traefik_dns_challenge_resolvers | map('string') | list | length) == (docker_traefik_dns_challenge_resolvers | length)
+      - (docker_traefik_dns_challenge_resolvers | map('trim') | reject('equalto', '') | list | length) == (docker_traefik_dns_challenge_resolvers | length)
+      - >-
+        (
+          docker_traefik_dashboard_entrypoints | map('string') | list | length
+        ) == (docker_traefik_dashboard_entrypoints | length)
+      - >-
+        (
+          docker_traefik_dashboard_entrypoints
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_traefik_dashboard_entrypoints | length)
+      - >-
+        (
+          docker_traefik_effective_dashboard_basic_auth_users
+          | map('string')
+          | list
+          | length
+        ) == (docker_traefik_effective_dashboard_basic_auth_users | length)
+      - >-
+        (
+          docker_traefik_effective_dashboard_basic_auth_users
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_traefik_effective_dashboard_basic_auth_users | length)
+      - >-
+        (
+          docker_traefik_access_group_members | map('string') | list | length
+        ) == (docker_traefik_access_group_members | length)
+      - >-
+        (
+          docker_traefik_access_group_members
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_traefik_access_group_members | length)
+      - >-
+        (
+          docker_traefik_access_group_members | unique | list | length
+        ) == (docker_traefik_access_group_members | length)
+      - >-
+        (
+          not (docker_traefik_dashboard_enabled | bool)
+        ) or (
+          docker_traefik_dashboard_host | trim | length > 0
+          and (docker_traefik_effective_dashboard_basic_auth_users | length) > 0
+        )
+      - >-
+        (
+          docker_traefik_environment | dict2items
+          | map(attribute='key')
+          | map('string')
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_traefik_environment | length)
+      - >-
+        (
+          docker_traefik_environment | dict2items
+          | map(attribute='value')
+          | map('string')
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_traefik_environment | length)
+    fail_msg: >-
+      docker_traefik variables must define valid booleans, mappings,
+      non-empty strings, absolute project and data paths, valid fixed IDs,
+      unique access-group members, a non-empty ACME email, non-empty
+      environment entries, valid package lists, and dashboard auth users when
+      the dashboard is enabled
+    quiet: true
+
+- name: "Assert | Validate requested firewall rule structure"
+  ansible.builtin.assert:
+    that:
+      - item is mapping
+      - item.rule is defined
+      - item.rule is string
+      - item.rule | trim | length > 0
+      - item.port is defined
+      - item.port | string | trim | length > 0
+      - item.proto is not defined or (item.proto is string and item.proto | trim | length > 0)
+      - item.comment is defined
+      - item.comment is string
+      - item.comment.startswith('managed:')
+    fail_msg: >-
+      Each docker_traefik_firewall_rules item must include a non-empty rule,
+      port, and managed: comment prefix, plus an optional non-empty proto
+    quiet: true
+  loop: "{{ docker_traefik_firewall_rules }}"
+  loop_control:
+    label: "{{ item.comment | default('docker-traefik-rule') }}"
+  when:
+    - docker_traefik_manage_firewall_rules | bool
+    - docker_traefik_firewall_rules | length > 0

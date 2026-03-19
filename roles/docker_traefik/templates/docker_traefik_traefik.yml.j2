@@ -1,0 +1,46 @@
+{# roles/docker_traefik/templates/docker_traefik_traefik.yml.j2 #}
+{# Template for the managed Traefik static configuration file in the `docker_traefik` role. #}
+# Managed by Ansible: docker_traefik
+# Source: roles/docker_traefik/templates/docker_traefik_traefik.yml.j2
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+api:
+  dashboard: {{ 'true' if docker_traefik_dashboard_enabled else 'false' }}
+  insecure: false
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: ":443"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: "{{ docker_traefik_network_name }}"
+  file:
+    directory: /etc/traefik/dynamic
+    watch: true
+
+certificatesResolvers:
+  {{ docker_traefik_certresolver_name }}:
+    acme:
+      email: "{{ docker_traefik_acme_email }}"
+      storage: /letsencrypt/acme.json
+      dnsChallenge:
+        provider: "{{ docker_traefik_dns_challenge_provider }}"
+        delayBeforeCheck: {{ docker_traefik_dns_challenge_delay_before_check }}
+{% if docker_traefik_dns_challenge_resolvers | length > 0 %}
+        resolvers:
+{% for resolver in docker_traefik_dns_challenge_resolvers %}
+          - "{{ resolver }}"
+{% endfor %}
+{% endif %}

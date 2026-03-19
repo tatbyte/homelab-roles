@@ -127,6 +127,7 @@
 - name: "Validate | Initialize expected managed firewall rule variants"
   ansible.builtin.set_fact:
     base_firewall_validate_expected_managed_rule_command_variants: []
+  when: base_firewall_remove_stale_managed_rules
 
 - name: "Validate | Collect expected managed firewall rule variants"
   vars:
@@ -187,6 +188,7 @@
         | default(item.rule ~ ' ' ~ (item.port | default(item.to_ip | default('any')) | string))
       }}
   when:
+    - base_firewall_remove_stale_managed_rules
     - item.comment is defined
     - item.comment.startswith(base_firewall_managed_comment_prefix)
 
@@ -225,6 +227,7 @@
         base_firewall_stale_managed_rule_commands | join(' || ')
       }}
     quiet: true
+  when: base_firewall_remove_stale_managed_rules
 
 - name: "Validate | Initialize expected firewall rule variants for purge validation"
   ansible.builtin.set_fact:

@@ -12,6 +12,7 @@ base_firewall_logging: low
 base_firewall_default_incoming_policy: deny
 base_firewall_default_outgoing_policy: allow
 base_firewall_purge_unmanaged_rules: false
+base_firewall_remove_stale_managed_rules: false
 base_firewall_state_checksum_path: /etc/ufw/.base_firewall_state.sha256
 base_firewall_managed_comment_prefix: "managed:"
 base_firewall_base_rules:

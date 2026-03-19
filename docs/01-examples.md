@@ -68,12 +68,15 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/<t
 
 - `playbooks/base.yml` uses `serial: 1` to reduce risk for reboot-capable runs.
 - `playbooks/bootstrap.yml` expects Vault-backed bootstrap credentials from
-  example inventory YAML rather than prompting interactively, using the example
-  inventory layout and the Vault password file configured in
+  `~/.config/ansible/vault.yml` rather than prompting interactively, using the
+  example inventory layout and the Vault password file configured in
   `examples/ansible.cfg`.
 - Keep only active inventory vars files inside `inventory/group_vars/all/`;
   move any examples elsewhere so Ansible does not auto-load them.
-- `bootstrap.yml` and `vault.yml` are merged into the same variable set, so
-  keep references in `bootstrap.yml` and secret values in `vault.yml`.
+- Keep public example vars in `inventory/group_vars/all/` and keep the real
+  secret file outside the repo at `~/.config/ansible/vault.yml`.
+- The Docker example keeps service projects under `/srv/<service>` and
+  persistent data under `/srv/<service>/data` so backup and restore behavior
+  stays aligned with the repository Docker conventions.
 - Example values are intentionally demo-friendly; replace identity, password, and key material before production use.
 - Keep role-specific behavior documentation in each role README so this example guide stays stable as roles are added.

@@ -1,0 +1,25 @@
+{# roles/docker_traefik/templates/docker_traefik_compose.yml.j2 #}
+{# Template for the managed Docker Compose file used by the `docker_traefik` role. #}
+# Managed by Ansible: docker_traefik
+# Source: roles/docker_traefik/templates/docker_traefik_compose.yml.j2
+services:
+  {{ docker_traefik_compose_service_name }}:
+    image: {{ docker_traefik_image }}
+    container_name: {{ docker_traefik_container_name }}
+    restart: unless-stopped
+    env_file:
+      - ./traefik.env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./dynamic:/etc/traefik/dynamic:ro
+      - ./data/letsencrypt:/letsencrypt
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    name: {{ docker_traefik_network_name }}

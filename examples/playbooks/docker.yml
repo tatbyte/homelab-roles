@@ -1,10 +1,20 @@
 ---
 # examples/playbooks/docker.yml
 # Docker phase playbook for the example lab.
-# Connects as the automation account after the user phase and applies the aggregate `docker` role.
+# Connects as the automation account after the user phase, loads a local Vault
+# vars file at runtime, applies the aggregate `docker` role, and optionally
+# re-runs `base_firewall` so Docker-declared ports can be enforced after
+# service registration.
 
 - name: Apply docker role after user
   hosts: all
   become: true
+  pre_tasks:
+    - name: Load local Vault vars file
+      ansible.builtin.include_vars:
+        file: "{{ lookup('env', 'HOME') }}/.config/ansible/vault.yml"
+      tags: [always]
   roles:
     - role: docker
+    - role: base_firewall
+      when: base_include_firewall | default(false)

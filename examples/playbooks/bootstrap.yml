@@ -1,17 +1,42 @@
 ---
 # examples/playbooks/bootstrap.yml
 # Bootstrap phase playbook for the example lab.
-# Uses inventory- and Vault-backed bootstrap login credentials, connects with
-# the initial admin account, and applies the `bootstrap` role.
+# Uses inventory- and Vault-backed bootstrap login credentials, loads a local
+# Vault vars file on localhost before target connection setup, and applies the
+# `bootstrap` role with the initial admin account.
+
+- name: Load bootstrap Vault vars on localhost
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Load local Vault vars file
+      ansible.builtin.include_vars:
+        file: "{{ lookup('env', 'HOME') }}/.config/ansible/vault.yml"
+        name: bootstrap_local_vault_vars
+      tags: [always]
+
+    - name: Share bootstrap Vault vars with target hosts
+      ansible.builtin.add_host:
+        name: "{{ item }}"
+        bootstrap_local_vault_vars: "{{ bootstrap_local_vault_vars }}"
+      loop: "{{ groups['bootstrap'] | default([]) }}"
+      loop_control:
+        label: "{{ item }}"
+      changed_when: false
+      tags: [always]
 
 - name: Bootstrap hosts using the initial admin account
   hosts: bootstrap
   become: true
-
+  gather_facts: false
   vars:
     ansible_user: "{{ bootstrap_login_user }}"
-    ansible_password: "{{ bootstrap_login_password }}"
-    ansible_become_password: "{{ bootstrap_login_become_password }}"
+    ansible_password: "{{ hostvars[inventory_hostname].bootstrap_local_vault_vars.vault_bootstrap_login_password }}"
+    ansible_become_password: >-
+      {{
+        hostvars[inventory_hostname].bootstrap_local_vault_vars.vault_bootstrap_login_become_password
+        | default(hostvars[inventory_hostname].bootstrap_local_vault_vars.vault_bootstrap_login_password)
+      }}
   roles:
     - role: bootstrap
       tags: [bootstrap]

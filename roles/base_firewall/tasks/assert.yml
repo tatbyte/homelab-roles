@@ -16,6 +16,7 @@
       - base_firewall_default_outgoing_policy is string
       - base_firewall_default_outgoing_policy in ['allow', 'deny', 'reject']
       - base_firewall_purge_unmanaged_rules is boolean
+      - base_firewall_remove_stale_managed_rules is boolean
       - base_firewall_state_checksum_path is string
       - base_firewall_state_checksum_path | trim | length > 0
       - base_firewall_managed_comment_prefix is string
@@ -35,7 +36,8 @@
       base_firewall_enabled must be a boolean, base_firewall_logging must use
       a supported UFW logging level, base_firewall_default_incoming_policy and
       base_firewall_default_outgoing_policy must use supported UFW policy
-      values, base_firewall_purge_unmanaged_rules must be a boolean,
+      values, base_firewall_purge_unmanaged_rules and
+      base_firewall_remove_stale_managed_rules must be booleans,
       base_firewall_state_checksum_path and
       base_firewall_managed_comment_prefix must be non-empty strings,
       base_firewall_base_rules, base_firewall_role_declared_rules, and

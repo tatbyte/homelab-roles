@@ -1,0 +1,67 @@
+---
+# examples/inventory/group_vars/all/docker_traefik.yml
+# Shared Docker Traefik variables for the example lab.
+# Defines the Traefik Compose, DNS challenge, service identity, dashboard, and firewall behavior exercised through the aggregate `docker` role.
+
+# Keep the Traefik role enabled in the example lab.
+docker_traefik_enabled: true
+
+# Let the role auto-detect a working Compose support package for the host.
+docker_traefik_packages: []
+
+# Keep the example Traefik project under `/srv` so backup and host-restore
+# workflows can capture the whole service layout predictably.
+docker_traefik_project_dir: /srv/traefik
+docker_traefik_data_dir: "{{ docker_traefik_project_dir }}/data"
+docker_traefik_compose_project_name: traefik
+docker_traefik_compose_service_name: traefik
+docker_traefik_container_name: traefik
+docker_traefik_image: traefik:v3.0
+docker_traefik_service_user: srv_traefik
+docker_traefik_service_uid: 1200
+docker_traefik_access_group: access_traefik
+docker_traefik_access_gid: 1200
+docker_traefik_service_user_shell: /usr/sbin/nologin
+docker_traefik_manage_access_group_memberships: true
+docker_traefik_access_group_members: >-
+  {{
+    [
+      bootstrap_user,
+      user_account_name
+    ]
+    | map('trim')
+    | reject('equalto', '')
+    | unique
+    | list
+  }}
+
+# Give Traefik a stable network name so other Compose projects can join it
+# later through `external: true`.
+docker_traefik_network_name: traefik_proxy
+
+# Keep ACME DNS challenge enabled for the example lab and pull the provider
+# credential from Vault-backed vars.
+docker_traefik_acme_email: "{{ vault_docker_traefik_acme_email }}"
+docker_traefik_dns_challenge_provider: cloudflare
+docker_traefik_dns_env:
+  CF_DNS_API_TOKEN: "{{ vault_docker_traefik_dns_api_token }}"
+
+# Keep the dashboard enabled through the file-provider dynamic config only.
+docker_traefik_dashboard_enabled: true
+docker_traefik_dashboard_host: "{{ vault_docker_traefik_dashboard_host }}"
+docker_traefik_dashboard_basic_auth_users: "{{ vault_docker_traefik_dashboard_basic_auth_users | to_json | from_json }}"
+
+# Register HTTP and HTTPS firewall rules so the follow-up base_firewall run in
+# the Docker playbook can enforce them after this role has declared them.
+docker_traefik_manage_firewall_rules: true
+docker_traefik_firewall_rules:
+  - rule: allow
+    direction: in
+    port: "80"
+    proto: tcp
+    comment: "managed:docker_traefik:http"
+  - rule: allow
+    direction: in
+    port: "443"
+    proto: tcp
+    comment: "managed:docker_traefik:https"
