@@ -1,0 +1,30 @@
+{# roles/docker_adguard/templates/docker_adguard_compose.yml.j2 #}
+{# Template for the managed Docker Compose file used by the `docker_adguard` role. #}
+# Managed by Ansible: docker_adguard
+# Source: roles/docker_adguard/templates/docker_adguard_compose.yml.j2
+services:
+  {{ docker_adguard_compose_service_name }}:
+    image: {{ docker_adguard_image }}
+    container_name: {{ docker_adguard_container_name }}
+    restart: unless-stopped
+    volumes:
+      - ./data/work:/opt/adguardhome/work
+      - ./data/conf:/opt/adguardhome/conf
+    ports:
+      - "{{ docker_adguard_dns_bind_port }}:{{ docker_adguard_container_dns_port }}/tcp"
+      - "{{ docker_adguard_dns_bind_port }}:{{ docker_adguard_container_dns_port }}/udp"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network={{ docker_adguard_proxy_network_name }}"
+      - "traefik.http.routers.{{ docker_adguard_router_name }}.rule=Host(`{{ docker_adguard_host }}`)"
+      - "traefik.http.routers.{{ docker_adguard_router_name }}.entrypoints={{ docker_adguard_router_entrypoints | join(',') }}"
+      - "traefik.http.routers.{{ docker_adguard_router_name }}.tls=true"
+      - "traefik.http.routers.{{ docker_adguard_router_name }}.tls.certresolver={{ docker_adguard_tls_certresolver }}"
+      - "traefik.http.services.{{ docker_adguard_router_name }}.loadbalancer.server.port={{ docker_adguard_container_web_port }}"
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true
+    name: {{ docker_adguard_proxy_network_name }}

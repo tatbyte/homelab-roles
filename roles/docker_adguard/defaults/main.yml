@@ -1,0 +1,79 @@
+---
+# roles/docker_adguard/defaults/main.yml
+# Default variables for the `docker_adguard` role.
+# Defines Docker Compose, AdGuard Home, Traefik proxy-network, service-identity,
+# admin-auth, and optional firewall inputs for a Debian-family host.
+
+docker_adguard_enabled: true
+
+docker_adguard_packages: []
+docker_adguard_compose_package_candidates:
+  - docker-compose-plugin
+  - docker-compose-v2
+
+docker_adguard_project_dir: /srv/adguard
+docker_adguard_data_dir: "{{ docker_adguard_project_dir }}/data"
+docker_adguard_work_dir: "{{ docker_adguard_data_dir }}/work"
+docker_adguard_conf_dir: "{{ docker_adguard_data_dir }}/conf"
+docker_adguard_config_path: "{{ docker_adguard_conf_dir }}/AdGuardHome.yaml"
+docker_adguard_compose_project_name: adguard
+docker_adguard_compose_service_name: adguard
+docker_adguard_container_name: adguard
+docker_adguard_image: adguard/adguardhome:v0.107.65
+docker_adguard_docker_service_name: "{{ docker_engine_service_name | default('docker') }}"
+docker_adguard_service_user: srv_adguard
+docker_adguard_service_uid: 1160
+docker_adguard_access_group: access_adguard
+docker_adguard_access_gid: 1160
+docker_adguard_service_user_shell: /usr/sbin/nologin
+docker_adguard_manage_access_group_memberships: true
+docker_adguard_access_group_members: >-
+  {{
+    [
+      (bootstrap_user | default('admin')),
+      (user_account_name | default('admin'))
+    ]
+    | map('trim')
+    | reject('equalto', '')
+    | unique
+    | list
+  }}
+
+docker_adguard_compose_file_path: "{{ docker_adguard_project_dir }}/compose.yml"
+docker_adguard_proxy_network_name: "{{ docker_traefik_network_name | default('traefik_proxy') }}"
+docker_adguard_host: adguard.example.com
+docker_adguard_router_name: adguard
+docker_adguard_router_entrypoints:
+  - websecure
+docker_adguard_tls_certresolver: "{{ docker_traefik_certresolver_name | default('letsencrypt') }}"
+docker_adguard_container_web_port: 3000
+
+docker_adguard_admin_user: admin
+docker_adguard_admin_password_hash: ""
+docker_adguard_dns_bind_port: 53
+docker_adguard_container_dns_port: 53
+docker_adguard_upstream_dns:
+  - https://dns10.quad9.net/dns-query
+  - https://dns.quad9.net/dns-query
+docker_adguard_bootstrap_dns:
+  - 9.9.9.10
+  - 149.112.112.10
+docker_adguard_http_session_ttl: 720h
+docker_adguard_theme: auto
+docker_adguard_filters:
+  - enabled: true
+    url: https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt
+    name: AdGuard DNS filter
+
+docker_adguard_manage_firewall_rules: true
+docker_adguard_firewall_rules:
+  - rule: allow
+    direction: in
+    port: "{{ docker_adguard_dns_bind_port | string }}"
+    proto: tcp
+    comment: "managed:docker_adguard:dns-tcp"
+  - rule: allow
+    direction: in
+    port: "{{ docker_adguard_dns_bind_port | string }}"
+    proto: udp
+    comment: "managed:docker_adguard:dns-udp"

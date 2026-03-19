@@ -1,0 +1,196 @@
+---
+# roles/docker_adguard/tasks/assert.yml
+# Assert phase tasks for the `docker_adguard` role.
+# Validates Docker Compose, AdGuard Home, Traefik proxy-network, identity,
+# admin-auth, and firewall inputs before configuration starts.
+
+- name: "Assert | Validate docker_adguard variable structure"
+  ansible.builtin.assert:
+    that:
+      - docker_adguard_enabled is boolean
+      - docker_adguard_manage_firewall_rules is boolean
+      - docker_adguard_packages is sequence
+      - docker_adguard_packages is not string
+      - docker_adguard_compose_package_candidates is sequence
+      - docker_adguard_compose_package_candidates is not string
+      - docker_adguard_access_group_members is sequence
+      - docker_adguard_access_group_members is not string
+      - docker_adguard_router_entrypoints is sequence
+      - docker_adguard_router_entrypoints is not string
+      - docker_adguard_upstream_dns is sequence
+      - docker_adguard_upstream_dns is not string
+      - docker_adguard_bootstrap_dns is sequence
+      - docker_adguard_bootstrap_dns is not string
+      - docker_adguard_filters is sequence
+      - docker_adguard_filters is not string
+      - docker_adguard_firewall_rules is sequence
+      - docker_adguard_firewall_rules is not string
+      - docker_adguard_manage_access_group_memberships is boolean
+      - docker_adguard_project_dir is string
+      - docker_adguard_project_dir.startswith('/')
+      - docker_adguard_data_dir is string
+      - docker_adguard_data_dir.startswith('/')
+      - docker_adguard_work_dir is string
+      - docker_adguard_work_dir.startswith('/')
+      - docker_adguard_conf_dir is string
+      - docker_adguard_conf_dir.startswith('/')
+      - docker_adguard_config_path is string
+      - docker_adguard_config_path.startswith('/')
+      - docker_adguard_compose_project_name is string
+      - docker_adguard_compose_project_name | trim | length > 0
+      - docker_adguard_compose_service_name is string
+      - docker_adguard_compose_service_name | trim | length > 0
+      - docker_adguard_container_name is string
+      - docker_adguard_container_name | trim | length > 0
+      - docker_adguard_image is string
+      - docker_adguard_image | trim | length > 0
+      - docker_adguard_docker_service_name is string
+      - docker_adguard_docker_service_name | trim | length > 0
+      - docker_adguard_service_user is string
+      - docker_adguard_service_user | trim | length > 0
+      - docker_adguard_service_uid is number
+      - docker_adguard_service_uid | int >= 1000
+      - docker_adguard_access_group is string
+      - docker_adguard_access_group | trim | length > 0
+      - docker_adguard_access_gid is number
+      - docker_adguard_access_gid | int >= 1000
+      - docker_adguard_service_user_shell is string
+      - docker_adguard_service_user_shell | trim | length > 0
+      - docker_adguard_proxy_network_name is string
+      - docker_adguard_proxy_network_name | trim | length > 0
+      - docker_adguard_host is string
+      - docker_adguard_host | trim | length > 0
+      - docker_adguard_router_name is string
+      - docker_adguard_router_name | trim | length > 0
+      - docker_adguard_tls_certresolver is string
+      - docker_adguard_tls_certresolver | trim | length > 0
+      - docker_adguard_container_web_port is integer
+      - docker_adguard_container_web_port > 0
+      - docker_adguard_admin_user is string
+      - docker_adguard_admin_user | trim | length > 0
+      - docker_adguard_admin_password_hash is string
+      - docker_adguard_admin_password_hash | trim | length > 0
+      - docker_adguard_dns_bind_port is integer
+      - docker_adguard_dns_bind_port > 0
+      - docker_adguard_container_dns_port is integer
+      - docker_adguard_container_dns_port > 0
+      - docker_adguard_http_session_ttl is string
+      - docker_adguard_http_session_ttl | trim | length > 0
+      - docker_adguard_theme is string
+      - docker_adguard_theme | trim | length > 0
+      - (docker_adguard_packages | map('string') | list | length) == (docker_adguard_packages | length)
+      - (docker_adguard_packages | map('trim') | reject('equalto', '') | list | length) == (docker_adguard_packages | length)
+      - >-
+        (
+          docker_adguard_compose_package_candidates | map('string') | list | length
+        ) == (docker_adguard_compose_package_candidates | length)
+      - >-
+        (
+          docker_adguard_compose_package_candidates
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_adguard_compose_package_candidates | length)
+      - >-
+        (
+          docker_adguard_access_group_members | map('string') | list | length
+        ) == (docker_adguard_access_group_members | length)
+      - >-
+        (
+          docker_adguard_access_group_members
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_adguard_access_group_members | length)
+      - >-
+        (
+          docker_adguard_access_group_members | unique | list | length
+        ) == (docker_adguard_access_group_members | length)
+      - >-
+        (
+          docker_adguard_router_entrypoints | map('string') | list | length
+        ) == (docker_adguard_router_entrypoints | length)
+      - >-
+        (
+          docker_adguard_router_entrypoints
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_adguard_router_entrypoints | length)
+      - >-
+        (
+          docker_adguard_upstream_dns | map('string') | list | length
+        ) == (docker_adguard_upstream_dns | length)
+      - >-
+        (
+          docker_adguard_upstream_dns
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_adguard_upstream_dns | length)
+      - >-
+        (
+          docker_adguard_bootstrap_dns | map('string') | list | length
+        ) == (docker_adguard_bootstrap_dns | length)
+      - >-
+        (
+          docker_adguard_bootstrap_dns
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_adguard_bootstrap_dns | length)
+    fail_msg: >-
+      docker_adguard variables must define valid booleans, non-empty strings,
+      absolute project and data paths, valid fixed IDs, unique access-group
+      members, non-empty upstream DNS entries, and a non-empty admin password
+      hash
+    quiet: true
+
+- name: "Assert | Validate requested filter structure"
+  ansible.builtin.assert:
+    that:
+      - item is mapping
+      - item.name is defined
+      - item.name is string
+      - item.name | trim | length > 0
+      - item.url is defined
+      - item.url is string
+      - item.url | trim | length > 0
+      - item.enabled is not defined or item.enabled is boolean
+    fail_msg: >-
+      Each docker_adguard_filters item must include a non-empty name and URL,
+      plus an optional boolean enabled flag
+    quiet: true
+  loop: "{{ docker_adguard_filters }}"
+  loop_control:
+    label: "{{ item.name | default('docker-adguard-filter') }}"
+  when: docker_adguard_filters | length > 0
+
+- name: "Assert | Validate requested firewall rule structure"
+  ansible.builtin.assert:
+    that:
+      - item is mapping
+      - item.rule is defined
+      - item.rule is string
+      - item.rule | trim | length > 0
+      - item.port is defined
+      - item.port | string | trim | length > 0
+      - item.proto is not defined or (item.proto is string and item.proto | trim | length > 0)
+      - item.comment is defined
+      - item.comment is string
+      - item.comment.startswith('managed:')
+    fail_msg: >-
+      Each docker_adguard_firewall_rules item must include a non-empty rule,
+      port, and managed: comment prefix, plus an optional non-empty proto
+    quiet: true
+  loop: "{{ docker_adguard_firewall_rules }}"
+  loop_control:
+    label: "{{ item.comment | default('docker-adguard-rule') }}"
+  when:
+    - docker_adguard_manage_firewall_rules | bool
+    - docker_adguard_firewall_rules | length > 0

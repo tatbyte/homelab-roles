@@ -1,0 +1,19 @@
+---
+# roles/docker_adguard/tasks/install.yml
+# Install phase tasks for the `docker_adguard` role.
+# Ensures the requested Docker Compose support packages are installed with APT
+# when AdGuard is enabled.
+
+- name: "Install | Derive effective Compose support packages"
+  ansible.builtin.import_tasks: derive_effective_packages.yml
+  when: docker_adguard_enabled | bool
+
+- name: "Install | Ensure requested Docker AdGuard packages are present"
+  ansible.builtin.apt:
+    name: "{{ docker_adguard_effective_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when:
+    - docker_adguard_enabled | bool
+    - docker_adguard_effective_packages | length > 0

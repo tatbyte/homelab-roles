@@ -1,0 +1,7 @@
+---
+# roles/docker_adguard/meta/main.yml
+# Role metadata for `docker_adguard`.
+# Leaves dependencies empty because direct and aggregate Docker-role ordering is
+# defined in the related playbook or `roles/docker/tasks/main.yml`.
+
+dependencies: []

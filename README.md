@@ -48,7 +48,7 @@ homelab-roles/
 ## Available Roles
 - `bootstrap`: standalone bootstrap role for initial automation-account setup.
 - `base`: aggregate base-phase role with required foundation plus optional hardening and maintenance child roles.
-- `docker`: aggregate Docker-phase role with Docker-related child roles such as `docker_engine`.
+- `docker`: aggregate Docker-phase role with Docker-related child roles such as `docker_engine`, `docker_traefik`, and `docker_adguard`.
 - `user`: aggregate human-admin role with account baseline plus optional user-environment child roles.
 - `monitoring`: aggregate monitoring namespace currently delegating to focused monitoring child roles.
 - `base_*`, `docker_*`, `user_*`, and other standalone roles: focused capabilities grouped by domain and consumed either directly or via aggregate roles.
@@ -176,6 +176,7 @@ Core repository docs:
 - [docs/05-vault.md](docs/05-vault.md): Short Vault guidance for secret-bearing inventory values such as `user_password`
 - [docs/06-user-groups-role-integration.md](docs/06-user-groups-role-integration.md): How future roles should register human admin supplementary-group needs for `user_groups`
 - [docs/07-docker-role-conventions.md](docs/07-docker-role-conventions.md): Shared Docker daemon, access-group, and backup-path conventions
+- [docs/08-docker-traefik-downstream-services.md](docs/08-docker-traefik-downstream-services.md): How future Docker service roles should join Traefik, publish direct host ports, and split host-versus-container listeners safely
 
 ## License
 MIT

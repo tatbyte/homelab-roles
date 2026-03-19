@@ -1,0 +1,469 @@
+---
+# roles/docker_adguard/tasks/config.yml
+# Config phase tasks for the `docker_adguard` role.
+# Creates the AdGuard access identities and project files, registers optional
+# firewall rules, and starts the managed Docker Compose project against the
+# existing Traefik proxy network.
+
+- name: "Config | Ensure AdGuard access group exists"
+  ansible.builtin.group:
+    name: "{{ docker_adguard_access_group }}"
+    gid: "{{ docker_adguard_access_gid }}"
+    state: present
+  when: docker_adguard_enabled | bool
+
+- name: "Config | Ensure AdGuard service user exists"
+  ansible.builtin.user:
+    name: "{{ docker_adguard_service_user }}"
+    uid: "{{ docker_adguard_service_uid }}"
+    group: "{{ docker_adguard_access_group }}"
+    shell: "{{ docker_adguard_service_user_shell }}"
+    home: "{{ docker_adguard_project_dir }}"
+    create_home: false
+    state: present
+    comment: "AdGuard service account managed by Ansible"
+  when: docker_adguard_enabled | bool
+
+- name: "Config | Register firewall rules" # noqa: var-naming[no-role-prefix]
+  ansible.builtin.set_fact:
+    base_firewall_role_declared_rules: >-
+      {{
+        (base_firewall_role_declared_rules | default([]))
+        + (docker_adguard_firewall_rules | default([]))
+      }}
+  when:
+    - docker_adguard_enabled | bool
+    - docker_adguard_manage_firewall_rules | bool
+
+- name: "Config | Collect existing user entries for AdGuard access-group management"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ item }}"
+  register: docker_adguard_config_passwd_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ docker_adguard_access_group_members }}"
+  loop_control:
+    label: "{{ item }}"
+  when:
+    - docker_adguard_enabled | bool
+    - docker_adguard_manage_access_group_memberships | bool
+    - docker_adguard_access_group_members | length > 0
+
+- name: "Config | Ensure AdGuard access-group membership for existing users"
+  ansible.builtin.user:
+    name: "{{ item.item }}"
+    state: present
+    groups: "{{ docker_adguard_access_group }}"
+    append: true
+  loop: "{{ docker_adguard_config_passwd_lookup.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when:
+    - docker_adguard_enabled | bool
+    - docker_adguard_manage_access_group_memberships | bool
+    - item.item in (item.ansible_facts.getent_passwd | default({}))
+
+- name: "Config | Check whether a managed Docker Compose file already exists"
+  ansible.builtin.stat:
+    path: "{{ docker_adguard_compose_file_path }}"
+  register: docker_adguard_compose_file_stat
+  changed_when: false
+
+- name: "Config | Stop managed Docker Compose project when AdGuard is disabled"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-name
+      - "{{ docker_adguard_compose_project_name }}"
+      - --file
+      - "{{ docker_adguard_compose_file_path }}"
+      - down
+  register: docker_adguard_compose_down
+  changed_when: docker_adguard_compose_file_stat.stat.exists
+  when:
+    - not docker_adguard_enabled | bool
+    - docker_adguard_compose_file_stat.stat.exists
+
+- name: "Config | Inspect required Traefik proxy network"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - network
+      - inspect
+      - "{{ docker_adguard_proxy_network_name }}"
+  register: docker_adguard_config_proxy_network
+  changed_when: false
+  failed_when: false
+  when: docker_adguard_enabled | bool
+
+- name: "Config | Require Traefik proxy network before starting AdGuard"
+  ansible.builtin.assert:
+    that:
+      - docker_adguard_config_proxy_network.rc == 0
+    fail_msg: >-
+      docker_adguard requires the external proxy network
+      {{ docker_adguard_proxy_network_name }}. Run docker_traefik first or
+      point docker_adguard_proxy_network_name at an existing Traefik network.
+    quiet: true
+  when: docker_adguard_enabled | bool
+
+- name: "Config | Ensure AdGuard project directory exists"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - path: "{{ docker_adguard_project_dir }}"
+      owner: root
+      group: "{{ docker_adguard_access_group }}"
+      mode: "0750"
+    - path: "{{ docker_adguard_data_dir }}"
+      owner: "{{ docker_adguard_service_user }}"
+      group: "{{ docker_adguard_access_group }}"
+      mode: "0750"
+    - path: "{{ docker_adguard_conf_dir }}"
+      owner: "{{ docker_adguard_service_user }}"
+      group: "{{ docker_adguard_access_group }}"
+      mode: "0750"
+  loop_control:
+    label: "{{ item.path }}"
+  when: docker_adguard_enabled | bool
+
+- name: "Config | Check whether AdGuard work directory already exists"
+  ansible.builtin.stat:
+    path: "{{ docker_adguard_work_dir }}"
+  register: docker_adguard_work_dir_stat
+  changed_when: false
+  when: docker_adguard_enabled | bool
+
+- name: "Config | Bootstrap AdGuard work directory when missing"
+  ansible.builtin.file:
+    path: "{{ docker_adguard_work_dir }}"
+    state: directory
+    owner: "{{ docker_adguard_service_user }}"
+    group: "{{ docker_adguard_access_group }}"
+    mode: "0750"
+  when:
+    - docker_adguard_enabled | bool
+    - not docker_adguard_work_dir_stat.stat.exists
+
+- name: "Config | Check whether managed AdGuard configuration already exists"
+  ansible.builtin.stat:
+    path: "{{ docker_adguard_config_path }}"
+  register: docker_adguard_config_file_stat
+  changed_when: false
+  when: docker_adguard_enabled | bool
+
+- name: "Config | Bootstrap AdGuard Home configuration when missing"
+  ansible.builtin.template:
+    src: docker_adguard_AdGuardHome.yaml.j2
+    dest: "{{ docker_adguard_config_path }}"
+    owner: root
+    group: "{{ docker_adguard_access_group }}"
+    mode: "0640"
+  register: docker_adguard_config_template_result
+  when:
+    - docker_adguard_enabled | bool
+    - not docker_adguard_config_file_stat.stat.exists
+
+- name: "Config | Read existing AdGuard Home configuration"
+  ansible.builtin.slurp:
+    path: "{{ docker_adguard_config_path }}"
+  register: docker_adguard_existing_config_file
+  when:
+    - docker_adguard_enabled | bool
+    - docker_adguard_config_file_stat.stat.exists
+
+- name: "Config | Derive merged AdGuard Home configuration"
+  vars:
+    docker_adguard_existing_config: >-
+      {{
+        docker_adguard_existing_config_file.content | b64decode | from_yaml
+      }}
+    docker_adguard_existing_users: >-
+      {{
+        docker_adguard_existing_config.users | default([])
+      }}
+    docker_adguard_preserved_users: >-
+      {{
+        docker_adguard_existing_users
+        | rejectattr('name', 'equalto', docker_adguard_admin_user)
+        | list
+      }}
+    docker_adguard_managed_user: >-
+      {{
+        {
+          'name': docker_adguard_admin_user,
+          'password': docker_adguard_admin_password_hash,
+        }
+      }}
+    docker_adguard_merged_managed_filters: >-
+      {%- set result = [] -%}
+      {%- for item in docker_adguard_filters -%}
+      {%-   set existing_filter = (
+              docker_adguard_existing_config.filters | default([])
+              | selectattr('url', 'equalto', item.url)
+              | list
+              | first
+              | default({})
+            ) -%}
+      {%-   set _ = result.append(
+              existing_filter
+              | combine(
+                  {
+                    'name': item.name,
+                    'url': item.url,
+                    'enabled': item.enabled | default(true),
+                  },
+                  recursive=true
+                )
+            ) -%}
+      {%- endfor -%}
+      {{ result | sort(attribute='name') | sort(attribute='url') }}
+    docker_adguard_normalized_desired_filters: >-
+      {%- set result = [] -%}
+      {%- for item in docker_adguard_filters -%}
+      {%-   set _ = result.append(
+              {
+                'name': item.name,
+                'url': item.url,
+                'enabled': item.enabled | default(true),
+              }
+            ) -%}
+      {%- endfor -%}
+      {{ result | sort(attribute='name') | sort(attribute='url') }}
+    docker_adguard_managed_config: >-
+      {{
+        {
+          'http': {
+            'address': '0.0.0.0:' ~ (docker_adguard_container_web_port | string),
+            'session_ttl': docker_adguard_http_session_ttl,
+          },
+          'users': docker_adguard_preserved_users + [docker_adguard_managed_user],
+          'dns': {
+            'port': docker_adguard_container_dns_port,
+            'upstream_dns': docker_adguard_upstream_dns,
+            'bootstrap_dns': docker_adguard_bootstrap_dns,
+          },
+          'filters': docker_adguard_merged_managed_filters,
+          'theme': docker_adguard_theme,
+        }
+      }}
+  ansible.builtin.set_fact:
+    docker_adguard_effective_config: >-
+      {{
+        docker_adguard_existing_config
+        | combine(docker_adguard_managed_config, recursive=true)
+      }}
+  changed_when: false
+  when:
+    - docker_adguard_enabled | bool
+    - docker_adguard_config_file_stat.stat.exists
+
+- name: "Config | Derive whether managed AdGuard settings differ"
+  vars:
+    docker_adguard_existing_config: >-
+      {{
+        docker_adguard_existing_config_file.content | b64decode | from_yaml
+      }}
+    docker_adguard_existing_users: >-
+      {{
+        docker_adguard_existing_config.users | default([])
+      }}
+    docker_adguard_existing_admin_matches: >-
+      {{
+        docker_adguard_existing_users
+        | selectattr('name', 'equalto', docker_adguard_admin_user)
+        | selectattr('password', 'equalto', docker_adguard_admin_password_hash)
+        | list
+      }}
+    docker_adguard_normalized_desired_filters: >-
+      {%- set result = [] -%}
+      {%- for item in docker_adguard_filters -%}
+      {%-   set _ = result.append(
+              {
+                'name': item.name,
+                'url': item.url,
+                'enabled': item.enabled | default(true),
+              }
+            ) -%}
+      {%- endfor -%}
+      {{ result | sort(attribute='name') | sort(attribute='url') }}
+    docker_adguard_normalized_existing_filters: >-
+      {%- set result = [] -%}
+      {%- for item in (docker_adguard_existing_config.filters | default([])) -%}
+      {%-   set _ = result.append(
+              {
+                'name': item.name,
+                'url': item.url,
+                'enabled': item.enabled | default(true),
+              }
+            ) -%}
+      {%- endfor -%}
+      {{ result | sort(attribute='name') | sort(attribute='url') }}
+  ansible.builtin.set_fact:
+    docker_adguard_managed_config_differs: >-
+      {{
+        (
+          docker_adguard_effective_config.http.address
+          != (docker_adguard_existing_config.http.address | default(''))
+        )
+        or (
+          docker_adguard_effective_config.http.session_ttl
+          != (docker_adguard_existing_config.http.session_ttl | default(''))
+        )
+        or (
+          (docker_adguard_existing_admin_matches | length) == 0
+        )
+        or (
+          docker_adguard_effective_config.dns.port
+          != (docker_adguard_existing_config.dns.port | default(0))
+        )
+        or (
+          docker_adguard_effective_config.dns.upstream_dns
+          | difference(docker_adguard_existing_config.dns.upstream_dns | default([]))
+          | length > 0
+        )
+        or (
+          (docker_adguard_existing_config.dns.upstream_dns | default([]))
+          | difference(docker_adguard_effective_config.dns.upstream_dns)
+          | length > 0
+        )
+        or (
+          docker_adguard_effective_config.dns.bootstrap_dns
+          | difference(docker_adguard_existing_config.dns.bootstrap_dns | default([]))
+          | length > 0
+        )
+        or (
+          (docker_adguard_existing_config.dns.bootstrap_dns | default([]))
+          | difference(docker_adguard_effective_config.dns.bootstrap_dns)
+          | length > 0
+        )
+        or (
+          docker_adguard_effective_config.theme
+          != (docker_adguard_existing_config.theme | default(''))
+        )
+        or (
+          docker_adguard_normalized_desired_filters | to_json
+          != (docker_adguard_normalized_existing_filters | to_json)
+        )
+      }}
+  changed_when: false
+  when:
+    - docker_adguard_enabled | bool
+    - docker_adguard_config_file_stat.stat.exists
+
+- name: "Config | Update managed AdGuard Home settings in existing configuration"
+  ansible.builtin.copy:
+    dest: "{{ docker_adguard_config_path }}"
+    owner: root
+    group: "{{ docker_adguard_access_group }}"
+    mode: "0640"
+    content: |-
+      # Managed by Ansible: docker_adguard
+      # Source: roles/docker_adguard/tasks/config.yml
+      {{ docker_adguard_effective_config | to_nice_yaml(indent=2) | trim }}
+  register: docker_adguard_config_merge_result
+  when:
+    - docker_adguard_enabled | bool
+    - docker_adguard_config_file_stat.stat.exists
+    - docker_adguard_managed_config_differs | bool
+
+- name: "Config | Render Docker Compose file"
+  ansible.builtin.template:
+    src: docker_adguard_compose.yml.j2
+    dest: "{{ docker_adguard_compose_file_path }}"
+    owner: root
+    group: "{{ docker_adguard_access_group }}"
+    mode: "0640"
+  register: docker_adguard_compose_template_result
+  when: docker_adguard_enabled | bool
+
+- name: "Config | Read current Docker Compose running services"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-name
+      - "{{ docker_adguard_compose_project_name }}"
+      - --file
+      - "{{ docker_adguard_compose_file_path }}"
+      - ps
+      - --services
+      - --status
+      - running
+  register: docker_adguard_compose_ps
+  changed_when: false
+  failed_when: false
+  when: docker_adguard_enabled | bool
+
+- name: "Config | Inspect running AdGuard container"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - inspect
+      - "{{ docker_adguard_container_name }}"
+  register: docker_adguard_container_inspect
+  changed_when: false
+  failed_when: false
+  when: docker_adguard_enabled | bool
+
+- name: "Config | Derive whether Docker Compose reconciliation is required"
+  ansible.builtin.set_fact:
+    docker_adguard_requires_compose_up: >-
+      {{
+        (docker_adguard_config_template_result.changed | default(false))
+        or (docker_adguard_config_merge_result.changed | default(false))
+        or docker_adguard_compose_template_result.changed
+        or (docker_adguard_container_inspect.rc != 0)
+        or (
+          docker_adguard_container_inspect.rc == 0
+          and (
+            (
+              docker_adguard_container_inspect.stdout | from_json | first
+            ).HostConfig.PortBindings[
+              (docker_adguard_container_dns_port | string) ~ '/tcp'
+            ][0].HostPort
+            != (docker_adguard_dns_bind_port | string)
+          )
+        )
+        or (
+          docker_adguard_container_inspect.rc == 0
+          and (
+            (
+              docker_adguard_container_inspect.stdout | from_json | first
+            ).HostConfig.PortBindings[
+              (docker_adguard_container_dns_port | string) ~ '/udp'
+            ][0].HostPort
+            != (docker_adguard_dns_bind_port | string)
+          )
+        )
+        or (
+          docker_adguard_compose_service_name
+          not in (docker_adguard_compose_ps.stdout_lines | default([]))
+        )
+      }}
+  changed_when: false
+  when: docker_adguard_enabled | bool
+
+- name: "Config | Reconcile Docker Compose project"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-name
+      - "{{ docker_adguard_compose_project_name }}"
+      - --file
+      - "{{ docker_adguard_compose_file_path }}"
+      - up
+      - --detach
+      - --force-recreate
+  register: docker_adguard_compose_up
+  changed_when: docker_adguard_requires_compose_up | bool
+  when:
+    - docker_adguard_enabled | bool
+    - docker_adguard_requires_compose_up | bool
