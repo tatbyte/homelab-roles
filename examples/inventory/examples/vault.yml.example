@@ -50,3 +50,28 @@ vault_docker_adguard_host: "adguard.example.com"
 # Example AdGuard Home admin password hash.
 # Use an AdGuard-compatible bcrypt hash here.
 vault_docker_adguard_admin_password_hash: "$2a$10$replace-me"
+
+# ---------------------------------------------------------------------------
+# docker_wireguard
+# ---------------------------------------------------------------------------
+
+# Example public host name used by both the wg-easy initial setup and the
+# Traefik router for the WireGuard dashboard.
+vault_docker_wireguard_host: "wireguard.example.com"
+
+# Example initial admin username for the wg-easy dashboard.
+vault_docker_wireguard_admin_username: "admin"
+
+# Example initial admin password for the wg-easy dashboard.
+# Use the plain password value here; the upstream unattended setup uses
+# `INIT_PASSWORD`, not a password-hash field.
+# The upstream wg-easy docs do not enforce password complexity, but they do say
+# to use a long enough password or login may fail. This repo recommends at
+# least 12 characters.
+vault_docker_wireguard_admin_password: "replace-me"
+
+# Example DNS resolvers pushed to WireGuard clients on first setup.
+# Use resolver IPs here. This example shows two AdGuard instances.
+vault_docker_wireguard_init_dns:
+  - "192.168.1.53"
+  - "192.168.1.54"

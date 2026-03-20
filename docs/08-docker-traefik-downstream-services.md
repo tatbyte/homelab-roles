@@ -12,7 +12,8 @@ Some Docker services in this repository need two different access paths:
 - an HTTP or HTTPS web UI published through Traefik
 - a separate non-HTTP service published directly on the host
 
-`docker_adguard` is the current example:
+`docker_adguard` is the current example, and `docker_wireguard` now follows the
+same split-host-port plus Traefik-web-UI pattern:
 
 - the web UI is published through Traefik
 - DNS is published directly from the container to a host port
@@ -97,7 +98,7 @@ Why this matters:
 - using one variable for both can make Docker publish one port while the app
   listens on another
 
-`docker_adguard` uses this exact split:
+`docker_adguard` and `docker_wireguard` use this exact split approach:
 
 - `docker_adguard_dns_bind_port`: host-published port
 - `docker_adguard_container_dns_port`: internal AdGuard DNS listener port
@@ -158,7 +159,8 @@ Do not use this pattern when:
 
 ## Summary
 
-For future Docker roles that behave like `docker_adguard`:
+For future Docker roles that behave like `docker_adguard` or
+`docker_wireguard`:
 
 - join the shared Traefik proxy network
 - publish the web UI with Compose labels

@@ -1,0 +1,75 @@
+---
+# roles/docker_wireguard/defaults/main.yml
+# Default variables for the `docker_wireguard` role.
+# Defines Docker Compose, `wg-easy`, Traefik proxy-network, service-identity,
+# initial admin setup, VPN listener, and optional firewall inputs for a
+# Debian-family host.
+
+docker_wireguard_enabled: true
+
+docker_wireguard_packages: []
+docker_wireguard_compose_package_candidates:
+  - docker-compose-plugin
+  - docker-compose-v2
+
+docker_wireguard_project_dir: /srv/wireguard
+docker_wireguard_data_dir: "{{ docker_wireguard_project_dir }}/data"
+docker_wireguard_compose_project_name: wireguard
+docker_wireguard_compose_service_name: wireguard
+docker_wireguard_container_name: wireguard
+docker_wireguard_image: ghcr.io/wg-easy/wg-easy:15
+docker_wireguard_docker_service_name: "{{ docker_engine_service_name | default('docker') }}"
+docker_wireguard_service_user: srv_wireguard
+docker_wireguard_service_uid: 1170
+docker_wireguard_access_group: access_wireguard
+docker_wireguard_access_gid: 1170
+docker_wireguard_service_user_shell: /usr/sbin/nologin
+docker_wireguard_manage_access_group_memberships: true
+docker_wireguard_access_group_members: >-
+  {{
+    [
+      (bootstrap_user | default('admin')),
+      (user_account_name | default('admin'))
+    ]
+    | map('trim')
+    | reject('equalto', '')
+    | unique
+    | list
+  }}
+
+docker_wireguard_compose_file_path: "{{ docker_wireguard_project_dir }}/compose.yml"
+docker_wireguard_env_file_path: "{{ docker_wireguard_project_dir }}/wireguard.env"
+docker_wireguard_proxy_network_name: "{{ docker_traefik_network_name | default('traefik_proxy') }}"
+docker_wireguard_host: wireguard.example.com
+docker_wireguard_web_ui_enabled: true
+docker_wireguard_router_name: wireguard
+docker_wireguard_router_entrypoints:
+  - websecure
+docker_wireguard_tls_certresolver: "{{ docker_traefik_certresolver_name | default('letsencrypt') }}"
+docker_wireguard_container_web_port: 51821
+docker_wireguard_ui_bind_host: 0.0.0.0
+docker_wireguard_insecure: false
+docker_wireguard_disable_ipv6: false
+docker_wireguard_init_enabled: true
+docker_wireguard_admin_username: admin
+docker_wireguard_admin_password: ""
+docker_wireguard_init_dns: []
+
+docker_wireguard_cap_add:
+  - NET_ADMIN
+  - SYS_MODULE
+docker_wireguard_vpn_bind_port: 51820
+docker_wireguard_modules_path: /lib/modules
+docker_wireguard_mount_modules: true
+docker_wireguard_sysctls:
+  - net.ipv4.conf.all.src_valid_mark=1
+  - net.ipv4.ip_forward=1
+docker_wireguard_restart_policy: unless-stopped
+
+docker_wireguard_manage_firewall_rules: true
+docker_wireguard_firewall_rules:
+  - rule: allow
+    direction: in
+    port: "{{ docker_wireguard_vpn_bind_port | string }}"
+    proto: udp
+    comment: "managed:docker_wireguard:vpn-udp"

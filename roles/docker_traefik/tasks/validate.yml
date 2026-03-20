@@ -133,12 +133,38 @@
   changed_when: false
   when: docker_traefik_enabled | bool
 
+- name: "Validate | Inspect running Traefik container"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - inspect
+      - "{{ docker_traefik_container_name }}"
+  register: docker_traefik_validate_container_inspect
+  changed_when: false
+  failed_when: false
+  when: docker_traefik_enabled | bool
+
 - name: "Validate | Assert Docker Traefik state"
   vars:
     docker_traefik_expected_compose: "{{ lookup('template', 'docker_traefik_compose.yml.j2') }}"
     docker_traefik_expected_static_config: "{{ lookup('template', 'docker_traefik_traefik.yml.j2') }}"
     docker_traefik_expected_dashboard_config: "{{ lookup('template', 'docker_traefik_dashboard.yml.j2') }}"
     docker_traefik_expected_env_file: "{{ lookup('template', 'docker_traefik_env.j2') }}"
+    docker_traefik_container_state: >-
+      {{
+        (docker_traefik_validate_container_inspect.stdout | from_json | first)
+        if docker_traefik_validate_container_inspect.rc == 0
+        else {}
+      }}
+    docker_traefik_container_mounts: >-
+      {{
+        docker_traefik_container_state.Mounts | default([])
+      }}
+    docker_traefik_expected_acme_source: >-
+      {{
+        docker_traefik_letsencrypt_storage_path
+        | regex_replace('/+', '/')
+      }}
     docker_traefik_service_unit: >-
       {{
         docker_traefik_docker_service_name
@@ -157,6 +183,7 @@
       - docker_traefik_validate_acme_storage.stat.exists
       - docker_traefik_validate_acme_storage.stat.mode == '0600'
       - docker_traefik_validate_compose_version.rc == 0
+      - docker_traefik_validate_container_inspect.rc == 0
       - docker_traefik_docker_service_name in ansible_facts.services or docker_traefik_service_unit in ansible_facts.services
       - >-
         (
@@ -168,6 +195,15 @@
         )
       - docker_traefik_validate_network.rc == 0
       - docker_traefik_compose_service_name in (docker_traefik_validate_compose_ps.stdout_lines | default([]))
+      - >-
+        (
+          docker_traefik_container_mounts
+          | selectattr('Destination', 'equalto', '/letsencrypt/acme.json')
+          | selectattr('Type', 'equalto', 'bind')
+          | selectattr('Source', 'equalto', docker_traefik_expected_acme_source)
+          | list
+          | length
+        ) == 1
     fail_msg: >-
       Configured Docker Traefik state does not match the requested docker_traefik values
     quiet: true

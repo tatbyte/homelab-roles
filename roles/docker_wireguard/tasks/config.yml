@@ -1,0 +1,243 @@
+---
+# roles/docker_wireguard/tasks/config.yml
+# Config phase tasks for the `docker_wireguard` role.
+# Creates the WireGuard access identities and project files, registers optional
+# firewall rules, and starts the managed Docker Compose project against the
+# existing Traefik proxy network.
+
+- name: "Config | Ensure WireGuard access group exists"
+  ansible.builtin.group:
+    name: "{{ docker_wireguard_access_group }}"
+    gid: "{{ docker_wireguard_access_gid }}"
+    state: present
+  when: docker_wireguard_enabled | bool
+
+- name: "Config | Ensure WireGuard service user exists"
+  ansible.builtin.user:
+    name: "{{ docker_wireguard_service_user }}"
+    uid: "{{ docker_wireguard_service_uid }}"
+    group: "{{ docker_wireguard_access_group }}"
+    shell: "{{ docker_wireguard_service_user_shell }}"
+    home: "{{ docker_wireguard_project_dir }}"
+    create_home: false
+    state: present
+    comment: "WireGuard service account managed by Ansible"
+  when: docker_wireguard_enabled | bool
+
+- name: "Config | Register firewall rules" # noqa: var-naming[no-role-prefix]
+  ansible.builtin.set_fact:
+    base_firewall_role_declared_rules: >-
+      {{
+        (base_firewall_role_declared_rules | default([]))
+        + (docker_wireguard_firewall_rules | default([]))
+      }}
+  when:
+    - docker_wireguard_enabled | bool
+    - docker_wireguard_manage_firewall_rules | bool
+
+- name: "Config | Collect existing user entries for WireGuard access-group management"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ item }}"
+  register: docker_wireguard_config_passwd_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ docker_wireguard_access_group_members }}"
+  loop_control:
+    label: "{{ item }}"
+  when:
+    - docker_wireguard_enabled | bool
+    - docker_wireguard_manage_access_group_memberships | bool
+    - docker_wireguard_access_group_members | length > 0
+
+- name: "Config | Ensure WireGuard access-group membership for existing users"
+  ansible.builtin.user:
+    name: "{{ item.item }}"
+    state: present
+    groups: "{{ docker_wireguard_access_group }}"
+    append: true
+  loop: "{{ docker_wireguard_config_passwd_lookup.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when:
+    - docker_wireguard_enabled | bool
+    - docker_wireguard_manage_access_group_memberships | bool
+    - item.item in (item.ansible_facts.getent_passwd | default({}))
+
+- name: "Config | Check whether a managed Docker Compose file already exists"
+  ansible.builtin.stat:
+    path: "{{ docker_wireguard_compose_file_path }}"
+  register: docker_wireguard_compose_file_stat
+  changed_when: false
+
+- name: "Config | Stop managed Docker Compose project when WireGuard is disabled"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-name
+      - "{{ docker_wireguard_compose_project_name }}"
+      - --file
+      - "{{ docker_wireguard_compose_file_path }}"
+      - down
+  register: docker_wireguard_compose_down
+  changed_when: docker_wireguard_compose_file_stat.stat.exists
+  when:
+    - not docker_wireguard_enabled | bool
+    - docker_wireguard_compose_file_stat.stat.exists
+
+- name: "Config | Inspect required Traefik proxy network"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - network
+      - inspect
+      - "{{ docker_wireguard_proxy_network_name }}"
+  register: docker_wireguard_config_proxy_network
+  changed_when: false
+  failed_when: false
+  when:
+    - docker_wireguard_enabled | bool
+    - docker_wireguard_web_ui_enabled | bool
+
+- name: "Config | Require Traefik proxy network before starting WireGuard"
+  ansible.builtin.assert:
+    that:
+      - docker_wireguard_config_proxy_network.rc == 0
+    fail_msg: >-
+      docker_wireguard requires the external proxy network
+      {{ docker_wireguard_proxy_network_name }}. Run docker_traefik first or
+      point docker_wireguard_proxy_network_name at an existing Traefik network.
+    quiet: true
+  when:
+    - docker_wireguard_enabled | bool
+    - docker_wireguard_web_ui_enabled | bool
+
+- name: "Config | Ensure WireGuard project directory exists"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - path: "{{ docker_wireguard_project_dir }}"
+      owner: root
+      group: "{{ docker_wireguard_access_group }}"
+      mode: "0750"
+    - path: "{{ docker_wireguard_data_dir }}"
+      owner: "{{ docker_wireguard_service_user }}"
+      group: "{{ docker_wireguard_access_group }}"
+      mode: "0750"
+  loop_control:
+    label: "{{ item.path }}"
+  when: docker_wireguard_enabled | bool
+
+- name: "Config | Render WireGuard environment file"
+  ansible.builtin.template:
+    src: docker_wireguard_env.j2
+    dest: "{{ docker_wireguard_env_file_path }}"
+    owner: root
+    group: "{{ docker_wireguard_access_group }}"
+    mode: "0640"
+  register: docker_wireguard_env_file_result
+  when: docker_wireguard_enabled | bool
+
+- name: "Config | Render Docker Compose file"
+  ansible.builtin.template:
+    src: docker_wireguard_compose.yml.j2
+    dest: "{{ docker_wireguard_compose_file_path }}"
+    owner: root
+    group: "{{ docker_wireguard_access_group }}"
+    mode: "0640"
+  register: docker_wireguard_compose_template_result
+  when: docker_wireguard_enabled | bool
+
+- name: "Config | Read current Docker Compose running services"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-name
+      - "{{ docker_wireguard_compose_project_name }}"
+      - --file
+      - "{{ docker_wireguard_compose_file_path }}"
+      - ps
+      - --services
+      - --status
+      - running
+  register: docker_wireguard_compose_ps
+  changed_when: false
+  failed_when: false
+  when: docker_wireguard_enabled | bool
+
+- name: "Config | Inspect running WireGuard container"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - inspect
+      - "{{ docker_wireguard_container_name }}"
+  register: docker_wireguard_container_inspect
+  changed_when: false
+  failed_when: false
+  when: docker_wireguard_enabled | bool
+
+- name: "Config | Derive whether Docker Compose reconciliation is required"
+  ansible.builtin.set_fact:
+    docker_wireguard_requires_compose_up: >-
+      {{
+        docker_wireguard_env_file_result.changed
+        or docker_wireguard_compose_template_result.changed
+        or (
+          docker_wireguard_web_ui_enabled
+          and (docker_wireguard_config_proxy_network.rc != 0)
+        )
+        or (docker_wireguard_container_inspect.rc != 0)
+        or (
+          docker_wireguard_container_inspect.rc == 0
+          and (
+            (
+              docker_wireguard_container_inspect.stdout | from_json | first
+            ).HostConfig.PortBindings[
+              (docker_wireguard_vpn_bind_port | string) ~ '/udp'
+            ][0].HostPort
+            != (docker_wireguard_vpn_bind_port | string)
+          )
+        )
+        or (
+          docker_wireguard_web_ui_enabled
+          and docker_wireguard_container_inspect.rc == 0
+          and (
+            docker_wireguard_proxy_network_name
+            not in (
+              (
+                docker_wireguard_container_inspect.stdout | from_json | first
+              ).NetworkSettings.Networks | default({})
+            )
+          )
+        )
+        or (
+          docker_wireguard_compose_service_name
+          not in (docker_wireguard_compose_ps.stdout_lines | default([]))
+        )
+      }}
+  changed_when: false
+  when: docker_wireguard_enabled | bool
+
+- name: "Config | Reconcile Docker Compose project"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-name
+      - "{{ docker_wireguard_compose_project_name }}"
+      - --file
+      - "{{ docker_wireguard_compose_file_path }}"
+      - up
+      - --detach
+      - --force-recreate
+  register: docker_wireguard_compose_up
+  changed_when: docker_wireguard_requires_compose_up | bool
+  when:
+    - docker_wireguard_enabled | bool
+    - docker_wireguard_requires_compose_up | bool
