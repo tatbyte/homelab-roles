@@ -3,6 +3,16 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v2.5.0]
+### Added
+- Added standalone `docker_wireguard` with Compose-managed `wg-easy` v15, a Traefik-routed HTTPS dashboard, Vault-backed initial admin setup, optional managed VPN firewall rules, and backup-friendly `/srv/wireguard` host paths.
+
+### Changed
+- Extended the aggregate Docker role and example lab to include optional `docker_wireguard` coverage alongside Traefik and AdGuard so the repo now exercises a UDP listener plus a Traefik-backed admin UI in the same Docker phase.
+
+### Documentation
+- Updated repository and example Docker docs to mention `docker_wireguard`, including the `wg-easy` initial-setup caveat that Vault-backed admin and host inputs seed the first start of a fresh data directory rather than continuously re-seeding an existing deployment.
+
 ## [v2.4.0]
 ### Added
 - Added standalone `docker_adguard` with Compose-managed AdGuard Home, Traefik proxy-network integration, role-owned service/access identities, Vault-backed admin inputs, and backup-friendly `/srv/adguard` host paths.

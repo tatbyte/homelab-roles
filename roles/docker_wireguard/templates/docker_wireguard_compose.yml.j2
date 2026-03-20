@@ -1,0 +1,46 @@
+{# roles/docker_wireguard/templates/docker_wireguard_compose.yml.j2 #}
+{# Template for the managed Docker Compose file used by the `docker_wireguard` role. #}
+# Managed by Ansible: docker_wireguard
+# Source: roles/docker_wireguard/templates/docker_wireguard_compose.yml.j2
+services:
+  {{ docker_wireguard_compose_service_name }}:
+    image: {{ docker_wireguard_image }}
+    container_name: {{ docker_wireguard_container_name }}
+    restart: {{ docker_wireguard_restart_policy }}
+    env_file:
+      - ./{{ docker_wireguard_env_file_path | basename }}
+    cap_add:
+{% for capability in docker_wireguard_cap_add %}
+      - {{ capability }}
+{% endfor %}
+    volumes:
+      - ./data:/etc/wireguard
+{% if docker_wireguard_mount_modules %}
+      - {{ docker_wireguard_modules_path }}:/lib/modules
+{% endif %}
+    ports:
+      - "{{ docker_wireguard_vpn_bind_port }}:{{ docker_wireguard_vpn_bind_port }}/udp"
+    sysctls:
+{% for sysctl in docker_wireguard_sysctls %}
+      - {{ sysctl }}
+{% endfor %}
+{% if docker_wireguard_web_ui_enabled %}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network={{ docker_wireguard_proxy_network_name }}"
+      - "traefik.http.routers.{{ docker_wireguard_router_name }}.rule=Host(`{{ docker_wireguard_host }}`)"
+      - "traefik.http.routers.{{ docker_wireguard_router_name }}.entrypoints={{ docker_wireguard_router_entrypoints | join(',') }}"
+      - "traefik.http.routers.{{ docker_wireguard_router_name }}.tls=true"
+      - "traefik.http.routers.{{ docker_wireguard_router_name }}.tls.certresolver={{ docker_wireguard_tls_certresolver }}"
+      - "traefik.http.routers.{{ docker_wireguard_router_name }}.service={{ docker_wireguard_router_name }}"
+      - "traefik.http.services.{{ docker_wireguard_router_name }}.loadbalancer.server.port={{ docker_wireguard_container_web_port }}"
+    networks:
+      - proxy
+{% endif %}
+
+{% if docker_wireguard_web_ui_enabled %}
+networks:
+  proxy:
+    external: true
+    name: {{ docker_wireguard_proxy_network_name }}
+{% endif %}

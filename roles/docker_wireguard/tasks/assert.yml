@@ -1,0 +1,198 @@
+---
+# roles/docker_wireguard/tasks/assert.yml
+# Assert phase tasks for the `docker_wireguard` role.
+# Validates Docker Compose, `wg-easy`, Traefik proxy-network, identity, initial
+# admin setup, VPN listener, and firewall inputs before configuration starts.
+
+- name: "Assert | Validate docker_wireguard variable structure"
+  ansible.builtin.assert:
+    that:
+      - docker_wireguard_enabled is boolean
+      - docker_wireguard_manage_firewall_rules is boolean
+      - docker_wireguard_manage_access_group_memberships is boolean
+      - docker_wireguard_mount_modules is boolean
+      - docker_wireguard_init_enabled is boolean
+      - docker_wireguard_web_ui_enabled is boolean
+      - docker_wireguard_insecure is boolean
+      - docker_wireguard_disable_ipv6 is boolean
+      - docker_wireguard_packages is sequence
+      - docker_wireguard_packages is not string
+      - docker_wireguard_compose_package_candidates is sequence
+      - docker_wireguard_compose_package_candidates is not string
+      - docker_wireguard_access_group_members is sequence
+      - docker_wireguard_access_group_members is not string
+      - docker_wireguard_init_dns is sequence
+      - docker_wireguard_init_dns is not string
+      - docker_wireguard_router_entrypoints is sequence
+      - docker_wireguard_router_entrypoints is not string
+      - docker_wireguard_cap_add is sequence
+      - docker_wireguard_cap_add is not string
+      - docker_wireguard_sysctls is sequence
+      - docker_wireguard_sysctls is not string
+      - docker_wireguard_firewall_rules is sequence
+      - docker_wireguard_firewall_rules is not string
+      - docker_wireguard_project_dir is string
+      - docker_wireguard_project_dir.startswith('/')
+      - docker_wireguard_data_dir is string
+      - docker_wireguard_data_dir.startswith('/')
+      - docker_wireguard_compose_file_path is string
+      - docker_wireguard_compose_file_path.startswith('/')
+      - docker_wireguard_env_file_path is string
+      - docker_wireguard_env_file_path.startswith('/')
+      - docker_wireguard_compose_project_name is string
+      - docker_wireguard_compose_project_name | trim | length > 0
+      - docker_wireguard_compose_service_name is string
+      - docker_wireguard_compose_service_name | trim | length > 0
+      - docker_wireguard_container_name is string
+      - docker_wireguard_container_name | trim | length > 0
+      - docker_wireguard_image is string
+      - docker_wireguard_image | trim | length > 0
+      - docker_wireguard_docker_service_name is string
+      - docker_wireguard_docker_service_name | trim | length > 0
+      - docker_wireguard_service_user is string
+      - docker_wireguard_service_user | trim | length > 0
+      - docker_wireguard_service_uid is number
+      - docker_wireguard_service_uid | int >= 1000
+      - docker_wireguard_access_group is string
+      - docker_wireguard_access_group | trim | length > 0
+      - docker_wireguard_access_gid is number
+      - docker_wireguard_access_gid | int >= 1000
+      - docker_wireguard_service_user_shell is string
+      - docker_wireguard_service_user_shell | trim | length > 0
+      - docker_wireguard_proxy_network_name is string
+      - docker_wireguard_proxy_network_name | trim | length > 0
+      - docker_wireguard_host is string
+      - docker_wireguard_host | trim | length > 0
+      - docker_wireguard_router_name is string
+      - docker_wireguard_router_name | trim | length > 0
+      - docker_wireguard_tls_certresolver is string
+      - docker_wireguard_tls_certresolver | trim | length > 0
+      - docker_wireguard_container_web_port is integer
+      - docker_wireguard_container_web_port > 0
+      - docker_wireguard_ui_bind_host is string
+      - docker_wireguard_ui_bind_host | trim | length > 0
+      - docker_wireguard_admin_username is string
+      - docker_wireguard_admin_password is string
+      - >-
+        (not docker_wireguard_init_enabled)
+        or (docker_wireguard_admin_username | trim | length > 0)
+      - >-
+        (not docker_wireguard_init_enabled)
+        or (docker_wireguard_admin_password | trim | length > 0)
+      - docker_wireguard_vpn_bind_port is integer
+      - docker_wireguard_vpn_bind_port > 0
+      - docker_wireguard_modules_path is string
+      - docker_wireguard_modules_path.startswith('/')
+      - docker_wireguard_restart_policy is string
+      - docker_wireguard_restart_policy | trim | length > 0
+      - (docker_wireguard_packages | map('string') | list | length) == (docker_wireguard_packages | length)
+      - (docker_wireguard_packages | map('trim') | reject('equalto', '') | list | length) == (docker_wireguard_packages | length)
+      - >-
+        (
+          docker_wireguard_compose_package_candidates | map('string') | list | length
+        ) == (docker_wireguard_compose_package_candidates | length)
+      - >-
+        (
+          docker_wireguard_compose_package_candidates
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_wireguard_compose_package_candidates | length)
+      - >-
+        (
+          docker_wireguard_access_group_members | map('string') | list | length
+        ) == (docker_wireguard_access_group_members | length)
+      - >-
+        (
+          docker_wireguard_access_group_members
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_wireguard_access_group_members | length)
+      - >-
+        (
+          docker_wireguard_access_group_members | unique | list | length
+        ) == (docker_wireguard_access_group_members | length)
+      - >-
+        (
+          docker_wireguard_init_dns | map('string') | list | length
+        ) == (docker_wireguard_init_dns | length)
+      - >-
+        (
+          docker_wireguard_init_dns
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_wireguard_init_dns | length)
+      - >-
+        (
+          docker_wireguard_router_entrypoints | map('string') | list | length
+        ) == (docker_wireguard_router_entrypoints | length)
+      - >-
+        (
+          docker_wireguard_router_entrypoints
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_wireguard_router_entrypoints | length)
+      - >-
+        (
+          docker_wireguard_cap_add | map('string') | list | length
+        ) == (docker_wireguard_cap_add | length)
+      - >-
+        (
+          docker_wireguard_cap_add
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_wireguard_cap_add | length)
+      - >-
+        (
+          docker_wireguard_sysctls | map('string') | list | length
+        ) == (docker_wireguard_sysctls | length)
+      - >-
+        (
+          docker_wireguard_sysctls
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_wireguard_sysctls | length)
+      - (docker_wireguard_cap_add | unique | list | length) == (docker_wireguard_cap_add | length)
+      - "'NET_ADMIN' in docker_wireguard_cap_add"
+      - not docker_wireguard_mount_modules or ('SYS_MODULE' in docker_wireguard_cap_add)
+    fail_msg: >-
+      docker_wireguard variables must define valid booleans, non-empty strings,
+      absolute project paths, valid fixed IDs, unique access-group members,
+      required `wg-easy` admin plus Traefik inputs, and a non-empty VPN
+      listener configuration
+    quiet: true
+
+- name: "Assert | Validate requested firewall rule structure"
+  ansible.builtin.assert:
+    that:
+      - item is mapping
+      - item.rule is defined
+      - item.rule is string
+      - item.rule | trim | length > 0
+      - item.port is defined
+      - item.port | string | trim | length > 0
+      - item.proto is not defined or (item.proto is string and item.proto | trim | length > 0)
+      - item.comment is defined
+      - item.comment is string
+      - item.comment.startswith('managed:')
+    fail_msg: >-
+      Each docker_wireguard_firewall_rules item must include a non-empty rule,
+      port, and managed: comment prefix, plus an optional non-empty proto
+    quiet: true
+  loop: "{{ docker_wireguard_firewall_rules }}"
+  loop_control:
+    label: "{{ item.comment | default('docker-wireguard-rule') }}"
+  when:
+    - docker_wireguard_manage_firewall_rules | bool
+    - docker_wireguard_firewall_rules | length > 0

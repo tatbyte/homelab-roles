@@ -1,0 +1,223 @@
+---
+# roles/docker_wireguard/tasks/validate.yml
+# Validate phase tasks for the `docker_wireguard` role.
+# Verifies package state, identities, rendered files, Docker network state, and
+# the running Docker Compose WireGuard service.
+
+- name: "Validate | Gather package facts"
+  ansible.builtin.package_facts:
+    manager: auto
+  when: docker_wireguard_enabled | bool
+
+- name: "Validate | Derive effective Compose support packages"
+  ansible.builtin.import_tasks: derive_effective_packages.yml
+  when: docker_wireguard_enabled | bool
+
+- name: "Validate | Collect WireGuard service-user entry"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ docker_wireguard_service_user }}"
+  register: docker_wireguard_validate_service_user
+  changed_when: false
+  when: docker_wireguard_enabled | bool
+
+- name: "Validate | Collect WireGuard access-group entry"
+  ansible.builtin.getent:
+    database: group
+    key: "{{ docker_wireguard_access_group }}"
+  register: docker_wireguard_validate_access_group
+  changed_when: false
+  when: docker_wireguard_enabled | bool
+
+- name: "Validate | Collect existing user entries for WireGuard access-group validation"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ item }}"
+  register: docker_wireguard_validate_passwd_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ docker_wireguard_access_group_members }}"
+  loop_control:
+    label: "{{ item }}"
+  when:
+    - docker_wireguard_enabled | bool
+    - docker_wireguard_manage_access_group_memberships | bool
+    - docker_wireguard_access_group_members | length > 0
+
+- name: "Validate | Collect effective group lists for WireGuard-managed existing users"
+  ansible.builtin.command:
+    cmd: "id -Gn {{ item.item }}"
+  register: docker_wireguard_validate_groups
+  changed_when: false
+  failed_when: false
+  loop: "{{ docker_wireguard_validate_passwd_lookup.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when:
+    - docker_wireguard_enabled | bool
+    - docker_wireguard_manage_access_group_memberships | bool
+    - item.item in (item.ansible_facts.getent_passwd | default({}))
+
+- name: "Validate | Read Docker Compose file"
+  ansible.builtin.slurp:
+    path: "{{ docker_wireguard_compose_file_path }}"
+  register: docker_wireguard_validate_compose_file
+  when: docker_wireguard_enabled | bool
+
+- name: "Validate | Read WireGuard environment file"
+  ansible.builtin.slurp:
+    path: "{{ docker_wireguard_env_file_path }}"
+  register: docker_wireguard_validate_env_file
+  when: docker_wireguard_enabled | bool
+
+- name: "Validate | Gather service facts"
+  ansible.builtin.service_facts:
+  when: docker_wireguard_enabled | bool
+
+- name: "Validate | Inspect Docker proxy network"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - network
+      - inspect
+      - "{{ docker_wireguard_proxy_network_name }}"
+  register: docker_wireguard_validate_proxy_network
+  changed_when: false
+  when:
+    - docker_wireguard_enabled | bool
+    - docker_wireguard_web_ui_enabled | bool
+
+- name: "Validate | Read Docker Compose running services"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-name
+      - "{{ docker_wireguard_compose_project_name }}"
+      - --file
+      - "{{ docker_wireguard_compose_file_path }}"
+      - ps
+      - --services
+      - --status
+      - running
+  register: docker_wireguard_validate_compose_ps
+  changed_when: false
+  when: docker_wireguard_enabled | bool
+
+- name: "Validate | Check Docker Compose availability"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - version
+  register: docker_wireguard_validate_compose_version
+  changed_when: false
+  when: docker_wireguard_enabled | bool
+
+- name: "Validate | Inspect running WireGuard container"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - inspect
+      - "{{ docker_wireguard_container_name }}"
+  register: docker_wireguard_validate_container_inspect
+  changed_when: false
+  failed_when: false
+  when: docker_wireguard_enabled | bool
+
+- name: "Validate | Assert Docker WireGuard state"
+  vars:
+    docker_wireguard_expected_compose: "{{ lookup('template', 'docker_wireguard_compose.yml.j2') }}"
+    docker_wireguard_expected_env_file: "{{ lookup('template', 'docker_wireguard_env.j2') }}"
+    docker_wireguard_container_state: >-
+      {{
+        (docker_wireguard_validate_container_inspect.stdout | from_json | first)
+        if docker_wireguard_validate_container_inspect.rc == 0
+        else {}
+      }}
+    docker_wireguard_container_labels: >-
+      {{
+        docker_wireguard_container_state.Config.Labels | default({})
+      }}
+    docker_wireguard_service_unit: >-
+      {{
+        docker_wireguard_docker_service_name
+        if docker_wireguard_docker_service_name.endswith('.service')
+        else (docker_wireguard_docker_service_name ~ '.service')
+      }}
+  ansible.builtin.assert:
+    that:
+      - (docker_wireguard_effective_packages | difference(ansible_facts.packages.keys() | list) | length) == 0
+      - docker_wireguard_service_user in (docker_wireguard_validate_service_user.ansible_facts.getent_passwd | default({}))
+      - docker_wireguard_access_group in (docker_wireguard_validate_access_group.ansible_facts.getent_group | default({}))
+      - (docker_wireguard_validate_compose_file.content | b64decode) == docker_wireguard_expected_compose
+      - (docker_wireguard_validate_env_file.content | b64decode) == docker_wireguard_expected_env_file
+      - docker_wireguard_validate_compose_version.rc == 0
+      - docker_wireguard_docker_service_name in ansible_facts.services or docker_wireguard_service_unit in ansible_facts.services
+      - >-
+        (
+          docker_wireguard_service_unit in ansible_facts.services
+          and ansible_facts.services[docker_wireguard_service_unit].state == 'running'
+        ) or (
+          docker_wireguard_docker_service_name in ansible_facts.services
+          and ansible_facts.services[docker_wireguard_docker_service_name].state == 'running'
+        )
+      - (not docker_wireguard_web_ui_enabled) or (docker_wireguard_validate_proxy_network.rc == 0)
+      - docker_wireguard_validate_container_inspect.rc == 0
+      - docker_wireguard_compose_service_name in (docker_wireguard_validate_compose_ps.stdout_lines | default([]))
+      - >-
+        (not docker_wireguard_web_ui_enabled)
+        or (
+          docker_wireguard_proxy_network_name
+          in (docker_wireguard_container_state.NetworkSettings.Networks | default({}))
+        )
+      - >-
+        (
+          docker_wireguard_container_state.HostConfig.PortBindings[
+            (docker_wireguard_vpn_bind_port | string) ~ '/udp'
+          ][0].HostPort
+        ) == (docker_wireguard_vpn_bind_port | string)
+      - docker_wireguard_container_state.Config.Image == docker_wireguard_image
+      - >-
+        (
+          docker_wireguard_web_ui_enabled
+          and docker_wireguard_container_labels.get('traefik.enable', 'false') == 'true'
+        ) or (
+          (not docker_wireguard_web_ui_enabled)
+          and docker_wireguard_container_labels.get('traefik.enable', 'false') != 'true'
+        )
+      - >-
+        (not docker_wireguard_web_ui_enabled)
+        or (
+          docker_wireguard_container_labels.get('traefik.docker.network', '')
+          == docker_wireguard_proxy_network_name
+        )
+      - >-
+        (not docker_wireguard_web_ui_enabled)
+        or (
+          docker_wireguard_container_labels.get(
+            'traefik.http.services.' ~ docker_wireguard_router_name ~ '.loadbalancer.server.port',
+            ''
+          ) == (docker_wireguard_container_web_port | string)
+        )
+    fail_msg: >-
+      Configured Docker WireGuard state does not match the requested
+      docker_wireguard values
+    quiet: true
+  when: docker_wireguard_enabled | bool
+
+- name: "Validate | Assert WireGuard access-group membership for existing users"
+  ansible.builtin.assert:
+    that:
+      - docker_wireguard_access_group in (item.stdout | trim | split())
+    fail_msg: >-
+      WireGuard access-group membership does not match requested
+      docker_wireguard_access_group_members
+    quiet: true
+  loop: "{{ docker_wireguard_validate_groups.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.item }}"
+  when:
+    - docker_wireguard_enabled | bool
+    - docker_wireguard_manage_access_group_memberships | bool
+    - item.rc == 0

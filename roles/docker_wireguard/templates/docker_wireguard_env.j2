@@ -1,0 +1,18 @@
+{# roles/docker_wireguard/templates/docker_wireguard_env.j2 #}
+{# Template for the managed environment file used by the `docker_wireguard` role. #}
+# Managed by Ansible: docker_wireguard
+# Source: roles/docker_wireguard/templates/docker_wireguard_env.j2
+INIT_ENABLED={{ 'true' if docker_wireguard_init_enabled else 'false' }}
+HOST={{ (docker_wireguard_ui_bind_host if docker_wireguard_web_ui_enabled else '127.0.0.1') | to_json }}
+PORT={{ docker_wireguard_container_web_port }}
+INSECURE={{ 'true' if docker_wireguard_insecure else 'false' }}
+DISABLE_IPV6={{ 'true' if docker_wireguard_disable_ipv6 else 'false' }}
+{% if docker_wireguard_init_enabled %}
+INIT_USERNAME={{ docker_wireguard_admin_username | to_json }}
+INIT_PASSWORD={{ docker_wireguard_admin_password | to_json }}
+INIT_HOST={{ docker_wireguard_host | to_json }}
+INIT_PORT={{ docker_wireguard_vpn_bind_port }}
+{% if docker_wireguard_init_dns | length > 0 %}
+INIT_DNS={{ docker_wireguard_init_dns | join(',') | to_json }}
+{% endif %}
+{% endif %}

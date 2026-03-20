@@ -1,0 +1,7 @@
+---
+# roles/docker_wireguard/meta/main.yml
+# Role metadata for `docker_wireguard`.
+# Leaves dependencies empty because direct and aggregate Docker-role ordering is
+# defined in the related playbook or `roles/docker/tasks/main.yml`.
+
+dependencies: []

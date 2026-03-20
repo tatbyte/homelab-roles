@@ -79,7 +79,8 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/<t
   persistent data under `/srv/<service>/data` so backup and restore behavior
   stays aligned with the repository Docker conventions.
 - The Docker example can also layer downstream services onto the shared
-  Traefik proxy network, so service roles such as `docker_adguard` can expose
-  web UIs through Compose labels while still keeping host data under `/srv`.
+  Traefik proxy network, so service roles such as `docker_adguard` and
+  `docker_wireguard` can expose web UIs through Compose labels while still
+  keeping host data under `/srv`.
 - Example values are intentionally demo-friendly; replace identity, password, and key material before production use.
 - Keep role-specific behavior documentation in each role README so this example guide stays stable as roles are added.

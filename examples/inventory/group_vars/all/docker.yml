@@ -15,3 +15,7 @@ docker_include_traefik: true
 # Traefik-connected downstream service that binds the host DNS port and joins
 # the shared proxy network after Traefik.
 docker_include_adguard: true
+
+# Keep WireGuard enabled in the example lab so the Docker layer also exercises
+# a `wg-easy` dashboard behind Traefik plus a direct UDP VPN listener.
+docker_include_wireguard: true
