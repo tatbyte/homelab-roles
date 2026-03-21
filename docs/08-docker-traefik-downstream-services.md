@@ -59,6 +59,38 @@ networks:
 This keeps each service role self-contained while still reusing the shared
 Traefik reverse proxy.
 
+## Inventory Alias Hostnames
+
+When the inventory defines a per-host `alias`, the example Docker layer can
+use that alias to derive public URLs for Traefik-published dashboards.
+
+Example pattern:
+
+```yaml
+docker_public_host_alias: "{{ alias | default(inventory_hostname) }}"
+docker_public_domain_suffix: "{{ vault_docker_public_domain_suffix }}"
+docker_traefik_dashboard_host: "traefik.{{ docker_public_host_alias }}.{{ docker_public_domain_suffix }}"
+docker_adguard_host: "adguard.{{ docker_public_host_alias }}.{{ docker_public_domain_suffix }}"
+```
+
+This keeps host-specific dashboard names predictable while storing only the
+shared domain suffix in Vault rather than repeating full FQDNs per service.
+
+For a host with `alias=proxy1`, this produces:
+
+- `traefik.proxy1.example.com`
+- `adguard.proxy1.example.com`
+
+If you adopt this pattern, keep DNS aligned with it through either:
+
+- explicit records for each derived hostname
+- a wildcard DNS record plus local rewrite behavior when your service model
+  supports that
+
+The key rule is that the inventory alias pattern and the live DNS resolution
+pattern must match, or the Traefik routers will be configured for names that
+clients cannot resolve.
+
 ## Host Port Versus Container Port
 
 When the service also exposes a non-HTTP port directly on the host, keep the

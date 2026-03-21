@@ -117,12 +117,36 @@ Incorrect:
 vault_bootstrap_login_password=admin
 ```
 
+## Docker URL Pattern
+
+The example Docker inventory no longer keeps full Traefik or AdGuard host
+names in Vault.
+
+Instead, the example derives those URLs from:
+
+- the inventory `alias` host var when present, with `inventory_hostname` as a fallback
+- `vault_docker_public_domain_suffix` from `~/.config/ansible/vault.yml`
+
+Example result for a host with `alias=lab`:
+
+```yaml
+docker_traefik_dashboard_host: "traefik.lab.example.com"
+docker_adguard_host: "adguard.lab.example.com"
+```
+
+Keep the supporting DNS records or rewrite rules aligned with that pattern so
+those derived hostnames resolve correctly.
+
 ## Which Roles Use Vault Well
 
 - Any role input that carries secret-bearing values (password hashes, private
   keys, API tokens, or credentials) is a good Vault candidate.
 - In this repository today, the most common example is hashed password input
   for user management.
+- For the example Docker roles, keep API tokens, basic-auth users, and admin
+  password hashes in Vault. The shared dashboard domain suffix also lives in
+  Vault, while the final Traefik and AdGuard hostnames stay derived in normal
+  vars files from `alias`.
 - Treat role names here as examples, not a fixed list, so new secret-bearing
   roles can adopt Vault without needing this doc rewritten.
 

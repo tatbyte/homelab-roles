@@ -60,6 +60,12 @@
       - docker_adguard_proxy_network_name | trim | length > 0
       - docker_adguard_host is string
       - docker_adguard_host | trim | length > 0
+      - docker_adguard_host == (docker_adguard_host | trim)
+      - docker_adguard_host is not match('.*\\s+.*')
+      - >-
+        docker_adguard_host is match(
+          '^(?=.{1,253}$)(?!-)[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\\.(?!-)[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$'
+        )
       - docker_adguard_router_name is string
       - docker_adguard_router_name | trim | length > 0
       - docker_adguard_tls_certresolver is string
@@ -147,8 +153,8 @@
     fail_msg: >-
       docker_adguard variables must define valid booleans, non-empty strings,
       absolute project and data paths, valid fixed IDs, unique access-group
-      members, non-empty upstream DNS entries, and a non-empty admin password
-      hash
+      members, non-empty upstream DNS entries, a DNS-safe web host, and a
+      non-empty admin password hash
     quiet: true
 
 - name: "Assert | Validate requested filter structure"

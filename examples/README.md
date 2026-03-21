@@ -76,6 +76,13 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/<t
   Traefik proxy network, so roles such as `docker_adguard` and
   `docker_wireguard` can publish web UIs through Compose labels without adding
   more Traefik file-provider config.
+- The Traefik and AdGuard example URLs are derived from the inventory `alias`
+  plus the Vault-backed `vault_docker_public_domain_suffix`, so an inventory host with
+  `alias=proxy1` gets URLs like `traefik.proxy1.example.com` and
+  `adguard.proxy1.example.com`.
+- Make sure your DNS layer resolves those derived hostnames, either with
+  explicit records per host or with a wildcard/rewrite pattern that matches
+  the chosen domain suffix.
 - Replace demo identity, password, and SSH key values before using these patterns outside a lab.
 
 ## Extending

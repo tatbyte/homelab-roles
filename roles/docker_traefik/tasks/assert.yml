@@ -129,6 +129,14 @@
           not (docker_traefik_dashboard_enabled | bool)
         ) or (
           docker_traefik_dashboard_host | trim | length > 0
+          and docker_traefik_dashboard_host == (docker_traefik_dashboard_host | trim)
+          and docker_traefik_dashboard_host is not match('.*\\s+.*')
+          and (
+            docker_traefik_dashboard_host
+            is match(
+              '^(?=.{1,253}$)(?!-)[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\\.(?!-)[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$'
+            )
+          )
           and (docker_traefik_effective_dashboard_basic_auth_users | length) > 0
         )
       - >-
@@ -155,8 +163,8 @@
       docker_traefik variables must define valid booleans, mappings,
       non-empty strings, absolute project and data paths, valid fixed IDs,
       unique access-group members, a non-empty ACME email, non-empty
-      environment entries, valid package lists, and dashboard auth users when
-      the dashboard is enabled
+      environment entries, valid package lists, and a DNS-safe dashboard host
+      plus dashboard auth users when the dashboard is enabled
     quiet: true
 
 - name: "Assert | Validate requested firewall rule structure"
