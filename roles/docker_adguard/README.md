@@ -28,7 +28,7 @@ Traefik-connected proxy-network deployment, role-owned access identities, and
 | `docker_adguard_access_group` | `access_adguard` | no | Role-owned feature access group used for AdGuard host access |
 | `docker_adguard_access_group_members` | de-duplicated `bootstrap_user` / `user_account_name` list with `admin` fallback | no | Existing admin users that should receive AdGuard host access when present |
 | `docker_adguard_proxy_network_name` | `docker_traefik_network_name` or `traefik_proxy` fallback | no | External Docker network name created by Traefik and joined by AdGuard |
-| `docker_adguard_host` | `adguard.example.com` | yes | Host name used by the Traefik router labels for the AdGuard web UI |
+| `docker_adguard_host` | `adguard.example.com` | yes | Host name used by the Traefik router labels for the AdGuard web UI; examples can derive this from the inventory `alias` plus a Vault-backed shared domain suffix |
 | `docker_adguard_admin_user` | `admin` | no | Admin account name written into the managed AdGuard configuration |
 | `docker_adguard_admin_password_hash` | `''` | yes | AdGuard-compatible bcrypt hash for the managed admin account |
 | `docker_adguard_dns_bind_port` | `53` | no | Host DNS port published by the AdGuard container for TCP and UDP |
@@ -71,7 +71,9 @@ docker_adguard_access_group_members: >-
     | list
   }}
 docker_adguard_proxy_network_name: "{{ docker_traefik_network_name }}"
-docker_adguard_host: adguard.example.com
+docker_public_host_alias: "{{ alias | default(inventory_hostname) }}"
+docker_public_domain_suffix: "{{ vault_docker_public_domain_suffix }}"
+docker_adguard_host: "adguard.{{ docker_public_host_alias }}.{{ docker_public_domain_suffix }}"
 docker_adguard_admin_password_hash: "{{ vault_docker_adguard_admin_password_hash }}"
 docker_adguard_dns_bind_port: 5353
 docker_adguard_container_dns_port: 53

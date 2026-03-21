@@ -29,8 +29,9 @@ vault_user_password_hash: "$6$replace-me"
 # Example ACME contact email used by Traefik for Let's Encrypt registration.
 vault_docker_traefik_acme_email: "admin@example.com"
 
-# Example host name used by the Traefik dashboard router.
-vault_docker_traefik_dashboard_host: "traefik.example.com"
+# Shared public domain suffix used to build Traefik and AdGuard dashboard
+# hostnames from the inventory `alias`.
+vault_docker_public_domain_suffix: "example.com"
 
 # Example DNS provider credential used by Traefik for ACME DNS-01.
 vault_docker_traefik_dns_api_token: "replace-me"
@@ -43,9 +44,6 @@ vault_docker_traefik_dashboard_basic_auth_users:
 # ---------------------------------------------------------------------------
 # docker_adguard
 # ---------------------------------------------------------------------------
-
-# Example host name used by the AdGuard web router.
-vault_docker_adguard_host: "adguard.example.com"
 
 # Example AdGuard Home admin password hash.
 # Use an AdGuard-compatible bcrypt hash here.

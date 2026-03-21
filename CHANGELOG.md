@@ -3,6 +3,16 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v2.5.1]
+### Changed
+- Updated the example Docker inventory so Traefik and AdGuard dashboard hostnames are derived from the inventory `alias`, while the shared public domain suffix is loaded from Vault through `vault_docker_public_domain_suffix`.
+
+### Fixed
+- Added assert-phase validation for `docker_traefik_dashboard_host` and `docker_adguard_host` so whitespace, malformed names, and other non-DNS-safe host values fail before Traefik reaches ACME certificate requests.
+
+### Documentation
+- Updated Vault, examples, downstream-service guidance, and Docker role READMEs to document the alias-based dashboard hostname pattern and the DNS requirements that go with it.
+
 ## [v2.5.0]
 ### Added
 - Added standalone `docker_wireguard` with Compose-managed `wg-easy` v15, a Traefik-routed HTTPS dashboard, Vault-backed initial admin setup, optional managed VPN firewall rules, and backup-friendly `/srv/wireguard` host paths.
