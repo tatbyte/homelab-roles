@@ -24,12 +24,57 @@
     comment: "AdGuard service account managed by Ansible"
   when: docker_adguard_enabled | bool
 
+- name: "Config | Resolve effective AdGuard admin credentials"
+  ansible.builtin.set_fact:
+    docker_adguard_effective_admin_user: >-
+      {{
+        docker_adguard_admin_credentials.split(':', 1)[0]
+        if (
+          docker_adguard_admin_credentials | trim | length > 0
+          and ':' in docker_adguard_admin_credentials
+        )
+        else docker_adguard_admin_user
+      }}
+    docker_adguard_effective_admin_password_hash: >-
+      {{
+        docker_adguard_admin_credentials.split(':', 1)[1]
+        if (
+          docker_adguard_admin_credentials | trim | length > 0
+          and ':' in docker_adguard_admin_credentials
+        )
+        else docker_adguard_admin_password_hash
+      }}
+  changed_when: false
+  when: docker_adguard_enabled | bool
+
+- name: "Config | Derive effective firewall rules"
+  ansible.builtin.set_fact:
+    docker_adguard_effective_firewall_rules: >-
+      {{
+        (docker_adguard_firewall_rules | default([]))
+        + (
+            [
+              {
+                'rule': 'allow',
+                'direction': 'in',
+                'port': (docker_adguard_http_bind_port | string),
+                'proto': 'tcp',
+                'comment': 'managed:docker_adguard:http',
+              }
+            ]
+            if docker_adguard_http_bind_port | int > 0
+            else []
+          )
+      }}
+  changed_when: false
+  when: docker_adguard_enabled | bool
+
 - name: "Config | Register firewall rules" # noqa: var-naming[no-role-prefix]
   ansible.builtin.set_fact:
     base_firewall_role_declared_rules: >-
       {{
         (base_firewall_role_declared_rules | default([]))
-        + (docker_adguard_firewall_rules | default([]))
+        + (docker_adguard_effective_firewall_rules | default([]))
       }}
   when:
     - docker_adguard_enabled | bool
@@ -72,14 +117,7 @@
 
 - name: "Config | Stop managed Docker Compose project when AdGuard is disabled"
   ansible.builtin.command:
-    argv:
-      - docker
-      - compose
-      - --project-name
-      - "{{ docker_adguard_compose_project_name }}"
-      - --file
-      - "{{ docker_adguard_compose_file_path }}"
-      - down
+    argv: "{{ docker_adguard_compose_command + ['--project-name', docker_adguard_compose_project_name, '--file', docker_adguard_compose_file_path, 'down'] }}"
   register: docker_adguard_compose_down
   changed_when: docker_adguard_compose_file_stat.stat.exists
   when:
@@ -191,14 +229,14 @@
     docker_adguard_preserved_users: >-
       {{
         docker_adguard_existing_users
-        | rejectattr('name', 'equalto', docker_adguard_admin_user)
+        | rejectattr('name', 'equalto', docker_adguard_effective_admin_user)
         | list
       }}
     docker_adguard_managed_user: >-
       {{
         {
-          'name': docker_adguard_admin_user,
-          'password': docker_adguard_admin_password_hash,
+          'name': docker_adguard_effective_admin_user,
+          'password': docker_adguard_effective_admin_password_hash,
         }
       }}
     docker_adguard_merged_managed_filters: >-
@@ -277,8 +315,8 @@
     docker_adguard_existing_admin_matches: >-
       {{
         docker_adguard_existing_users
-        | selectattr('name', 'equalto', docker_adguard_admin_user)
-        | selectattr('password', 'equalto', docker_adguard_admin_password_hash)
+        | selectattr('name', 'equalto', docker_adguard_effective_admin_user)
+        | selectattr('password', 'equalto', docker_adguard_effective_admin_password_hash)
         | list
       }}
     docker_adguard_normalized_desired_filters: >-
@@ -385,17 +423,20 @@
 
 - name: "Config | Read current Docker Compose running services"
   ansible.builtin.command:
-    argv:
-      - docker
-      - compose
-      - --project-name
-      - "{{ docker_adguard_compose_project_name }}"
-      - --file
-      - "{{ docker_adguard_compose_file_path }}"
-      - ps
-      - --services
-      - --status
-      - running
+    argv: >-
+      {{
+        docker_adguard_compose_command
+        + [
+            '--project-name',
+            docker_adguard_compose_project_name,
+            '--file',
+            docker_adguard_compose_file_path,
+            'ps',
+            '--services',
+            '--status',
+            'running',
+          ]
+      }}
   register: docker_adguard_compose_ps
   changed_when: false
   failed_when: false
@@ -413,6 +454,23 @@
   when: docker_adguard_enabled | bool
 
 - name: "Config | Derive whether Docker Compose reconciliation is required"
+  vars:
+    docker_adguard_live_container: >-
+      {{
+        (docker_adguard_container_inspect.stdout | from_json | first)
+        if docker_adguard_container_inspect.rc == 0
+        else {}
+      }}
+    docker_adguard_live_port_bindings: >-
+      {{
+        docker_adguard_live_container.HostConfig.PortBindings | default({})
+      }}
+    docker_adguard_live_http_bindings: >-
+      {{
+        docker_adguard_live_port_bindings[
+          (docker_adguard_container_web_port | string) ~ '/tcp'
+        ] | default([])
+      }}
   ansible.builtin.set_fact:
     docker_adguard_requires_compose_up: >-
       {{
@@ -424,10 +482,10 @@
           docker_adguard_container_inspect.rc == 0
           and (
             (
-              docker_adguard_container_inspect.stdout | from_json | first
-            ).HostConfig.PortBindings[
+              docker_adguard_live_port_bindings[
               (docker_adguard_container_dns_port | string) ~ '/tcp'
-            ][0].HostPort
+              ] | default([])
+            )[0].HostPort
             != (docker_adguard_dns_bind_port | string)
           )
         )
@@ -435,12 +493,26 @@
           docker_adguard_container_inspect.rc == 0
           and (
             (
-              docker_adguard_container_inspect.stdout | from_json | first
-            ).HostConfig.PortBindings[
+              docker_adguard_live_port_bindings[
               (docker_adguard_container_dns_port | string) ~ '/udp'
-            ][0].HostPort
+              ] | default([])
+            )[0].HostPort
             != (docker_adguard_dns_bind_port | string)
           )
+        )
+        or (
+          docker_adguard_container_inspect.rc == 0
+          and docker_adguard_http_bind_port | int > 0
+          and (
+            (docker_adguard_live_http_bindings | length) == 0
+            or docker_adguard_live_http_bindings[0].HostPort
+               != (docker_adguard_http_bind_port | string)
+          )
+        )
+        or (
+          docker_adguard_container_inspect.rc == 0
+          and docker_adguard_http_bind_port | int == 0
+          and (docker_adguard_live_http_bindings | length) > 0
         )
         or (
           docker_adguard_compose_service_name
@@ -452,16 +524,19 @@
 
 - name: "Config | Reconcile Docker Compose project"
   ansible.builtin.command:
-    argv:
-      - docker
-      - compose
-      - --project-name
-      - "{{ docker_adguard_compose_project_name }}"
-      - --file
-      - "{{ docker_adguard_compose_file_path }}"
-      - up
-      - --detach
-      - --force-recreate
+    argv: >-
+      {{
+        docker_adguard_compose_command
+        + [
+            '--project-name',
+            docker_adguard_compose_project_name,
+            '--file',
+            docker_adguard_compose_file_path,
+            'up',
+            '--detach',
+            '--force-recreate',
+          ]
+      }}
   register: docker_adguard_compose_up
   changed_when: docker_adguard_requires_compose_up | bool
   when:

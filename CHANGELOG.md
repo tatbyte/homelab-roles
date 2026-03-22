@@ -3,6 +3,26 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v2.6.0]
+### Added
+- Added a shared example `secret_sources.yml` switch so example playbooks can consistently opt into controller-local Vault files without hard-coding paths in each playbook.
+- Added `networkmanager` support to `base_dns`, including a managed NetworkManager DNS override and a static `/etc/resolv.conf` template for hosts that do not use `systemd-resolved`.
+- Added optional direct AdGuard HTTP publishing for LAN-only tooling while keeping the main dashboard behind Traefik HTTPS.
+- Added `docker_wireguard_init_host` plus persisted `wg-easy.db` endpoint reconciliation so existing WireGuard installs can converge on updated VPN endpoint host/port values after first boot.
+- Added optional cleanup of conflicting broad `NOPASSWD:ALL` sudo rules in `user_sudo` when converging a managed human admin account back to prompted sudo.
+
+### Changed
+- Reworked the example inventory so aggregate `*_include_*` toggles stay disabled by default in `group_vars/all/`, with example hosts opting into optional child roles through `host_vars/<host>/vars.yml`.
+- Split example role inputs into layer-specific inventory directories under `group_vars/base/`, `group_vars/bootstrap/`, `group_vars/user/`, and `group_vars/docker/`.
+- Updated example recurring-layer playbooks to target the matching inventory groups (`base`, `user`, `docker`) instead of running against every host in `all`.
+- Standardized Docker application roles on configurable Compose commands so hosts can use either `docker compose` or classic `docker-compose`, and documented the one-package-family-per-host convention across the Docker role docs.
+- Extended `base_sshd` to ensure the main `sshd_config` loads `sshd_config.d/*.conf`, making the managed base drop-in effective on older or hand-written SSH daemon configs.
+- Extended `docker_engine` with optional cleanup of conflicting Docker Inc. packages before installing the distro `docker.io` package family.
+
+### Documentation
+- Updated repository, example, Vault, and role documentation to cover the new example inventory layout, shared secret-source workflow, NetworkManager DNS mode, Docker Compose package-family guidance, AdGuard direct HTTP access, WireGuard DuckDNS endpoint handling, and prompted-sudo convergence caveats.
+- Documented `ghcr.io/wg-easy/wg-easy:15.1.0` as the current known-good inventory tag being tested across both the Ubuntu example host and the 32-bit Raspberry Pi host.
+
 ## [v2.5.1]
 ### Changed
 - Updated the example Docker inventory so Traefik and AdGuard dashboard hostnames are derived from the inventory `alias`, while the shared public domain suffix is loaded from Vault through `vault_docker_public_domain_suffix`.
@@ -41,7 +61,7 @@ Documents notable changes across repository structure, roles, examples, and docu
 - Added service user/group behavior for the Docker service roles, aligned engine and Traefik example vars with the new defaults, added a base-firewall managed-rule cleanup guard (`base_firewall_remove_stale_managed_rules: false`), and kept the Docker playbook flow ready to reapply firewall state after Docker service declarations.
 
 ### Documentation
-- Updated Docker role docs and example docs for daemon JSON management, Traefik proxy-network behavior, and standardized external Vault workflow (`~/.config/ansible/vault.yml` + `~/.config/ansible/vault.pass`).
+- Updated Docker role docs and example docs for daemon JSON management, Traefik proxy-network behavior, and the standardized external Vault workflow used by the example lab.
 
 ## [v2.2.0]
 ### Added

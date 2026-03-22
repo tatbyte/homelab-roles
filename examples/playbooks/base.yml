@@ -1,10 +1,12 @@
 ---
 # examples/playbooks/base.yml
 # Base phase playbook for the example lab.
-# Connects as the automation account after bootstrap and applies the `base` role one host at a time for safer reboot-capable runs.
+# Connects as the automation account after bootstrap and applies the `base`
+# role to hosts in the `base` inventory group one host at a time for safer
+# reboot-capable runs.
 
 - name: Apply base role after bootstrap
-  hosts: all
+  hosts: base
   # Run one host at a time so optional reboot-capable roles stay safer.
   serial: 1
   become: true

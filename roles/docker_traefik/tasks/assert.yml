@@ -16,6 +16,8 @@
       - docker_traefik_packages is not string
       - docker_traefik_compose_package_candidates is sequence
       - docker_traefik_compose_package_candidates is not string
+      - docker_traefik_compose_command is sequence
+      - docker_traefik_compose_command is not string
       - docker_traefik_dns_challenge_resolvers is sequence
       - docker_traefik_dns_challenge_resolvers is not string
       - docker_traefik_dashboard_entrypoints is sequence
@@ -79,6 +81,16 @@
           | list
           | length
         ) == (docker_traefik_compose_package_candidates | length)
+      - (docker_traefik_compose_command | length) > 0
+      - (docker_traefik_compose_command | map('string') | list | length) == (docker_traefik_compose_command | length)
+      - >-
+        (
+          docker_traefik_compose_command
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_traefik_compose_command | length)
       - (docker_traefik_dns_challenge_resolvers | map('string') | list | length) == (docker_traefik_dns_challenge_resolvers | length)
       - (docker_traefik_dns_challenge_resolvers | map('trim') | reject('equalto', '') | list | length) == (docker_traefik_dns_challenge_resolvers | length)
       - >-

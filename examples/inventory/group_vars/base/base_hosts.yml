@@ -1,0 +1,36 @@
+---
+# examples/inventory/group_vars/base/base_hosts.yml
+# Shared hosts-file variables for the example lab.
+# Defines the inventory-driven `/etc/hosts` block settings used during the base phase.
+
+# Inventory group used to build the managed `/etc/hosts` block.
+# Keep `all` here so every host in the example lab learns the inventory
+# hostname-to-address mappings for every other managed host.
+base_hosts_inventory_group: all
+# Example group-specific override:
+# Use this when only one inventory group should appear in the managed
+# `/etc/hosts` block instead of every host from `all`.
+# base_hosts_inventory_group: cluster_nodes
+#
+# Example inventory layout:
+# [cluster_nodes]
+# node1 ansible_host=192.168.0.101
+# node2 ansible_host=192.168.0.102
+
+# Optional extra host mappings for devices that are not managed as Ansible
+# inventory hosts. Keep this empty unless you want additional static entries
+# such as NAS, router, printer, or switch names in the managed hosts block.
+base_hosts_manual_entries: []
+# base_hosts_manual_entries:
+#   - ip: 192.168.0.10
+#     names:
+#       - nas
+#   - ip: 192.168.0.20
+#     names:
+#       - router
+#       - gateway
+
+# Marker used around the managed hosts block.
+# Keep the default marker unless you need a host-specific format for an
+# existing `/etc/hosts` management workflow.
+base_hosts_block_marker: "# {mark} ANSIBLE HOSTS"

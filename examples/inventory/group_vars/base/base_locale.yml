@@ -1,0 +1,24 @@
+---
+# examples/inventory/group_vars/base/base_locale.yml
+# Shared locale variables for the example lab.
+# Defines the locale packages, generated locales, and default locale categories enforced during the base phase.
+
+# Package list installed with APT to provide locale tools and locale data on the host.
+base_locale_packages:
+  - locales           # locale support package used by the base_locale role on Debian-family hosts
+
+# Locale assigned to LANG in the system locale configuration.
+base_locale_lang: en_US.UTF-8                # default locale enforced on example hosts
+
+# Locale assigned to LC_ALL when you need to override all locale categories.
+# Leave empty to omit LC_ALL from the managed config file.
+base_locale_lc_all: ""
+
+# Locale assigned to LC_TIME when you want a different time display format.
+# Example: en_GB.UTF-8 gives 24-hour time while keeping LANG at en_US.UTF-8.
+base_locale_lc_time: en_GB.UTF-8            # time-format locale used for 24-hour clock display
+
+# Locale names that must exist before validation completes.
+base_locale_present:
+  - en_US.UTF-8      # default language locale generated and validated by the base_locale role
+  - en_GB.UTF-8      # time-format locale generated so LC_TIME can use 24-hour display

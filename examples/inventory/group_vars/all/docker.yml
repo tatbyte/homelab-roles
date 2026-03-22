@@ -2,23 +2,25 @@
 # examples/inventory/group_vars/all/docker.yml
 # Shared aggregate Docker-role variables for the example lab.
 # Defines the optional aggregate-role toggles for the example Docker layer.
+# Keep these disabled by default here, then enable them per host in
+# `examples/inventory/host_vars/<host>/vars.yml`.
 
 # Keep Docker engine enabled in the example lab so the Docker role installs
 # and configures the engine plus Docker supplementary-group access.
-docker_include_engine: true
+docker_include_engine: false
 
 # Keep the Traefik reverse proxy enabled in the example lab so the Docker role
 # also exercises a Compose-managed service workload.
-docker_include_traefik: true
+docker_include_traefik: false
 
 # Keep AdGuard enabled in the example lab so the Docker layer also exercises a
 # Traefik-connected downstream service that binds the host DNS port and joins
 # the shared proxy network after Traefik.
-docker_include_adguard: true
+docker_include_adguard: false
 
 # Keep WireGuard enabled in the example lab so the Docker layer also exercises
 # a `wg-easy` dashboard behind Traefik plus a direct UDP VPN listener.
-docker_include_wireguard: true
+docker_include_wireguard: false
 
 # Inventory alias used to build per-host dashboard URLs in the example lab.
 # Keep `alias` in `inventory/hosts.ini` when you want host-specific public

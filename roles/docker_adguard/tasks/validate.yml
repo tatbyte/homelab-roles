@@ -13,6 +13,29 @@
   ansible.builtin.import_tasks: derive_effective_packages.yml
   when: docker_adguard_enabled | bool
 
+- name: "Validate | Resolve effective AdGuard admin credentials"
+  ansible.builtin.set_fact:
+    docker_adguard_effective_admin_user: >-
+      {{
+        docker_adguard_admin_credentials.split(':', 1)[0]
+        if (
+          docker_adguard_admin_credentials | trim | length > 0
+          and ':' in docker_adguard_admin_credentials
+        )
+        else docker_adguard_admin_user
+      }}
+    docker_adguard_effective_admin_password_hash: >-
+      {{
+        docker_adguard_admin_credentials.split(':', 1)[1]
+        if (
+          docker_adguard_admin_credentials | trim | length > 0
+          and ':' in docker_adguard_admin_credentials
+        )
+        else docker_adguard_admin_password_hash
+      }}
+  changed_when: false
+  when: docker_adguard_enabled | bool
+
 - name: "Validate | Collect AdGuard service-user entry"
   ansible.builtin.getent:
     database: passwd
@@ -87,27 +110,37 @@
 
 - name: "Validate | Read Docker Compose running services"
   ansible.builtin.command:
+    argv: >-
+      {{
+        docker_adguard_compose_command
+        + [
+            '--project-name',
+            docker_adguard_compose_project_name,
+            '--file',
+            docker_adguard_compose_file_path,
+            'ps',
+            '--services',
+            '--status',
+            'running',
+          ]
+      }}
+  register: docker_adguard_validate_compose_ps
+  changed_when: false
+  when: docker_adguard_enabled | bool
+
+- name: "Validate | Inspect running AdGuard container"
+  ansible.builtin.command:
     argv:
       - docker
-      - compose
-      - --project-name
-      - "{{ docker_adguard_compose_project_name }}"
-      - --file
-      - "{{ docker_adguard_compose_file_path }}"
-      - ps
-      - --services
-      - --status
-      - running
-  register: docker_adguard_validate_compose_ps
+      - inspect
+      - "{{ docker_adguard_container_name }}"
+  register: docker_adguard_validate_container_inspect
   changed_when: false
   when: docker_adguard_enabled | bool
 
 - name: "Validate | Check Docker Compose availability"
   ansible.builtin.command:
-    argv:
-      - docker
-      - compose
-      - version
+    argv: "{{ docker_adguard_compose_command + ['version'] }}"
   register: docker_adguard_validate_compose_version
   changed_when: false
   when: docker_adguard_enabled | bool
@@ -122,8 +155,8 @@
     docker_adguard_live_admin_matches: >-
       {{
         docker_adguard_live_config.users | default([])
-        | selectattr('name', 'equalto', docker_adguard_admin_user)
-        | selectattr('password', 'equalto', docker_adguard_admin_password_hash)
+        | selectattr('name', 'equalto', docker_adguard_effective_admin_user)
+        | selectattr('password', 'equalto', docker_adguard_effective_admin_password_hash)
         | list
       }}
     docker_adguard_desired_filters: >-
@@ -155,6 +188,20 @@
         docker_adguard_docker_service_name
         if docker_adguard_docker_service_name.endswith('.service')
         else (docker_adguard_docker_service_name ~ '.service')
+      }}
+    docker_adguard_live_container: >-
+      {{
+        docker_adguard_validate_container_inspect.stdout | from_json | first
+      }}
+    docker_adguard_live_port_bindings: >-
+      {{
+        docker_adguard_live_container.HostConfig.PortBindings | default({})
+      }}
+    docker_adguard_live_http_bindings: >-
+      {{
+        docker_adguard_live_port_bindings[
+          (docker_adguard_container_web_port | string) ~ '/tcp'
+        ] | default([])
       }}
   ansible.builtin.assert:
     that:
@@ -206,6 +253,28 @@
         )
       - docker_adguard_validate_proxy_network.rc == 0
       - docker_adguard_compose_service_name in (docker_adguard_validate_compose_ps.stdout_lines | default([]))
+      - docker_adguard_validate_container_inspect.rc == 0
+      - >-
+        (
+          docker_adguard_live_port_bindings[
+            (docker_adguard_container_dns_port | string) ~ '/tcp'
+          ][0].HostPort
+        ) == (docker_adguard_dns_bind_port | string)
+      - >-
+        (
+          docker_adguard_live_port_bindings[
+            (docker_adguard_container_dns_port | string) ~ '/udp'
+          ][0].HostPort
+        ) == (docker_adguard_dns_bind_port | string)
+      - >-
+        (
+          docker_adguard_http_bind_port | int > 0
+          and (docker_adguard_live_http_bindings | length) > 0
+          and docker_adguard_live_http_bindings[0].HostPort == (docker_adguard_http_bind_port | string)
+        ) or (
+          docker_adguard_http_bind_port | int == 0
+          and (docker_adguard_live_http_bindings | length) == 0
+        )
     fail_msg: >-
       Configured Docker AdGuard state does not match the requested
       docker_adguard values

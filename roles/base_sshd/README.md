@@ -6,6 +6,7 @@ Explains how the role manages a Debian-family SSH daemon baseline during the bas
 ## Features
 - Installs the OpenSSH server package with APT before SSH daemon configuration
 - Validates the requested SSH package, service, port, login-policy, and user-list inputs
+- Ensures the main `/etc/ssh/sshd_config` loads `/etc/ssh/sshd_config.d/*.conf` so the managed drop-in is effective
 - Manages `/etc/ssh/sshd_config.d/90-base-sshd.conf` as a dedicated base-phase drop-in
 - Validates SSH daemon syntax before the managed service is restarted
 - Ensures the SSH service is enabled and running
@@ -48,6 +49,7 @@ base_sshd_allow_users:
 ```
 
 This role manages a dedicated drop-in under `/etc/ssh/sshd_config.d/` so Debian-family package defaults and other local drop-ins can stay separate from the base-phase policy.
+It also ensures the main `/etc/ssh/sshd_config` contains `Include /etc/ssh/sshd_config.d/*.conf` near the top so the managed drop-in is actually loaded on hosts with older or hand-written SSH daemon configs.
 If `base_sshd_allow_users` is empty, this role does not add an `AllowUsers` line of its own; any existing `AllowUsers` setting from other SSH daemon config files remains outside this role's management.
 If `base_sshd_allow_users` is set, the role validates that those users are allowed after OpenSSH merges all config sources, but it does not require this role to be the only source of `AllowUsers` entries.
 General validation for settings such as `Port`, `PermitRootLogin`, `PasswordAuthentication`, and `PubkeyAuthentication` uses baseline `sshd -T` output rather than trying to validate every external `Match` rule interaction on the host.

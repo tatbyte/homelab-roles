@@ -3,6 +3,27 @@
 # Install phase tasks for the `docker_engine` role.
 # Ensures the requested Docker engine packages are installed with APT when Docker is enabled.
 
+- name: "Install | Remove conflicting Docker packages before engine install"
+  ansible.builtin.apt:
+    name: "{{ docker_engine_conflicting_packages }}"
+    state: absent
+    purge: true
+    autoremove: false
+    update_cache: true
+    cache_valid_time: 3600
+  when:
+    - docker_engine_enabled | bool
+    - docker_engine_cleanup_conflicting_packages | bool
+    - docker_engine_conflicting_packages | length > 0
+
+- name: "Install | Repair package manager state after Docker package cleanup"
+  ansible.builtin.apt:
+    state: fixed
+  when:
+    - docker_engine_enabled | bool
+    - docker_engine_cleanup_conflicting_packages | bool
+    - docker_engine_fix_broken_apt_after_cleanup | bool
+
 - name: "Install | Ensure requested Docker engine packages are present"
   ansible.builtin.apt:
     name: "{{ docker_engine_packages }}"

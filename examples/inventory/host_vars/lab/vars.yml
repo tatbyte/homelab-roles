@@ -1,0 +1,33 @@
+---
+# examples/inventory/host_vars/lab/vars.yml
+# Host-specific variables for the `lab` example host.
+# Enables the optional aggregate-role features exercised by the example stack.
+
+# Optional base layer roles enabled for this host.
+base_include_hosts: true
+base_include_dns: true
+base_include_firewall: true
+base_include_fail2ban: true
+base_include_logging: true
+base_include_updates: true
+base_include_apparmor: true
+base_include_auditd: true
+base_include_upgrade: true
+base_include_needrestart: true
+
+# Optional user layer roles enabled for this host.
+user_include_groups: true
+user_include_sudo: true
+user_include_password: true
+user_include_ssh: true
+user_include_zshell: true
+user_include_profile: true
+user_include_directories: true
+user_include_git: true
+user_include_vim: true
+
+# Optional Docker layer roles enabled for this host.
+docker_include_engine: true
+docker_include_traefik: true
+docker_include_adguard: true
+docker_include_wireguard: true

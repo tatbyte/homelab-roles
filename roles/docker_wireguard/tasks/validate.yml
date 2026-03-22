@@ -70,6 +70,83 @@
   register: docker_wireguard_validate_env_file
   when: docker_wireguard_enabled | bool
 
+- name: "Validate | Stat persisted wg-easy database"
+  ansible.builtin.stat:
+    path: "{{ docker_wireguard_database_path }}"
+  register: docker_wireguard_validate_database_stat
+  changed_when: false
+  when: docker_wireguard_enabled | bool
+
+- name: "Validate | Read persisted WireGuard endpoint settings"
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -c
+      - |
+        import json
+        import sqlite3
+
+        def table_columns(connection, table_name):
+            return {
+                row[1]
+                for row in connection.execute(f"PRAGMA table_info({table_name})")
+            }
+
+        conn = sqlite3.connect("{{ docker_wireguard_database_path }}")
+        conn.row_factory = sqlite3.Row
+        interface_columns = table_columns(conn, "interfaces_table")
+        user_config_columns = table_columns(conn, "user_configs_table")
+        schema_supported = True
+
+        if "user_config_id" in interface_columns:
+            row = conn.execute(
+                """
+                SELECT uc.host, uc.port, uc.id
+                  FROM user_configs_table AS uc
+                  JOIN interfaces_table AS i
+                    ON i.user_config_id = uc.id
+                 WHERE i.name = ?
+                 LIMIT 1
+                """,
+                ("{{ docker_wireguard_interface_name }}",),
+            ).fetchone()
+        elif "interface_id" in user_config_columns:
+            row = conn.execute(
+                """
+                SELECT uc.host, uc.port, uc.id
+                  FROM user_configs_table AS uc
+                  JOIN interfaces_table AS i
+                    ON uc.interface_id = i.id
+                 WHERE i.name = ?
+                 LIMIT 1
+                """,
+                ("{{ docker_wireguard_interface_name }}",),
+            ).fetchone()
+        elif "name" in user_config_columns:
+            row = conn.execute(
+                """
+                SELECT host, port, id
+                  FROM user_configs_table
+                 WHERE name = ?
+                 LIMIT 1
+                """,
+                ("{{ docker_wireguard_interface_name }}",),
+            ).fetchone()
+        else:
+            row = None
+            schema_supported = False
+        print(json.dumps({
+            "host": row["host"] if row else "",
+            "port": row["port"] if row else 0,
+            "id": str(row["id"]) if row and row["id"] is not None else "",
+            "schema_supported": schema_supported,
+        }))
+  register: docker_wireguard_validate_database_endpoint
+  changed_when: false
+  when:
+    - docker_wireguard_enabled | bool
+    - docker_wireguard_validate_database_stat.stat.exists
+
 - name: "Validate | Gather service facts"
   ansible.builtin.service_facts:
   when: docker_wireguard_enabled | bool
@@ -89,27 +166,27 @@
 
 - name: "Validate | Read Docker Compose running services"
   ansible.builtin.command:
-    argv:
-      - docker
-      - compose
-      - --project-name
-      - "{{ docker_wireguard_compose_project_name }}"
-      - --file
-      - "{{ docker_wireguard_compose_file_path }}"
-      - ps
-      - --services
-      - --status
-      - running
+    argv: >-
+      {{
+        docker_wireguard_compose_command
+        + [
+            '--project-name',
+            docker_wireguard_compose_project_name,
+            '--file',
+            docker_wireguard_compose_file_path,
+            'ps',
+            '--services',
+            '--status',
+            'running',
+          ]
+      }}
   register: docker_wireguard_validate_compose_ps
   changed_when: false
   when: docker_wireguard_enabled | bool
 
 - name: "Validate | Check Docker Compose availability"
   ansible.builtin.command:
-    argv:
-      - docker
-      - compose
-      - version
+    argv: "{{ docker_wireguard_compose_command + ['version'] }}"
   register: docker_wireguard_validate_compose_version
   changed_when: false
   when: docker_wireguard_enabled | bool
@@ -199,6 +276,50 @@
             'traefik.http.services.' ~ docker_wireguard_router_name ~ '.loadbalancer.server.port',
             ''
           ) == (docker_wireguard_container_web_port | string)
+        )
+      - >-
+        (not docker_wireguard_validate_database_stat.stat.exists)
+        or (
+          (
+            not (
+              docker_wireguard_validate_database_endpoint.stdout | from_json
+            )['schema_supported']
+          ) or (
+            (
+              (docker_wireguard_validate_database_endpoint.stdout | from_json)['host']
+              | trim
+            ) == (docker_wireguard_init_host | trim)
+          )
+        )
+      - >-
+        (not docker_wireguard_validate_database_stat.stat.exists)
+        or (
+          (
+            not (
+              docker_wireguard_validate_database_endpoint.stdout | from_json
+            )['schema_supported']
+          ) or (
+            (
+              (docker_wireguard_validate_database_endpoint.stdout | from_json)['port']
+              | int
+            ) == (docker_wireguard_vpn_bind_port | int)
+          )
+        )
+      - >-
+        (not docker_wireguard_validate_database_stat.stat.exists)
+        or (
+          (
+            not (
+              docker_wireguard_validate_database_endpoint.stdout | from_json
+            )['schema_supported']
+          ) or (
+            (
+              (docker_wireguard_validate_database_endpoint.stdout | from_json)['id']
+              | string
+              | trim
+              | length
+            ) > 0
+          )
         )
     fail_msg: >-
       Configured Docker WireGuard state does not match the requested

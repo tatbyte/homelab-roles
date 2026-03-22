@@ -1,0 +1,21 @@
+---
+# examples/inventory/group_vars/base/base_auditd.yml
+# Shared audit variables for the example lab.
+# Defines the audit package, service, and minimal configuration baseline enforced during the base phase.
+
+# Package list installed with APT to provide the Linux audit daemon baseline.
+base_auditd_packages:
+  - auditd
+
+# Audit daemon service name managed and validated during the base phase.
+base_auditd_service_name: auditd
+
+# Keep the audit daemon enabled and running in the example lab.
+base_auditd_enabled: true
+
+# Flush audit records asynchronously for a safer balance between durability
+# and runtime overhead in the example lab.
+base_auditd_flush: incremental_async
+
+# Enrich audit records with additional decoded metadata in the example lab.
+base_auditd_log_format: enriched

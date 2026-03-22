@@ -56,6 +56,17 @@ homelab-roles/
 Role details live in each role README under `roles/<role>/README.md`.
 Aggregate execution order is documented by, and sourced from, `roles/base/tasks/main.yml`, `roles/docker/tasks/main.yml`, and `roles/user/tasks/main.yml`.
 
+## Docker Role Conventions
+
+When adding future `docker_*` roles in this repository:
+
+- keep one Docker package family per host; do not mix distro `docker.io` hosts with Docker Inc. plugin packages on the same machine unless that host is intentionally managed that way
+- keep Compose support in the same package family as the Docker engine on that host
+- make the Compose command configurable so a host can use either `docker compose` or classic `docker-compose`
+- keep host-family differences in the consumer inventory `host_vars`, not hardcoded into shared role logic
+- keep host-side persistent state under `/srv/<service>` with data under `/srv/<service>/data` unless a role has a strong reason to differ
+- document any firewall rules, proxy-network assumptions, and first-run initialization caveats in the role README
+
 ## Consume From Another Repo
 Recommended pattern: add this repository to your infra repository (submodule or vendored checkout), then point `roles_path` to `homelab-roles/roles`.
 
@@ -78,19 +89,19 @@ Example infra playbook:
     - role: bootstrap
 
 - name: Apply base setup
-  hosts: all
+  hosts: base
   become: true
   roles:
     - role: base
 
 - name: Apply human admin user setup
-  hosts: all
+  hosts: user
   become: true
   roles:
     - role: user
 
 - name: Apply Docker setup
-  hosts: all
+  hosts: docker
   become: true
   roles:
     - role: docker
@@ -115,6 +126,14 @@ The example bootstrap flow expects its login password to come from
 Vault-backed variables in inventory YAML, and the example Ansible config
 explicitly uses `~/.config/ansible/vault.pass` as the Vault password
 file path.
+The example inventory keeps aggregate layer toggles in
+`examples/inventory/group_vars/all/` and layer-specific role inputs under the
+matching group directories such as `examples/inventory/group_vars/base/`,
+`examples/inventory/group_vars/user/`, `examples/inventory/group_vars/docker/`,
+and `examples/inventory/group_vars/bootstrap/`.
+Optional aggregate `*_include_*` toggles stay disabled by default in
+`group_vars/all/`, and the example host re-enables them through
+`examples/inventory/host_vars/lab/vars.yml`.
 
 Then run the full post-bootstrap stack:
 

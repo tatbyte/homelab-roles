@@ -1,0 +1,10 @@
+{# roles/base_dns/templates/resolv.conf.j2 #}
+{# Template for the managed `/etc/resolv.conf` file in the `base_dns` role. #}
+# Managed by Ansible: base_dns
+# Source: roles/base_dns/templates/resolv.conf.j2
+{% if base_dns_search_domains | length > 0 %}
+search {{ base_dns_search_domains | join(' ') }}
+{% endif %}
+{% for server in base_dns_servers %}
+nameserver {{ server }}
+{% endfor %}

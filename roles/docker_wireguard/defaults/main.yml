@@ -11,9 +11,15 @@ docker_wireguard_packages: []
 docker_wireguard_compose_package_candidates:
   - docker-compose-plugin
   - docker-compose-v2
+  - docker-compose
+docker_wireguard_compose_command:
+  - docker
+  - compose
 
 docker_wireguard_project_dir: /srv/wireguard
 docker_wireguard_data_dir: "{{ docker_wireguard_project_dir }}/data"
+docker_wireguard_database_path: "{{ docker_wireguard_data_dir }}/wg-easy.db"
+docker_wireguard_interface_name: wg0
 docker_wireguard_compose_project_name: wireguard
 docker_wireguard_compose_service_name: wireguard
 docker_wireguard_container_name: wireguard
@@ -41,6 +47,7 @@ docker_wireguard_compose_file_path: "{{ docker_wireguard_project_dir }}/compose.
 docker_wireguard_env_file_path: "{{ docker_wireguard_project_dir }}/wireguard.env"
 docker_wireguard_proxy_network_name: "{{ docker_traefik_network_name | default('traefik_proxy') }}"
 docker_wireguard_host: wireguard.example.com
+docker_wireguard_init_host: "{{ docker_wireguard_host }}"
 docker_wireguard_web_ui_enabled: true
 docker_wireguard_router_name: wireguard
 docker_wireguard_router_entrypoints:

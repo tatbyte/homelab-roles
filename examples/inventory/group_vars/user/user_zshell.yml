@@ -1,0 +1,24 @@
+---
+# examples/inventory/group_vars/user/user_zshell.yml
+# Shared human admin zsh variables for the example lab.
+# Defines the managed zsh login shell and `.zshrc` baseline enforced after
+# account, auth, password, and SSH-access setup through the aggregate `user`
+# role.
+
+# Existing human admin account whose zsh login shell and `.zshrc` are managed.
+user_zshell_user: "{{ user_account_name }}"
+
+# Group owner for the managed `.zshrc` file.
+user_zshell_group: "{{ user_account_primary_group }}"
+
+# Home directory where the managed `.zshrc` file is written.
+user_zshell_home: "{{ user_account_home }}"
+
+# Use zsh in the example lab.
+user_zshell_login_shell: /usr/bin/zsh
+
+# Keep example shell aliases shell-only so Git aliases remain in `user_git`.
+user_zshell_aliases:
+  ll: ls -alF
+  la: ls -A
+  l: ls -CF

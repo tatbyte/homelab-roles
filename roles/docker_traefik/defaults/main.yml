@@ -9,6 +9,10 @@ docker_traefik_packages: []
 docker_traefik_compose_package_candidates:
   - docker-compose-plugin
   - docker-compose-v2
+  - docker-compose
+docker_traefik_compose_command:
+  - docker
+  - compose
 
 docker_traefik_project_dir: /srv/traefik
 docker_traefik_data_dir: "{{ docker_traefik_project_dir }}/data"

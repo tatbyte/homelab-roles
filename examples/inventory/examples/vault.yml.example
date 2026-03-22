@@ -1,7 +1,7 @@
 ---
 # examples/inventory/examples/vault.yml.example
 # Example secret-bearing variables for the local lab.
-# Copy this to `~/.config/ansible/vault.yml` and encrypt it with
+# Copy this to `~/.config/ansible/lab_vault.yml` and encrypt it with
 # `ansible-vault` for local use.
 
 # ---------------------------------------------------------------------------
@@ -45,9 +45,10 @@ vault_docker_traefik_dashboard_basic_auth_users:
 # docker_adguard
 # ---------------------------------------------------------------------------
 
-# Example AdGuard Home admin password hash.
-# Use an AdGuard-compatible bcrypt hash here.
-vault_docker_adguard_admin_password_hash: "$2a$10$replace-me"
+# Example AdGuard Home admin credential in `user:bcrypt-hash` form.
+# Keep the username and AdGuard-compatible bcrypt hash together here, and keep
+# the leading `$` in the bcrypt value.
+vault_docker_adguard_admin_credentials: "admin:$2a$10$replace-me"
 
 # ---------------------------------------------------------------------------
 # docker_wireguard
@@ -56,6 +57,12 @@ vault_docker_adguard_admin_password_hash: "$2a$10$replace-me"
 # Example public host name used by both the wg-easy initial setup and the
 # Traefik router for the WireGuard dashboard.
 vault_docker_wireguard_host: "wireguard.example.com"
+
+# Optional separate VPN endpoint host name passed to wg-easy as `INIT_HOST`.
+# Set this when WireGuard clients should connect through DuckDNS or another
+# DDNS name while the dashboard stays on `vault_docker_wireguard_host`.
+# Omit this key entirely to reuse `vault_docker_wireguard_host`.
+vault_docker_wireguard_duckdns_host: "myhomelabvpn.duckdns.org"
 
 # Example initial admin username for the wg-easy dashboard.
 vault_docker_wireguard_admin_username: "admin"

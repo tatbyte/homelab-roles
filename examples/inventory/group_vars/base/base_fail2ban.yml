@@ -1,0 +1,24 @@
+---
+# examples/inventory/group_vars/base/base_fail2ban.yml
+# Shared Fail2ban variables for the example lab.
+# Defines the Fail2ban package, service, and SSH jail baseline enforced during the base phase.
+
+# Package list installed with APT to provide the Fail2ban baseline.
+base_fail2ban_packages:
+  - fail2ban
+
+# Fail2ban service name managed and validated during the base phase.
+base_fail2ban_service_name: fail2ban
+
+# Use the systemd backend in the example lab so the SSH jail reads the
+# journal directly on modern Debian-family hosts.
+base_fail2ban_backend: systemd
+
+# Ban repeated SSH failures for 10 minutes in the example lab.
+base_fail2ban_bantime: 10m
+
+# Count retries that occur within a 10-minute window.
+base_fail2ban_findtime: 10m
+
+# Ban after 5 failed attempts in the example lab.
+base_fail2ban_maxretry: 5

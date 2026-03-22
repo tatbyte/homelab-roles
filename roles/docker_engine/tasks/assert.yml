@@ -9,6 +9,10 @@
       - docker_engine_enabled is boolean
       - docker_engine_packages is sequence
       - docker_engine_packages is not string
+      - docker_engine_cleanup_conflicting_packages is boolean
+      - docker_engine_conflicting_packages is sequence
+      - docker_engine_conflicting_packages is not string
+      - docker_engine_fix_broken_apt_after_cleanup is boolean
       - docker_engine_service_name is string
       - docker_engine_service_name | trim | length > 0
       - docker_engine_group_name is string
@@ -29,6 +33,9 @@
       - docker_engine_user_group_memberships is not string
       - (docker_engine_packages | map('string') | list | length) == (docker_engine_packages | length)
       - (docker_engine_packages | map('trim') | reject('equalto', '') | list | length) == (docker_engine_packages | length)
+      - (docker_engine_conflicting_packages | map('string') | list | length) == (docker_engine_conflicting_packages | length)
+      - (docker_engine_conflicting_packages | map('trim') | reject('equalto', '') | list | length) == (docker_engine_conflicting_packages | length)
+      - (docker_engine_conflicting_packages | unique | list | length) == (docker_engine_conflicting_packages | length)
       - >-
         (
           docker_engine_log_opts | dict2items
@@ -60,11 +67,13 @@
         )
     fail_msg: >-
       docker_engine_enabled and docker_engine_manage_group_memberships must be booleans,
-      docker_engine_packages and docker_engine_group_members must be lists of unique
-      non-empty strings, daemon config paths must be absolute, Docker daemon log
-      settings must be non-empty mappings, docker_engine_service_name and
-      docker_engine_group_name must be non-empty strings, and
-      docker_engine_user_group_memberships must be a list of mappings
+      docker_engine_packages, docker_engine_conflicting_packages, and
+      docker_engine_group_members must be lists of unique non-empty strings,
+      daemon config paths must be absolute, Docker daemon log settings must be
+      non-empty mappings, docker_engine_service_name and
+      docker_engine_group_name must be non-empty strings, cleanup toggles must
+      be booleans, and docker_engine_user_group_memberships must be a list of
+      mappings
     quiet: true
 
 - name: "Assert | Validate requested user_groups registration structure"
