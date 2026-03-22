@@ -3,6 +3,18 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v2.6.1]
+### Changed
+- Extended `base_dns` with a pre-config detect phase that inspects `/etc/resolv.conf`, `systemd-resolved`, `NetworkManager`, `resolvectl`, and `nmcli`, then fails early on resolver-mode mismatch or ambiguous DNS ownership.
+- Extended `base_dns` so mixed-but-convergeable DNS states can continue to config, where the role now enforces a single DNS owner for the requested resolver mode.
+
+### Fixed
+- Fixed `base_dns` `networkmanager` mode so reruns keep a regular `/etc/resolv.conf` in place and stop reporting a forced change on every playbook run.
+- Fixed `base_dns` `networkmanager` mode by stopping/disabling conflicting `systemd-resolved`, and fixed `systemd_resolved` mode by removing the role-managed NetworkManager DNS override when present.
+
+### Documentation
+- Updated `base_dns` documentation and example inventory comments to show the manual resolver inspection workflow, supported `base_dns_resolver_mode` values, the one-DNS-owner rule for each host, and the new conflicting-owner cleanup behavior.
+
 ## [v2.6.0]
 ### Added
 - Added a shared example `secret_sources.yml` switch so example playbooks can consistently opt into controller-local Vault files without hard-coding paths in each playbook.

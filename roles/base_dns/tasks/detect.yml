@@ -1,0 +1,239 @@
+---
+# roles/base_dns/tasks/detect.yml
+# Pre-config detection tasks for the `base_dns` role.
+# Inspects the current resolver stack and fails early when the requested
+# resolver mode does not match a clearly detected single-owner DNS state.
+# Mixed but convergeable DNS states are allowed to continue so the role can
+# clean up the conflicting owner during config.
+
+- name: "Detect | Read /etc/resolv.conf state"
+  ansible.builtin.stat:
+    path: "{{ base_dns_resolv_conf_path }}"
+    follow: false
+  register: base_dns_detect_resolv_conf
+
+- name: "Detect | Read managed NetworkManager override state"
+  ansible.builtin.stat:
+    path: "{{ base_dns_networkmanager_conf_path }}"
+  register: base_dns_detect_networkmanager_conf
+
+- name: "Detect | Gather service facts"
+  ansible.builtin.service_facts:
+
+- name: "Detect | Probe resolvectl status"
+  ansible.builtin.command: resolvectl status
+  register: base_dns_detect_resolvectl_status
+  changed_when: false
+  failed_when: false
+
+- name: "Detect | Probe nmcli device state"
+  ansible.builtin.command: nmcli device show
+  register: base_dns_detect_nmcli_device_show
+  changed_when: false
+  failed_when: false
+
+- name: "Detect | Derive base resolver state facts"
+  vars:
+    base_dns_systemd_resolved_unit: systemd-resolved.service
+    base_dns_networkmanager_unit: NetworkManager.service
+    base_dns_networkmanager_resolv_conf_sources:
+      - /run/NetworkManager/resolv.conf
+      - /var/run/NetworkManager/resolv.conf
+      - /run/NetworkManager/no-stub-resolv.conf
+      - /var/run/NetworkManager/no-stub-resolv.conf
+  ansible.builtin.set_fact:
+    base_dns_detect_resolv_conf_description: >-
+      {% if not base_dns_detect_resolv_conf.stat.exists %}
+      missing
+      {% elif base_dns_detect_resolv_conf.stat.islnk | default(false) %}
+      {% if base_dns_detect_resolv_conf.stat.lnk_source == '/run/systemd/resolve/stub-resolv.conf' %}
+      a symlink to /run/systemd/resolve/stub-resolv.conf
+      {% else %}
+      a symlink to {{ base_dns_detect_resolv_conf.stat.lnk_source }}
+      {% endif %}
+      {% elif base_dns_detect_resolv_conf.stat.isreg | default(false) %}
+      a regular file
+      {% else %}
+      present but not a regular file or symlink
+      {% endif %}
+    base_dns_detect_systemd_resolved_active: >-
+      {{
+        base_dns_systemd_resolved_unit in ansible_facts.services
+        and ansible_facts.services[base_dns_systemd_resolved_unit].state
+          == 'running'
+      }}
+    base_dns_detect_networkmanager_active: >-
+      {{
+        base_dns_networkmanager_unit in ansible_facts.services
+        and ansible_facts.services[base_dns_networkmanager_unit].state
+          == 'running'
+      }}
+    base_dns_detect_resolvectl_ok: >-
+      {{ base_dns_detect_resolvectl_status.rc == 0 }}
+    base_dns_detect_nmcli_has_dns: >-
+      {{
+        base_dns_detect_nmcli_device_show.rc == 0
+        and (
+          (
+            base_dns_detect_nmcli_device_show.stdout_lines
+            | select('match', '^IP4\\.DNS')
+            | list
+            | length
+          ) > 0
+          or
+          (
+            base_dns_detect_nmcli_device_show.stdout_lines
+            | select('match', '^IP6\\.DNS')
+            | list
+            | length
+          ) > 0
+        )
+      }}
+    base_dns_detect_networkmanager_resolv_conf_compatible: >-
+      {{
+        (base_dns_detect_resolv_conf.stat.isreg | default(false))
+        or
+        (
+          (base_dns_detect_resolv_conf.stat.islnk | default(false))
+          and (
+            base_dns_detect_resolv_conf.stat.lnk_source
+            in base_dns_networkmanager_resolv_conf_sources
+          )
+        )
+      }}
+
+- name: "Detect | Derive resolver ownership signals"
+  ansible.builtin.set_fact:
+    base_dns_detect_systemd_resolved_signals: >-
+      {{
+        base_dns_detect_systemd_resolved_active
+        and base_dns_detect_resolvectl_ok
+      }}
+    base_dns_detect_networkmanager_signals: >-
+      {{
+        base_dns_detect_networkmanager_active
+        and (
+          base_dns_detect_networkmanager_resolv_conf_compatible
+          or base_dns_detect_networkmanager_conf.stat.exists
+          or base_dns_detect_nmcli_has_dns
+        )
+      }}
+
+- name: "Detect | Derive detected resolver mode"
+  ansible.builtin.set_fact:
+    base_dns_detected_resolver_mode: >-
+      {{
+        'systemd_resolved'
+        if (
+          base_dns_detect_systemd_resolved_signals
+          and not base_dns_detect_networkmanager_signals
+        )
+        else (
+          'networkmanager'
+          if (
+            base_dns_detect_networkmanager_signals
+            and not base_dns_detect_systemd_resolved_signals
+          )
+          else (
+            'mixed'
+            if (
+              base_dns_detect_systemd_resolved_signals
+              and base_dns_detect_networkmanager_signals
+            )
+            else 'unknown'
+          )
+        )
+      }}
+
+- name: "Detect | Note mixed resolver ownership that will be converged"
+  ansible.builtin.debug:
+    msg: >-
+      Detected mixed DNS ownership on this host. The requested
+      base_dns_resolver_mode={{ base_dns_resolver_mode }} will be used to
+      converge the host to one DNS owner during config.
+  when: base_dns_detected_resolver_mode == 'mixed'
+
+- name: "Detect | Fail when resolver ownership is ambiguous"
+  vars:
+    base_dns_detect_resolvectl_summary: >-
+      {{
+        'succeeded'
+        if base_dns_detect_resolvectl_ok
+        else 'is unavailable or failed'
+      }}
+    base_dns_detect_nmcli_summary: >-
+      {{
+        'reported DNS values'
+        if base_dns_detect_nmcli_has_dns
+        else (
+          'ran without DNS values'
+          if base_dns_detect_nmcli_device_show.rc == 0
+          else 'is unavailable or failed'
+        )
+      }}
+  ansible.builtin.fail:
+    msg: |
+      Requested base_dns_resolver_mode={{ base_dns_resolver_mode }}
+
+      Detected host state:
+      - /etc/resolv.conf is {{ base_dns_detect_resolv_conf_description }}
+      - systemd-resolved is {{ 'active' if base_dns_detect_systemd_resolved_active else 'inactive or absent' }}
+      - NetworkManager is {{ 'active' if base_dns_detect_networkmanager_active else 'inactive or absent' }}
+      - resolvectl status {{ base_dns_detect_resolvectl_summary }}
+      - nmcli device show {{ base_dns_detect_nmcli_summary }}
+      - {{ base_dns_networkmanager_conf_path }} is {{ 'present' if base_dns_detect_networkmanager_conf.stat.exists else 'absent' }}
+
+      This host does not clearly match one supported base_dns resolver mode.
+      Inspect the host manually before setting base_dns_resolver_mode.
+
+      Suggested checks:
+      - ls -l /etc/resolv.conf
+      - systemctl is-active systemd-resolved
+      - systemctl is-active NetworkManager
+      - nmcli device show <iface> | grep -i 'IP4.DNS\|IP6.DNS'
+      - resolvectl status
+  when: base_dns_detected_resolver_mode == 'unknown'
+
+- name: "Detect | Fail on resolver-mode mismatch"
+  vars:
+    base_dns_detect_expected_mode_label: >-
+      {{
+        'systemd-resolved'
+        if base_dns_detected_resolver_mode == 'systemd_resolved'
+        else 'NetworkManager-backed'
+      }}
+    base_dns_detect_resolvectl_summary: >-
+      {{
+        'succeeded'
+        if base_dns_detect_resolvectl_ok
+        else 'is unavailable or failed'
+      }}
+    base_dns_detect_nmcli_summary: >-
+      {{
+        'reported DNS values'
+        if base_dns_detect_nmcli_has_dns
+        else (
+          'ran without DNS values'
+          if base_dns_detect_nmcli_device_show.rc == 0
+          else 'is unavailable or failed'
+        )
+      }}
+  ansible.builtin.fail:
+    msg: |
+      Requested base_dns_resolver_mode={{ base_dns_resolver_mode }}
+
+      Detected host state:
+      - /etc/resolv.conf is {{ base_dns_detect_resolv_conf_description }}
+      - systemd-resolved is {{ 'active' if base_dns_detect_systemd_resolved_active else 'inactive or absent' }}
+      - NetworkManager is {{ 'active' if base_dns_detect_networkmanager_active else 'inactive or absent' }}
+      - resolvectl status {{ base_dns_detect_resolvectl_summary }}
+      - nmcli device show {{ base_dns_detect_nmcli_summary }}
+      - {{ base_dns_networkmanager_conf_path }} is {{ 'present' if base_dns_detect_networkmanager_conf.stat.exists else 'absent' }}
+
+      This host appears to be using the {{ base_dns_detect_expected_mode_label }} resolver stack.
+
+      Use:
+        base_dns_resolver_mode: {{ base_dns_detected_resolver_mode }}
+  when:
+    - base_dns_detected_resolver_mode in ['systemd_resolved', 'networkmanager']
+    - base_dns_resolver_mode != base_dns_detected_resolver_mode

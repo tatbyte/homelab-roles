@@ -4,17 +4,25 @@
 # Defines the resolver mode, DNS servers, and optional search domains enforced during the base phase.
 
 # Resolver backend managed during the base phase.
+# Choose this manually after checking the host:
+#   ls -l /etc/resolv.conf
+#   systemctl is-active systemd-resolved
+#   systemctl is-active NetworkManager
+#   nmcli device show <iface> | grep -i 'IP4.DNS\|IP6.DNS'
+#   resolvectl status
+# Example choices:
+#   base_dns_resolver_mode: systemd_resolved
+#   base_dns_resolver_mode: networkmanager
 # Keep the default `systemd_resolved` mode in the example lab so DNS state
 # stays explicit through /etc/systemd/resolved.conf on Debian-family hosts.
-# Hosts that use NetworkManager can override this per host to
-# `networkmanager`.
+# The role converges the host to one DNS owner:
+# `systemd_resolved` removes the role-managed NetworkManager DNS override,
+# while `networkmanager` stops/disables `systemd-resolved`.
+# Hosts that use NetworkManager can override only `base_dns_resolver_mode`
+# per host to `networkmanager`.
 # Example host_vars override:
 # base_dns_resolver_mode: networkmanager
-# base_dns_service_name: NetworkManager
 base_dns_resolver_mode: systemd_resolved
-
-# Resolver service name enabled and validated during the base phase.
-base_dns_service_name: systemd-resolved
 
 # Global DNS servers written to /etc/systemd/resolved.conf.
 # Replace these with your router, Pi-hole, AdGuard Home, or other local
@@ -26,6 +34,8 @@ base_dns_servers:
 # Optional search domains written to /etc/systemd/resolved.conf.
 # Keep this empty unless you want short-name lookups such as `nas` to expand
 # through a shared homelab suffix like `lab.home.arpa`.
+# Keep one DNS owner per host. The role will clean up the conflicting owner
+# for the selected resolver mode.
 base_dns_search_domains: []
 # base_dns_search_domains:
 #   - lab.home.arpa

@@ -15,6 +15,12 @@
   register: base_dns_networkmanager_config_file
   when: base_dns_resolver_mode == 'networkmanager'
 
+- name: "Validate | Read NetworkManager DNS override state"
+  ansible.builtin.stat:
+    path: "{{ base_dns_networkmanager_conf_path }}"
+  register: base_dns_networkmanager_conf
+  when: base_dns_resolver_mode == 'systemd_resolved'
+
 - name: "Validate | Read /etc/resolv.conf link state"
   ansible.builtin.stat:
     path: "{{ base_dns_resolv_conf_path }}"
@@ -55,6 +61,7 @@
   ansible.builtin.assert:
     that:
       - (base_dns_config_file.content | b64decode) == base_dns_expected_config
+      - not base_dns_networkmanager_conf.stat.exists
       - base_dns_resolv_conf.stat.exists
       - base_dns_resolv_conf.stat.islnk
       - base_dns_resolv_conf.stat.lnk_source == '/run/systemd/resolve/stub-resolv.conf'
@@ -85,6 +92,16 @@
       - base_dns_service_unit in ansible_facts.services
       - ansible_facts.services[base_dns_service_unit].status == 'enabled'
       - ansible_facts.services[base_dns_service_unit].state == 'running'
+      - >-
+        (
+          'systemd-resolved.service' not in ansible_facts.services
+        )
+        or ansible_facts.services['systemd-resolved.service'].status != 'enabled'
+      - >-
+        (
+          'systemd-resolved.service' not in ansible_facts.services
+        )
+        or ansible_facts.services['systemd-resolved.service'].state != 'running'
     fail_msg: >-
       Configured NetworkManager DNS state does not match the requested
       base_dns values

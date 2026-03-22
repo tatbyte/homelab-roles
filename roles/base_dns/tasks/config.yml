@@ -22,6 +22,13 @@
     follow: false
   when: base_dns_resolver_mode == 'systemd_resolved'
 
+- name: "Config | Remove managed NetworkManager DNS override for systemd-resolved mode"
+  ansible.builtin.file:
+    path: "{{ base_dns_networkmanager_conf_path }}"
+    state: absent
+  register: base_dns_systemd_removed_networkmanager_override
+  when: base_dns_resolver_mode == 'systemd_resolved'
+
 - name: "Config | Ensure NetworkManager resolver drop-in directory exists"
   ansible.builtin.file:
     path: "{{ base_dns_networkmanager_conf_dir }}"
@@ -41,11 +48,21 @@
   notify: Restart DNS resolver service
   when: base_dns_resolver_mode == 'networkmanager'
 
-- name: "Config | Remove existing /etc/resolv.conf entry before static render"
+- name: "Config | Read /etc/resolv.conf state before static render"
+  ansible.builtin.stat:
+    path: "{{ base_dns_resolv_conf_path }}"
+    follow: false
+  register: base_dns_networkmanager_resolv_conf
+  when: base_dns_resolver_mode == 'networkmanager'
+
+- name: "Config | Remove existing /etc/resolv.conf symlink or special entry before static render"
   ansible.builtin.file:
     path: "{{ base_dns_resolv_conf_path }}"
     state: absent
-  when: base_dns_resolver_mode == 'networkmanager'
+  when:
+    - base_dns_resolver_mode == 'networkmanager'
+    - base_dns_networkmanager_resolv_conf.stat.exists
+    - not (base_dns_networkmanager_resolv_conf.stat.isreg | default(false))
 
 - name: "Config | Render static /etc/resolv.conf for NetworkManager mode"
   ansible.builtin.template:
@@ -66,3 +83,36 @@
 - name: "Config | Flush DNS resolver handler"
   ansible.builtin.meta: flush_handlers
   when: base_dns_resolver_mode in ['systemd_resolved', 'networkmanager']
+
+- name: "Config | Restart NetworkManager after removing managed DNS override"
+  ansible.builtin.service:
+    name: NetworkManager
+    state: restarted
+  when:
+    - base_dns_resolver_mode == 'systemd_resolved'
+    - base_dns_systemd_removed_networkmanager_override.changed
+    - "'NetworkManager.service' in ansible_facts.services"
+    - ansible_facts.services['NetworkManager.service'].state == 'running'
+
+- name: "Config | Probe systemd-resolved unit load state for NetworkManager mode"
+  ansible.builtin.command:
+    argv:
+      - systemctl
+      - show
+      - --property=LoadState
+      - --value
+      - systemd-resolved.service
+  register: base_dns_systemd_resolved_load_state
+  changed_when: false
+  failed_when: false
+  when: base_dns_resolver_mode == 'networkmanager'
+
+- name: "Config | Disable conflicting systemd-resolved service for NetworkManager mode"
+  ansible.builtin.systemd_service:
+    name: systemd-resolved.service
+    enabled: false
+    state: stopped
+  when:
+    - base_dns_resolver_mode == 'networkmanager'
+    - base_dns_systemd_resolved_load_state.rc == 0
+    - base_dns_systemd_resolved_load_state.stdout | trim != 'not-found'
