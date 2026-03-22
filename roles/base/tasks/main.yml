@@ -52,7 +52,7 @@
     apply:
       tags: [base, base_dns]
   when: base_include_dns | default(false)
-  tags: [base, base_dns, assert, install, config, validate, base_dns_assert, base_dns_install, base_dns_config, base_dns_validate]
+  tags: [base, base_dns, assert, install, config, validate, base_dns_assert, base_dns_detect, base_dns_install, base_dns_config, base_dns_validate]
 
 - name: "Base | Include base_sudo role"
   ansible.builtin.include_role:

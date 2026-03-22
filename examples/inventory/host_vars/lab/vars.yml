@@ -15,6 +15,10 @@ base_include_auditd: true
 base_include_upgrade: true
 base_include_needrestart: true
 
+# This example host keeps the shared `systemd_resolved` DNS default.
+# The role removes any old role-managed NetworkManager DNS override here so
+# `systemd-resolved` remains the single DNS owner for the example lab host.
+
 # Optional user layer roles enabled for this host.
 user_include_groups: true
 user_include_sudo: true

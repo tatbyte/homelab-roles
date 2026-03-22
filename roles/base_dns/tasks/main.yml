@@ -1,11 +1,16 @@
 ---
 # roles/base_dns/tasks/main.yml
 # Task entrypoint for the `base_dns` role.
-# Imports the assert, install, config, and validate phase files in order.
+# Imports the assert, detect, install, config, and validate phase files in
+# order.
 
 - name: Assert
   ansible.builtin.import_tasks: assert.yml
   tags: [assert, base_dns, base_dns_assert]
+
+- name: Detect
+  ansible.builtin.import_tasks: detect.yml
+  tags: [assert, install, config, validate, base_dns, base_dns_assert, base_dns_detect, base_dns_install, base_dns_config, base_dns_validate]
 
 - name: Install
   ansible.builtin.import_tasks: install.yml
