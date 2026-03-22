@@ -5,6 +5,7 @@ Explains how the role installs and validates Docker engine plus daemon defaults 
 
 ## Features
 - Installs requested Docker engine packages with APT
+- Optionally removes conflicting Docker Inc. packages first when converging to the distro `docker.io` package family
 - Renders `/etc/docker/daemon.json` from role-managed inputs
 - Applies default Docker log-driver and log-rotation settings for all containers
 - Ensures the Docker service is enabled and running
@@ -19,6 +20,9 @@ Explains how the role installs and validates Docker engine plus daemon defaults 
 |----------|---------|----------|-------------|
 | `docker_engine_enabled` | `true` | no | Enables Docker engine package/service/group management in this role |
 | `docker_engine_packages` | `['docker.io']` | no | Docker engine package list installed with APT |
+| `docker_engine_cleanup_conflicting_packages` | `{{ 'docker.io' in docker_engine_packages }}` | no | When true, purge known conflicting Docker Inc. packages before installing the requested engine packages |
+| `docker_engine_conflicting_packages` | `['containerd.io', 'docker-ce', 'docker-ce-cli', 'docker-ce-rootless-extras', 'docker-buildx-plugin', 'docker-compose-plugin']` | no | Package names removed first when the role cleans up conflicting Docker Inc. packages |
+| `docker_engine_fix_broken_apt_after_cleanup` | `true` | no | Whether to run `apt` in `fixed` mode after conflicting-package cleanup before installing the requested engine packages |
 | `docker_engine_service_name` | `docker` | no | Docker service name to enable and start |
 | `docker_engine_group_name` | `docker` | no | Supplementary group used for non-root Docker access |
 | `docker_engine_daemon_config_path` | `/etc/docker/daemon.json` | no | Path of the managed Docker daemon configuration file |
@@ -53,6 +57,7 @@ Example variables:
 docker_engine_enabled: true
 docker_engine_packages:
   - docker.io
+docker_engine_cleanup_conflicting_packages: true
 docker_engine_log_driver: json-file
 docker_engine_log_opts:
   max-size: "10m"
@@ -69,6 +74,20 @@ docker_engine_group_members: >-
     | list
   }}
 ```
+
+## Package Family Rule
+
+Keep one Docker package family per host.
+If a host uses distro Docker packages such as `docker.io`, keep the related
+Compose support in the distro family too.
+Do not mix that with Docker Inc. packages such as `docker-ce`,
+`containerd.io`, `docker-buildx-plugin`, or `docker-compose-plugin` unless the
+host is intentionally managed as a Docker Inc. package host.
+
+This role defaults to the distro `docker.io` family and can purge the known
+Docker Inc. conflicts before install so migrations converge cleanly.
+Future Docker application roles should follow the same rule and avoid assuming
+that every host uses the same package family.
 
 ## Dependencies
 None

@@ -1,0 +1,5 @@
+secret:
+  ignored_matches:
+    - match: 68015b7c22ad8bc5ae8635db0a0ed1fef30b9521b4c5758fca8ab5c5f30069dd
+      name: user_sudo false positive
+version: 2

@@ -9,15 +9,27 @@
   register: base_dns_config_file
   when: base_dns_resolver_mode == 'systemd_resolved'
 
+- name: "Validate | Read NetworkManager DNS override"
+  ansible.builtin.slurp:
+    path: "{{ base_dns_networkmanager_conf_path }}"
+  register: base_dns_networkmanager_config_file
+  when: base_dns_resolver_mode == 'networkmanager'
+
 - name: "Validate | Read /etc/resolv.conf link state"
   ansible.builtin.stat:
-    path: /etc/resolv.conf
+    path: "{{ base_dns_resolv_conf_path }}"
   register: base_dns_resolv_conf
-  when: base_dns_resolver_mode == 'systemd_resolved'
+  when: base_dns_resolver_mode in ['systemd_resolved', 'networkmanager']
+
+- name: "Validate | Read /etc/resolv.conf contents for NetworkManager mode"
+  ansible.builtin.slurp:
+    path: "{{ base_dns_resolv_conf_path }}"
+  register: base_dns_resolv_conf_file
+  when: base_dns_resolver_mode == 'networkmanager'
 
 - name: "Validate | Gather service facts"
   ansible.builtin.service_facts:
-  when: base_dns_resolver_mode == 'systemd_resolved'
+  when: base_dns_resolver_mode in ['systemd_resolved', 'networkmanager']
 
 - name: "Validate | Read active DNS server state"
   ansible.builtin.command: resolvectl dns
@@ -54,6 +66,31 @@
     quiet: true
   when: base_dns_resolver_mode == 'systemd_resolved'
 
+- name: "Validate | Assert NetworkManager resolver configuration state"
+  vars:
+    base_dns_expected_networkmanager_config: "{{ lookup('template', 'networkmanager-base-dns.conf.j2') }}"
+    base_dns_expected_resolv_conf: "{{ lookup('template', 'resolv.conf.j2') }}"
+    base_dns_service_unit: >-
+      {{
+        base_dns_service_name
+        if base_dns_service_name.endswith('.service')
+        else (base_dns_service_name ~ '.service')
+      }}
+  ansible.builtin.assert:
+    that:
+      - (base_dns_networkmanager_config_file.content | b64decode) == base_dns_expected_networkmanager_config
+      - base_dns_resolv_conf.stat.exists
+      - not base_dns_resolv_conf.stat.islnk
+      - (base_dns_resolv_conf_file.content | b64decode) == base_dns_expected_resolv_conf
+      - base_dns_service_unit in ansible_facts.services
+      - ansible_facts.services[base_dns_service_unit].status == 'enabled'
+      - ansible_facts.services[base_dns_service_unit].state == 'running'
+    fail_msg: >-
+      Configured NetworkManager DNS state does not match the requested
+      base_dns values
+    quiet: true
+  when: base_dns_resolver_mode == 'networkmanager'
+
 - name: "Validate | Assert active DNS servers"
   ansible.builtin.assert:
     that:
@@ -69,6 +106,22 @@
   loop_control:
     label: "{{ item }}"
   when: base_dns_resolver_mode == 'systemd_resolved'
+
+- name: "Validate | Assert configured DNS servers in static /etc/resolv.conf"
+  ansible.builtin.assert:
+    that:
+      - >-
+        (base_dns_resolv_conf_file.content | b64decode) is search(
+          '(?m)^nameserver\\s+' ~ (item | regex_escape) ~ '$'
+        )
+    fail_msg: >-
+      Static resolv.conf does not include the requested base_dns server
+      {{ item }}
+    quiet: true
+  loop: "{{ base_dns_servers }}"
+  loop_control:
+    label: "{{ item }}"
+  when: base_dns_resolver_mode == 'networkmanager'
 
 - name: "Validate | Assert active DNS search domains"
   ansible.builtin.assert:
@@ -87,3 +140,26 @@
   when:
     - base_dns_resolver_mode == 'systemd_resolved'
     - base_dns_search_domains | length > 0
+
+- name: "Validate | Assert configured DNS search domains in static /etc/resolv.conf"
+  vars:
+    base_dns_resolv_conf_text: "{{ base_dns_resolv_conf_file.content | b64decode }}"
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          base_dns_search_domains | length == 0
+          and (base_dns_resolv_conf_text is not search('(?m)^search\\s+'))
+        )
+        or
+        (
+          base_dns_search_domains | length > 0
+          and base_dns_resolv_conf_text is search(
+            '(?m)^search\\s+' ~ (base_dns_search_domains | map('regex_escape') | join('\\s+')) ~ '$'
+          )
+        )
+    fail_msg: >-
+      Static resolv.conf search domains do not match the requested
+      base_dns values
+    quiet: true
+  when: base_dns_resolver_mode == 'networkmanager'

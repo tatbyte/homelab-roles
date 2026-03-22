@@ -13,6 +13,9 @@ services:
     ports:
       - "{{ docker_adguard_dns_bind_port }}:{{ docker_adguard_container_dns_port }}/tcp"
       - "{{ docker_adguard_dns_bind_port }}:{{ docker_adguard_container_dns_port }}/udp"
+{% if docker_adguard_http_bind_port | int > 0 %}
+      - "{{ docker_adguard_http_bind_port }}:{{ docker_adguard_container_web_port }}/tcp"
+{% endif %}
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network={{ docker_adguard_proxy_network_name }}"

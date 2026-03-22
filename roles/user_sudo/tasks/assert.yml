@@ -18,6 +18,7 @@
       - user_sudo_group == (user_sudo_group | trim)
       - user_sudo_group is not match('.*\\s+.*')
       - user_sudo_passwordless is boolean
+      - user_sudo_cleanup_conflicting_nopasswd_all is boolean
       - user_sudo_drop_in_path is string
       - user_sudo_drop_in_path | trim | length > 0
       - user_sudo_drop_in_path == (user_sudo_drop_in_path | trim)
@@ -29,8 +30,30 @@
       non-empty username without whitespace,
       user_sudo_policy_type must be user or group, user_sudo_group must be a
       non-empty group name without whitespace, user_sudo_passwordless must be a
-      boolean, and user_sudo_drop_in_path must be one direct file path under
+      boolean, user_sudo_cleanup_conflicting_nopasswd_all must be a boolean,
+      and user_sudo_drop_in_path must be one direct file path under
       /etc/sudoers.d/ without whitespace
+    quiet: true
+
+- name: "Assert | Prevent self-lockout when converging prompted sudo"
+  ansible.builtin.assert:
+    that:
+      - >-
+        not (
+          user_sudo_state == 'present'
+          and not user_sudo_passwordless | bool
+          and user_sudo_cleanup_conflicting_nopasswd_all | bool
+          and (ansible_user | default('') == user_sudo_user)
+          and (
+            ansible_become_password is not defined
+            or (ansible_become_password | string | trim | length) == 0
+          )
+        )
+    fail_msg: >-
+      user_sudo cannot safely remove passwordless sudo from the current SSH
+      login user without a become password. Rerun with ansible_become_password
+      (or `-K`) or connect as another privileged user such as the bootstrap
+      automation account.
     quiet: true
 
 - name: "Assert | Collect Human Admin Account Entry For Sudo Management"

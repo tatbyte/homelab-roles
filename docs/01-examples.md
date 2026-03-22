@@ -19,7 +19,13 @@ The example assumes Debian-family hosts.
 
 - `examples/ansible.cfg`: local Ansible configuration for the example lab.
 - `examples/inventory/hosts.ini`: test hosts and groups.
-- `examples/inventory/group_vars/all/`: aggregate and role-scoped variables.
+- `examples/inventory/group_vars/all/`: aggregate layer toggles, shared switches, and standalone examples.
+- `examples/inventory/group_vars/bootstrap/`: bootstrap-layer variables.
+- `examples/inventory/group_vars/base/`: recurring base-layer role inputs.
+- `examples/inventory/group_vars/user/`: recurring user-layer role inputs.
+- `examples/inventory/group_vars/docker/`: recurring Docker-layer role inputs.
+- `examples/inventory/group_vars/all/secret_sources.yml`: shared secret-source switch for playbooks that optionally load controller-local files.
+- `examples/inventory/host_vars/<host>/vars.yml`: host-specific enable flags for optional aggregate child roles.
 - `examples/playbooks/bootstrap.yml`: bootstrap-phase playbook.
 - `examples/playbooks/base.yml`: base-phase playbook.
 - `examples/playbooks/user.yml`: user-phase playbook.
@@ -30,7 +36,10 @@ The example assumes Debian-family hosts.
 ## Variable Layout Convention
 
 - Keep aggregate toggles in aggregate files such as `base.yml`, `docker.yml`, and `user.yml`.
-- Keep child role inputs in role-scoped files named `<role>.yml`.
+- Keep optional aggregate `*_include_*` toggles disabled by default in `group_vars/all/`.
+- Enable those optional child roles per host in `examples/inventory/host_vars/<host>/vars.yml`.
+- Keep layer-specific child-role inputs under the matching inventory group directory.
+- Put hosts in the matching layer groups (`base`, `user`, `docker`, `bootstrap`) so those grouped vars load when their playbooks run.
 - Use this split consistently so adding a role usually means:
 1. add one toggle in an aggregate file
 2. add one role-scoped variable file
@@ -68,13 +77,21 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/<t
 
 - `playbooks/base.yml` uses `serial: 1` to reduce risk for reboot-capable runs.
 - `playbooks/bootstrap.yml` expects Vault-backed bootstrap credentials from
-  `~/.config/ansible/vault.yml` rather than prompting interactively, using the
+  `~/.config/ansible/lab_vault.yml` rather than prompting interactively, using the
   example inventory layout and the Vault password file configured in
   `examples/ansible.cfg`.
-- Keep only active inventory vars files inside `inventory/group_vars/all/`;
-  move any examples elsewhere so Ansible does not auto-load them.
-- Keep public example vars in `inventory/group_vars/all/` and keep the real
-  secret file outside the repo at `~/.config/ansible/vault.yml`.
+- `playbooks/base.yml`, `playbooks/user.yml`, and `playbooks/docker.yml` target the matching inventory groups `base`, `user`, and `docker`, so hosts opt into each recurring layer explicitly.
+- The example lab then re-enables the optional child roles for `lab` in
+  `examples/inventory/host_vars/lab/vars.yml`, which keeps the example stack
+  representative without making every future example host inherit all optional
+  roles automatically.
+- That controller-local secret behavior is shared through
+  `examples/inventory/group_vars/all/secret_sources.yml`, which stays enabled
+  by default in the example lab.
+- Keep aggregate toggles and shared switches in `inventory/group_vars/all/`.
+- Keep layer-specific vars under their matching inventory-group directories in
+  `inventory/group_vars/`.
+- Keep the real secret file outside the repo at `~/.config/ansible/lab_vault.yml`.
 - The Docker example keeps service projects under `/srv/<service>` and
   persistent data under `/srv/<service>/data` so backup and restore behavior
   stays aligned with the repository Docker conventions.
@@ -92,3 +109,6 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/<t
   the chosen public suffix.
 - Example values are intentionally demo-friendly; replace identity, password, and key material before production use.
 - Keep role-specific behavior documentation in each role README so this example guide stays stable as roles are added.
+- Future example playbooks that support controller-local secrets should reuse
+  `secret_sources_use_local_vault_file` and
+  `secret_sources_local_vault_file` instead of hard-coding paths in each file.

@@ -7,6 +7,97 @@
   ansible.builtin.import_tasks: derive_policy.yml
   when: user_sudo_state == 'present'
 
+- name: "Config | Discover active sudoers drop-ins for conflict cleanup"
+  ansible.builtin.find:
+    paths: /etc/sudoers.d
+    file_type: file
+    recurse: false
+  register: user_sudo_config_sudoers_drop_ins
+  changed_when: false
+  when:
+    - user_sudo_state == 'present'
+    - user_sudo_cleanup_conflicting_nopasswd_all | bool
+    - not user_sudo_passwordless | bool
+
+- name: "Config | Read active sudoers drop-ins for conflict cleanup"
+  ansible.builtin.slurp:
+    path: "{{ item.path }}"
+  register: user_sudo_config_sudoers_drop_in_contents
+  changed_when: false
+  loop: >-
+    {{
+      user_sudo_config_sudoers_drop_ins.files
+      | rejectattr('path', 'equalto', user_sudo_drop_in_path)
+      | rejectattr('path', 'search', '[.~][^/]*$')
+      | list
+    }}
+  loop_control:
+    label: "{{ item.path }}"
+  when:
+    - user_sudo_state == 'present'
+    - user_sudo_cleanup_conflicting_nopasswd_all | bool
+    - not user_sudo_passwordless | bool
+
+- name: "Config | Read main sudoers file for conflict cleanup"
+  ansible.builtin.slurp:
+    path: /etc/sudoers
+  register: user_sudo_config_main_sudoers
+  changed_when: false
+  when:
+    - user_sudo_state == 'present'
+    - user_sudo_cleanup_conflicting_nopasswd_all | bool
+    - not user_sudo_passwordless | bool
+
+- name: "Config | Derive conflicting sudoers drop-ins"
+  vars:
+    user_sudo_conflicting_nopasswd_all_pattern: >-
+      (?m)^{{ user_sudo_policy_identity | regex_escape }}\s+ALL=.*NOPASSWD:\s*ALL(?:\s|$)
+  ansible.builtin.set_fact:
+    user_sudo_conflicting_nopasswd_all_paths: >-
+      {%- set result = [] -%}
+      {%- if (
+              user_sudo_config_main_sudoers.content is defined
+              and (
+                user_sudo_config_main_sudoers.content | b64decode
+              ) is search(user_sudo_conflicting_nopasswd_all_pattern)
+            ) -%}
+      {%-   set _ = result.append('/etc/sudoers') -%}
+      {%- endif -%}
+      {%- for sudoers_file in (user_sudo_config_sudoers_drop_in_contents.results | default([])) -%}
+      {%-   if (
+              sudoers_file.content is defined
+              and (
+                sudoers_file.content | b64decode
+              ) is search(user_sudo_conflicting_nopasswd_all_pattern)
+            ) -%}
+      {%-     set _ = result.append(sudoers_file.item.path) -%}
+      {%-   endif -%}
+      {%- endfor -%}
+      {{ result }}
+  changed_when: false
+  when:
+    - user_sudo_state == 'present'
+    - user_sudo_cleanup_conflicting_nopasswd_all | bool
+    - not user_sudo_passwordless | bool
+
+- name: "Config | Remove conflicting broad passwordless sudo entries"
+  vars:
+    user_sudo_conflicting_nopasswd_all_line: >-
+      ^{{ user_sudo_policy_identity | regex_escape }}\s+ALL=.*NOPASSWD:\s*ALL(?:\s*#.*)?$
+  ansible.builtin.lineinfile:
+    path: "{{ item }}"
+    regexp: "{{ user_sudo_conflicting_nopasswd_all_line }}"
+    state: absent
+    backup: true
+    validate: "visudo -cf %s"
+  loop: "{{ user_sudo_conflicting_nopasswd_all_paths | default([]) }}"
+  loop_control:
+    label: "{{ item }}"
+  when:
+    - user_sudo_state == 'present'
+    - user_sudo_cleanup_conflicting_nopasswd_all | bool
+    - not user_sudo_passwordless | bool
+
 - name: "Config | Ensure Managed Human Admin Sudoers Drop-In"
   ansible.builtin.copy:
     dest: "{{ user_sudo_drop_in_path }}"

@@ -4,6 +4,28 @@
 # Validates Docker Compose, AdGuard Home, Traefik proxy-network, identity,
 # admin-auth, and firewall inputs before configuration starts.
 
+- name: "Derive | Resolve effective AdGuard admin credentials"
+  ansible.builtin.set_fact:
+    docker_adguard_effective_admin_user: >-
+      {{
+        docker_adguard_admin_credentials.split(':', 1)[0]
+        if (
+          docker_adguard_admin_credentials | trim | length > 0
+          and ':' in docker_adguard_admin_credentials
+        )
+        else docker_adguard_admin_user
+      }}
+    docker_adguard_effective_admin_password_hash: >-
+      {{
+        docker_adguard_admin_credentials.split(':', 1)[1]
+        if (
+          docker_adguard_admin_credentials | trim | length > 0
+          and ':' in docker_adguard_admin_credentials
+        )
+        else docker_adguard_admin_password_hash
+      }}
+  changed_when: false
+
 - name: "Assert | Validate docker_adguard variable structure"
   ansible.builtin.assert:
     that:
@@ -13,6 +35,8 @@
       - docker_adguard_packages is not string
       - docker_adguard_compose_package_candidates is sequence
       - docker_adguard_compose_package_candidates is not string
+      - docker_adguard_compose_command is sequence
+      - docker_adguard_compose_command is not string
       - docker_adguard_access_group_members is sequence
       - docker_adguard_access_group_members is not string
       - docker_adguard_router_entrypoints is sequence
@@ -72,10 +96,14 @@
       - docker_adguard_tls_certresolver | trim | length > 0
       - docker_adguard_container_web_port is integer
       - docker_adguard_container_web_port > 0
-      - docker_adguard_admin_user is string
-      - docker_adguard_admin_user | trim | length > 0
-      - docker_adguard_admin_password_hash is string
-      - docker_adguard_admin_password_hash | trim | length > 0
+      - docker_adguard_http_bind_port is integer
+      - docker_adguard_http_bind_port >= 0
+      - docker_adguard_http_bind_port != docker_adguard_dns_bind_port
+      - docker_adguard_effective_admin_user is string
+      - docker_adguard_effective_admin_user | trim | length > 0
+      - docker_adguard_effective_admin_password_hash is string
+      - docker_adguard_effective_admin_password_hash | trim | length > 0
+      - docker_adguard_admin_credentials is string
       - docker_adguard_dns_bind_port is integer
       - docker_adguard_dns_bind_port > 0
       - docker_adguard_container_dns_port is integer
@@ -98,6 +126,16 @@
           | list
           | length
         ) == (docker_adguard_compose_package_candidates | length)
+      - (docker_adguard_compose_command | length) > 0
+      - (docker_adguard_compose_command | map('string') | list | length) == (docker_adguard_compose_command | length)
+      - >-
+        (
+          docker_adguard_compose_command
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_adguard_compose_command | length)
       - >-
         (
           docker_adguard_access_group_members | map('string') | list | length
@@ -154,8 +192,36 @@
       docker_adguard variables must define valid booleans, non-empty strings,
       absolute project and data paths, valid fixed IDs, unique access-group
       members, non-empty upstream DNS entries, a DNS-safe web host, and a
-      non-empty admin password hash
+      non-empty effective admin credential
     quiet: true
+
+- name: "Assert | Validate docker_adguard_admin_credentials format when provided"
+  ansible.builtin.assert:
+    that:
+      - docker_adguard_admin_credentials | trim | length > 0
+      - '":" in docker_adguard_admin_credentials'
+      - docker_adguard_admin_credentials.split(':', 1)[0] | trim | length > 0
+      - docker_adguard_admin_credentials.split(':', 1)[1] | trim | length > 0
+      - >-
+        docker_adguard_admin_credentials.split(':', 1)[1]
+        is match('^\\$2[aby]\\$.+')
+    fail_msg: >-
+      docker_adguard_admin_credentials must use the form
+      username:$2a$..., username:$2b$..., or username:$2y$... when it is
+      provided
+    quiet: true
+  when: docker_adguard_admin_credentials | trim | length > 0
+
+- name: "Assert | Validate legacy docker_adguard_admin_password_hash format when used"
+  ansible.builtin.assert:
+    that:
+      - docker_adguard_admin_password_hash | trim | length > 0
+      - docker_adguard_admin_password_hash is match('^\\$2[aby]\\$.+')
+    fail_msg: >-
+      docker_adguard_admin_password_hash must start with a bcrypt prefix such
+      as $2a$, $2b$, or $2y$
+    quiet: true
+  when: docker_adguard_admin_credentials | trim | length == 0
 
 - name: "Assert | Validate requested filter structure"
   ansible.builtin.assert:

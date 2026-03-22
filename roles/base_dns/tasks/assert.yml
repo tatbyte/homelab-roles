@@ -13,12 +13,18 @@
       - base_dns_service_name == (base_dns_service_name | trim)
       - base_dns_service_name is not match('.*\\s+.*')
       - base_dns_resolver_mode is string
-      - base_dns_resolver_mode in ['systemd_resolved']
+      - base_dns_resolver_mode in ['systemd_resolved', 'networkmanager']
       - base_dns_servers is sequence
       - base_dns_servers is not string
       - (base_dns_servers | length) > 0
       - base_dns_search_domains is sequence
       - base_dns_search_domains is not string
+      - base_dns_networkmanager_conf_dir is string
+      - base_dns_networkmanager_conf_dir.startswith('/')
+      - base_dns_networkmanager_conf_path is string
+      - base_dns_networkmanager_conf_path.startswith('/')
+      - base_dns_resolv_conf_path is string
+      - base_dns_resolv_conf_path.startswith('/')
       - (base_dns_packages | map('string') | list | length) == (base_dns_packages | length)
       - (base_dns_servers | map('string') | list | length) == (base_dns_servers | length)
       - (base_dns_search_domains | map('string') | list | length) == (base_dns_search_domains | length)
@@ -50,6 +56,7 @@
       base_dns_packages must be a list of package names, base_dns_service_name
       must be a non-empty service name without whitespace,
       base_dns_resolver_mode must use a supported resolver mode,
+      managed NetworkManager and resolv.conf paths must be absolute,
       base_dns_servers must be a non-empty list of DNS server values without
       whitespace, and base_dns_search_domains must be a list of non-empty
       search domains without whitespace or split-DNS route-only prefixes

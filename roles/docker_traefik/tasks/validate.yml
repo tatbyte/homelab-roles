@@ -108,27 +108,27 @@
 
 - name: "Validate | Read Docker Compose running services"
   ansible.builtin.command:
-    argv:
-      - docker
-      - compose
-      - --project-name
-      - "{{ docker_traefik_compose_project_name }}"
-      - --file
-      - "{{ docker_traefik_compose_file_path }}"
-      - ps
-      - --services
-      - --status
-      - running
+    argv: >-
+      {{
+        docker_traefik_compose_command
+        + [
+            '--project-name',
+            docker_traefik_compose_project_name,
+            '--file',
+            docker_traefik_compose_file_path,
+            'ps',
+            '--services',
+            '--status',
+            'running',
+          ]
+      }}
   register: docker_traefik_validate_compose_ps
   changed_when: false
   when: docker_traefik_enabled | bool
 
 - name: "Validate | Check Docker Compose availability"
   ansible.builtin.command:
-    argv:
-      - docker
-      - compose
-      - version
+    argv: "{{ docker_traefik_compose_command + ['version'] }}"
   register: docker_traefik_validate_compose_version
   changed_when: false
   when: docker_traefik_enabled | bool

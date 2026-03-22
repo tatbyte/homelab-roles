@@ -1,0 +1,19 @@
+---
+# examples/inventory/group_vars/user/user_vim.yml
+# Shared human admin Vim variables for the example lab.
+# Defines the managed `.vimrc` baseline enforced after the directory layer through
+# the aggregate `user` role.
+
+# Keep the example Vim baseline scoped to the same human admin account managed
+# earlier in `user_account.yml`.
+user_vim_users:
+  - user: "{{ user_account_name }}"
+    group: "{{ user_account_primary_group }}"
+    home: "{{ user_account_home }}"
+    vimrc_lines:
+      - set ruler
+      - set showmode
+      - set showcmd
+      - set wildmenu
+      - set ignorecase
+      - set smartcase

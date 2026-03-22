@@ -15,20 +15,54 @@
 
 - name: "Config | Ensure /etc/resolv.conf uses the systemd-resolved stub"
   ansible.builtin.file:
-    path: /etc/resolv.conf
+    path: "{{ base_dns_resolv_conf_path }}"
     state: link
     src: /run/systemd/resolve/stub-resolv.conf
     force: true
     follow: false
   when: base_dns_resolver_mode == 'systemd_resolved'
 
+- name: "Config | Ensure NetworkManager resolver drop-in directory exists"
+  ansible.builtin.file:
+    path: "{{ base_dns_networkmanager_conf_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: base_dns_resolver_mode == 'networkmanager'
+
+- name: "Config | Render NetworkManager DNS management override"
+  ansible.builtin.template:
+    src: networkmanager-base-dns.conf.j2
+    dest: "{{ base_dns_networkmanager_conf_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart DNS resolver service
+  when: base_dns_resolver_mode == 'networkmanager'
+
+- name: "Config | Remove existing /etc/resolv.conf entry before static render"
+  ansible.builtin.file:
+    path: "{{ base_dns_resolv_conf_path }}"
+    state: absent
+  when: base_dns_resolver_mode == 'networkmanager'
+
+- name: "Config | Render static /etc/resolv.conf for NetworkManager mode"
+  ansible.builtin.template:
+    src: resolv.conf.j2
+    dest: "{{ base_dns_resolv_conf_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: base_dns_resolver_mode == 'networkmanager'
+
 - name: "Config | Ensure resolver service is enabled and running"
   ansible.builtin.service:
     name: "{{ base_dns_service_name }}"
     enabled: true
     state: started
-  when: base_dns_resolver_mode == 'systemd_resolved'
+  when: base_dns_resolver_mode in ['systemd_resolved', 'networkmanager']
 
 - name: "Config | Flush DNS resolver handler"
   ansible.builtin.meta: flush_handlers
-  when: base_dns_resolver_mode == 'systemd_resolved'
+  when: base_dns_resolver_mode in ['systemd_resolved', 'networkmanager']

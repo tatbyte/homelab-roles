@@ -72,14 +72,17 @@
 
 - name: "Config | Stop managed Docker Compose project when WireGuard is disabled"
   ansible.builtin.command:
-    argv:
-      - docker
-      - compose
-      - --project-name
-      - "{{ docker_wireguard_compose_project_name }}"
-      - --file
-      - "{{ docker_wireguard_compose_file_path }}"
-      - down
+    argv: >-
+      {{
+        docker_wireguard_compose_command
+        + [
+            '--project-name',
+            docker_wireguard_compose_project_name,
+            '--file',
+            docker_wireguard_compose_file_path,
+            'down',
+          ]
+      }}
   register: docker_wireguard_compose_down
   changed_when: docker_wireguard_compose_file_stat.stat.exists
   when:
@@ -153,19 +156,149 @@
   register: docker_wireguard_compose_template_result
   when: docker_wireguard_enabled | bool
 
-- name: "Config | Read current Docker Compose running services"
+- name: "Config | Check whether persisted wg-easy database already exists"
+  ansible.builtin.stat:
+    path: "{{ docker_wireguard_database_path }}"
+  register: docker_wireguard_database_stat
+  changed_when: false
+  when: docker_wireguard_enabled | bool
+
+- name: "Config | Read persisted WireGuard endpoint settings"
   ansible.builtin.command:
     argv:
-      - docker
-      - compose
-      - --project-name
-      - "{{ docker_wireguard_compose_project_name }}"
-      - --file
-      - "{{ docker_wireguard_compose_file_path }}"
-      - ps
-      - --services
-      - --status
-      - running
+      - python3
+      - -c
+      - |
+        import json
+        import sqlite3
+
+        def table_columns(connection, table_name):
+            return {
+                row[1]
+                for row in connection.execute(f"PRAGMA table_info({table_name})")
+            }
+
+        conn = sqlite3.connect("{{ docker_wireguard_database_path }}")
+        conn.row_factory = sqlite3.Row
+        interface_columns = table_columns(conn, "interfaces_table")
+        user_config_columns = table_columns(conn, "user_configs_table")
+        schema_supported = True
+
+        if "user_config_id" in interface_columns:
+            row = conn.execute(
+                """
+                SELECT uc.host, uc.port, uc.id
+                  FROM user_configs_table AS uc
+                  JOIN interfaces_table AS i
+                    ON i.user_config_id = uc.id
+                 WHERE i.name = ?
+                 LIMIT 1
+                """,
+                ("{{ docker_wireguard_interface_name }}",),
+            ).fetchone()
+        elif "interface_id" in user_config_columns:
+            row = conn.execute(
+                """
+                SELECT uc.host, uc.port, uc.id
+                  FROM user_configs_table AS uc
+                  JOIN interfaces_table AS i
+                    ON uc.interface_id = i.id
+                 WHERE i.name = ?
+                 LIMIT 1
+                """,
+                ("{{ docker_wireguard_interface_name }}",),
+            ).fetchone()
+        elif "name" in user_config_columns:
+            row = conn.execute(
+                """
+                SELECT host, port, id
+                  FROM user_configs_table
+                 WHERE name = ?
+                 LIMIT 1
+                """,
+                ("{{ docker_wireguard_interface_name }}",),
+            ).fetchone()
+        else:
+            row = None
+            schema_supported = False
+        print(json.dumps({
+            "host": row["host"] if row else "",
+            "port": row["port"] if row else 0,
+            "id": str(row["id"]) if row and row["id"] is not None else "",
+            "schema_supported": schema_supported,
+        }))
+  register: docker_wireguard_database_endpoint
+  changed_when: false
+  when:
+    - docker_wireguard_enabled | bool
+    - docker_wireguard_database_stat.stat.exists
+
+- name: "Config | Derive whether persisted WireGuard endpoint differs"
+  vars:
+    docker_wireguard_persisted_endpoint: >-
+      {{
+        docker_wireguard_database_endpoint.stdout | from_json
+      }}
+  ansible.builtin.set_fact:
+    docker_wireguard_database_endpoint_differs: >-
+      {{
+        (docker_wireguard_persisted_endpoint.schema_supported | default(false))
+        and (
+          docker_wireguard_persisted_endpoint.host != docker_wireguard_init_host
+        or (docker_wireguard_persisted_endpoint.port | int) != (docker_wireguard_vpn_bind_port | int)
+        )
+      }}
+  changed_when: false
+  when:
+    - docker_wireguard_enabled | bool
+    - docker_wireguard_database_stat.stat.exists
+
+- name: "Config | Update persisted WireGuard endpoint settings"
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -c
+      - |
+        import sqlite3
+
+        conn = sqlite3.connect("{{ docker_wireguard_database_path }}")
+        conn.execute(
+            """
+            UPDATE user_configs_table
+               SET host = ?, port = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?
+            """,
+            (
+                "{{ docker_wireguard_init_host }}",
+                {{ docker_wireguard_vpn_bind_port | int }},
+                {{ (docker_wireguard_database_endpoint.stdout | from_json).id | to_json }},
+            ),
+        )
+        conn.commit()
+  register: docker_wireguard_database_update_result
+  changed_when: docker_wireguard_database_endpoint_differs | bool
+  when:
+    - docker_wireguard_enabled | bool
+    - docker_wireguard_database_stat.stat.exists
+    - ((docker_wireguard_database_endpoint.stdout | from_json).id | string | trim | length) > 0
+    - docker_wireguard_database_endpoint_differs | bool
+
+- name: "Config | Read current Docker Compose running services"
+  ansible.builtin.command:
+    argv: >-
+      {{
+        docker_wireguard_compose_command
+        + [
+            '--project-name',
+            docker_wireguard_compose_project_name,
+            '--file',
+            docker_wireguard_compose_file_path,
+            'ps',
+            '--services',
+            '--status',
+            'running',
+          ]
+      }}
   register: docker_wireguard_compose_ps
   changed_when: false
   failed_when: false
@@ -188,6 +321,7 @@
       {{
         docker_wireguard_env_file_result.changed
         or docker_wireguard_compose_template_result.changed
+        or (docker_wireguard_database_update_result.changed | default(false))
         or (
           docker_wireguard_web_ui_enabled
           and (docker_wireguard_config_proxy_network.rc != 0)
@@ -226,16 +360,19 @@
 
 - name: "Config | Reconcile Docker Compose project"
   ansible.builtin.command:
-    argv:
-      - docker
-      - compose
-      - --project-name
-      - "{{ docker_wireguard_compose_project_name }}"
-      - --file
-      - "{{ docker_wireguard_compose_file_path }}"
-      - up
-      - --detach
-      - --force-recreate
+    argv: >-
+      {{
+        docker_wireguard_compose_command
+        + [
+            '--project-name',
+            docker_wireguard_compose_project_name,
+            '--file',
+            docker_wireguard_compose_file_path,
+            'up',
+            '--detach',
+            '--force-recreate',
+          ]
+      }}
   register: docker_wireguard_compose_up
   changed_when: docker_wireguard_requires_compose_up | bool
   when:

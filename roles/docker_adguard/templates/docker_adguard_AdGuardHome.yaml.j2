@@ -7,8 +7,8 @@ http:
   session_ttl: "{{ docker_adguard_http_session_ttl }}"
 
 users:
-  - name: "{{ docker_adguard_admin_user }}"
-    password: "{{ docker_adguard_admin_password_hash }}"
+  - name: "{{ docker_adguard_effective_admin_user }}"
+    password: "{{ docker_adguard_effective_admin_password_hash }}"
 
 dns:
   bind_hosts:

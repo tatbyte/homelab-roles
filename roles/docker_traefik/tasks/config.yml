@@ -74,14 +74,7 @@
 
 - name: "Config | Stop managed Docker Compose project when Traefik is disabled"
   ansible.builtin.command:
-    argv:
-      - docker
-      - compose
-      - --project-name
-      - "{{ docker_traefik_compose_project_name }}"
-      - --file
-      - "{{ docker_traefik_compose_file_path }}"
-      - down
+    argv: "{{ docker_traefik_compose_command + ['--project-name', docker_traefik_compose_project_name, '--file', docker_traefik_compose_file_path, 'down'] }}"
   register: docker_traefik_compose_down
   changed_when: docker_traefik_compose_file_stat.stat.exists
   when:
@@ -179,17 +172,20 @@
 
 - name: "Config | Read current Docker Compose running services"
   ansible.builtin.command:
-    argv:
-      - docker
-      - compose
-      - --project-name
-      - "{{ docker_traefik_compose_project_name }}"
-      - --file
-      - "{{ docker_traefik_compose_file_path }}"
-      - ps
-      - --services
-      - --status
-      - running
+    argv: >-
+      {{
+        docker_traefik_compose_command
+        + [
+            '--project-name',
+            docker_traefik_compose_project_name,
+            '--file',
+            docker_traefik_compose_file_path,
+            'ps',
+            '--services',
+            '--status',
+            'running',
+          ]
+      }}
   register: docker_traefik_compose_ps
   changed_when: false
   failed_when: false
@@ -215,15 +211,18 @@
 
 - name: "Config | Reconcile Docker Compose project"
   ansible.builtin.command:
-    argv:
-      - docker
-      - compose
-      - --project-name
-      - "{{ docker_traefik_compose_project_name }}"
-      - --file
-      - "{{ docker_traefik_compose_file_path }}"
-      - up
-      - --detach
+    argv: >-
+      {{
+        docker_traefik_compose_command
+        + [
+            '--project-name',
+            docker_traefik_compose_project_name,
+            '--file',
+            docker_traefik_compose_file_path,
+            'up',
+            '--detach',
+          ]
+      }}
   register: docker_traefik_compose_up
   changed_when: docker_traefik_requires_compose_up | bool
   when:

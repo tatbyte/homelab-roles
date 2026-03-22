@@ -5,6 +5,7 @@ Explains how the role manages a Traefik reverse proxy through Docker Compose wit
 
 ## Features
 - Installs requested or auto-detected Docker Compose support packages with APT
+- Supports either `docker compose` or classic `docker-compose` through a configurable command prefix
 - Creates a role-owned service user and feature access group for Traefik host files
 - Adds requested existing admin users to the role-owned Traefik access group
 - Manages a Docker Compose Traefik project under a fixed `/srv` project directory
@@ -21,8 +22,9 @@ Explains how the role manages a Traefik reverse proxy through Docker Compose wit
 | Variable | Default | Required | Description |
 |----------|---------|----------|-------------|
 | `docker_traefik_enabled` | `true` | no | Enables Traefik package, file, and Docker Compose management |
-| `docker_traefik_packages` | `[]` | no | Explicit package list installed to support `docker compose`; when empty, the role auto-detects an available package |
-| `docker_traefik_compose_package_candidates` | `['docker-compose-plugin', 'docker-compose-v2']` | no | Candidate package names probed when auto-detecting Compose support on Debian-family hosts |
+| `docker_traefik_packages` | `[]` | no | Explicit package list installed to support the chosen Compose command; when empty, the role auto-detects an available package |
+| `docker_traefik_compose_package_candidates` | `['docker-compose-plugin', 'docker-compose-v2', 'docker-compose']` | no | Candidate package names probed when auto-detecting Compose support on Debian-family hosts |
+| `docker_traefik_compose_command` | `['docker', 'compose']` | no | Command prefix used for Compose operations such as `up`, `down`, `ps`, and `version`; override with `['docker-compose']` on hosts that use the classic Compose binary |
 | `docker_traefik_project_dir` | `/srv/traefik` | no | Directory that stores the managed Compose project files |
 | `docker_traefik_data_dir` | `/srv/traefik/data` | no | Directory that stores Traefik persistent data for backup-friendly restores |
 | `docker_traefik_service_user` | `srv_traefik` | no | Role-owned service user that owns Traefik data paths on the host |
@@ -102,6 +104,14 @@ networks:
 
 Then label the application service for Traefik as needed, while keeping this
 role's file-provider dynamic config limited to the Traefik dashboard.
+
+## Compose Conventions
+
+Future Docker application roles should keep Compose invocation configurable
+instead of assuming plugin-style `docker compose` is always available.
+Use `docker_traefik_compose_command` on hosts that need classic
+`docker-compose`, and keep the selected Compose package in the same package
+family as the Docker engine package on that host.
 
 Keep persistent service data under `{{ docker_traefik_project_dir }}/data`
 so backups of `/srv` capture the full Traefik host-side state needed for host

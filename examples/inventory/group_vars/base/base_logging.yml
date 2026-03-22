@@ -1,0 +1,22 @@
+---
+# examples/inventory/group_vars/base/base_logging.yml
+# Shared logging variables for the example lab.
+# Defines the journald package, service, storage, and retention values used during the base phase.
+
+# Package list installed with APT before journald configuration.
+# Keep `systemd` here in the example lab so the journald package baseline is
+# explicitly present before the role manages configuration.
+base_logging_packages:
+  - systemd
+
+# Journald service name managed and validated during the base phase.
+base_logging_service_name: systemd-journald
+
+# Keep persistent journald storage enabled in the example lab.
+base_logging_storage: persistent
+
+# Compress larger journal objects to reduce disk usage.
+base_logging_compress: true
+
+# Limit persistent journal growth in the example lab.
+base_logging_system_max_use: 256M

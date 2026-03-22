@@ -9,13 +9,13 @@ Keep your personal Ansible config and Vault password file under:
 
 - `~/.config/ansible/ansible.cfg`
 - `~/.config/ansible/vault.pass`
-- `~/.config/ansible/vault.yml`
+- `~/.config/ansible/lab_vault.yml`
 
 Suggested permissions:
 
 - `~/.config/ansible/`: `0700`
 - `~/.config/ansible/vault.pass`: `0600`
-- `~/.config/ansible/vault.yml`: `0600`
+- `~/.config/ansible/lab_vault.yml`: `0600`
 
 Example:
 
@@ -24,7 +24,7 @@ mkdir -p ~/.config/ansible
 chmod 700 ~/.config/ansible
 printf '%s\n' 'your-vault-password' > ~/.config/ansible/vault.pass
 chmod 600 ~/.config/ansible/vault.pass
-ansible-vault create ~/.config/ansible/vault.yml
+ansible-vault create ~/.config/ansible/lab_vault.yml
 ```
 
 ## Ansible Config
@@ -39,18 +39,20 @@ vault_password_file = ~/.config/ansible/vault.pass
 The example lab also sets this directly in `examples/ansible.cfg`, so the
 example playbooks intentionally expect that file to exist at the standard local
 path.
+That default behavior is controlled by
+`examples/inventory/group_vars/all/secret_sources.yml`.
 
 ## How To Use It
 
 Create or edit an encrypted vars file:
 
 ```sh
-ansible-vault create ~/.config/ansible/vault.yml
-ansible-vault edit ~/.config/ansible/vault.yml
+ansible-vault create ~/.config/ansible/lab_vault.yml
+ansible-vault edit ~/.config/ansible/lab_vault.yml
 ```
 
 Keep the real encrypted secret file outside the repo at
-`~/.config/ansible/vault.yml`.
+`~/.config/ansible/lab_vault.yml`.
 Do not keep checked-in example files in `group_vars/all/`, because Ansible
 loads every file it finds there.
 Store checked-in examples elsewhere, for example at
@@ -62,48 +64,75 @@ create that file before running the example playbooks.
 Then store secret values there and reference them from normal vars files:
 
 ```yaml
-# ~/.config/ansible/vault.yml
+# ~/.config/ansible/lab_vault.yml
 vault_user_password_hash: "$6$..."
 vault_bootstrap_login_password: "..."
 ```
 
 ```yaml
-# inventory/group_vars/all/user_password.yml
+# inventory/group_vars/user/user_password.yml
 user_password_password_hash: "{{ vault_user_password_hash }}"
 ```
 
 ```yaml
-# inventory/group_vars/all/bootstrap.yml
+# inventory/group_vars/bootstrap/bootstrap.yml
 bootstrap_login_user: "admin"
 bootstrap_login_password: "{{ vault_bootstrap_login_password }}"
 ```
 
 ## How `bootstrap.yml` And The Local Vault File Work Together
 
-The example playbooks load non-secret role inputs from `group_vars/all/` and
-load secret values from `~/.config/ansible/vault.yml` separately.
+The example playbooks load non-secret role inputs from inventory-managed
+`group_vars/` files and load secret values from `~/.config/ansible/lab_vault.yml`
+separately.
 
 Use this split:
 
 - `bootstrap.yml`: non-secret role inputs and references to secret vars
-- `~/.config/ansible/vault.yml`: raw secret values only
+- `~/.config/ansible/lab_vault.yml`: raw secret values only
 
 Example:
 
 ```yaml
-# inventory/group_vars/all/bootstrap.yml
+# inventory/group_vars/bootstrap/bootstrap.yml
 bootstrap_login_user: "admin"
 bootstrap_login_password: "{{ vault_bootstrap_login_password }}"
 ```
 
 ```yaml
-# ~/.config/ansible/vault.yml
+# ~/.config/ansible/lab_vault.yml
 vault_bootstrap_login_password: "admin"
 ```
 
-Also make sure `~/.config/ansible/vault.yml` contains YAML, not shell or INI
+Also make sure `~/.config/ansible/lab_vault.yml` contains YAML, not shell or INI
 syntax, and keep fallback logic in normal vars files rather than inside Vault
 data.
+
+## Shared Secret Source Switch
+
+The example inventory includes a shared secret-source selector at:
+
+```yaml
+examples/inventory/group_vars/all/secret_sources.yml
+```
+
+It controls whether example playbooks load the controller-local Vault file:
+
+```yaml
+secret_sources_use_local_vault_file: true
+secret_sources_local_vault_file: "{{ lookup('env', 'HOME') }}/.config/ansible/lab_vault.yml"
+```
+
+- `true`: keep the default example behavior and load the local Vault file.
+- `false`: skip the controller-local file and rely on inventory-backed vars
+  instead.
+
+For future example playbooks, prefer this pattern:
+
+1. Read the shared `secret_sources_*` vars from `group_vars/all/`.
+2. Load the local file only when the switch is enabled.
+3. Override canonical inventory vars such as `bootstrap_login_password`
+   instead of introducing playbook-only secret variable names.
 
 Correct:
 
@@ -125,7 +154,7 @@ names in Vault.
 Instead, the example derives those URLs from:
 
 - the inventory `alias` host var when present, with `inventory_hostname` as a fallback
-- `vault_docker_public_domain_suffix` from `~/.config/ansible/vault.yml`
+- `vault_docker_public_domain_suffix` from `~/.config/ansible/lab_vault.yml`
 
 Example result for a host with `alias=lab`:
 

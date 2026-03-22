@@ -21,3 +21,8 @@ user_sudo_passwordless: false
 
 # Managed sudoers drop-in path for this human admin sudo policy.
 user_sudo_drop_in_path: "/etc/sudoers.d/90-user_sudo-{{ user_sudo_user }}"
+
+# If true, remove conflicting broad `NOPASSWD:ALL` entries for the managed
+# user or group principal from other active `/etc/sudoers.d/` files when the
+# requested final policy requires prompted sudo.
+user_sudo_cleanup_conflicting_nopasswd_all: true

@@ -8,6 +8,11 @@
     path: /etc/ssh/sshd_config.d/90-base-sshd.conf
   register: base_sshd_config_file
 
+- name: "Validate | Read main sshd_config"
+  ansible.builtin.slurp:
+    path: /etc/ssh/sshd_config
+  register: base_sshd_main_config_file
+
 - name: "Validate | Gather service facts"
   ansible.builtin.service_facts:
 
@@ -50,6 +55,10 @@
       {{ 'yes' if base_sshd_pubkey_authentication else 'no' }}
   ansible.builtin.assert:
     that:
+      - >-
+        (base_sshd_main_config_file.content | b64decode) is search(
+          '(?m)^Include /etc/ssh/sshd_config\\.d/\\*\\.conf$'
+        )
       - (base_sshd_config_file.content | b64decode) == base_sshd_expected_config
       - base_sshd_service_unit in ansible_facts.services
       - ansible_facts.services[base_sshd_service_unit].status == 'enabled'

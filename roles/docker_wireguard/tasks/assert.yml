@@ -19,6 +19,8 @@
       - docker_wireguard_packages is not string
       - docker_wireguard_compose_package_candidates is sequence
       - docker_wireguard_compose_package_candidates is not string
+      - docker_wireguard_compose_command is sequence
+      - docker_wireguard_compose_command is not string
       - docker_wireguard_access_group_members is sequence
       - docker_wireguard_access_group_members is not string
       - docker_wireguard_init_dns is sequence
@@ -35,6 +37,10 @@
       - docker_wireguard_project_dir.startswith('/')
       - docker_wireguard_data_dir is string
       - docker_wireguard_data_dir.startswith('/')
+      - docker_wireguard_database_path is string
+      - docker_wireguard_database_path.startswith('/')
+      - docker_wireguard_interface_name is string
+      - docker_wireguard_interface_name | trim | length > 0
       - docker_wireguard_compose_file_path is string
       - docker_wireguard_compose_file_path.startswith('/')
       - docker_wireguard_env_file_path is string
@@ -63,6 +69,8 @@
       - docker_wireguard_proxy_network_name | trim | length > 0
       - docker_wireguard_host is string
       - docker_wireguard_host | trim | length > 0
+      - docker_wireguard_init_host is string
+      - docker_wireguard_init_host | trim | length > 0
       - docker_wireguard_router_name is string
       - docker_wireguard_router_name | trim | length > 0
       - docker_wireguard_tls_certresolver is string
@@ -99,6 +107,16 @@
           | list
           | length
         ) == (docker_wireguard_compose_package_candidates | length)
+      - (docker_wireguard_compose_command | length) > 0
+      - (docker_wireguard_compose_command | map('string') | list | length) == (docker_wireguard_compose_command | length)
+      - >-
+        (
+          docker_wireguard_compose_command
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_wireguard_compose_command | length)
       - >-
         (
           docker_wireguard_access_group_members | map('string') | list | length
