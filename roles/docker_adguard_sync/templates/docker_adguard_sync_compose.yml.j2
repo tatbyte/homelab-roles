@@ -1,0 +1,33 @@
+{# roles/docker_adguard_sync/templates/docker_adguard_sync_compose.yml.j2 #}
+{# Template for the managed Docker Compose file used by the `docker_adguard_sync` role. #}
+# Managed by Ansible: docker_adguard_sync
+# Source: roles/docker_adguard_sync/templates/docker_adguard_sync_compose.yml.j2
+services:
+  {{ docker_adguard_sync_compose_service_name }}:
+    image: {{ docker_adguard_sync_image }}
+    container_name: {{ docker_adguard_sync_container_name }}
+    user: "{{ docker_adguard_sync_container_user }}"
+    restart: unless-stopped
+    command:
+      - --config
+      - /config/adguardhome-sync.yaml
+      - run
+    environment:
+      LOG_LEVEL: {{ docker_adguard_sync_log_level }}
+    volumes:
+      - ./data/{{ docker_adguard_sync_config_path | basename }}:/config/adguardhome-sync.yaml:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network={{ docker_adguard_sync_proxy_network_name }}"
+      - "traefik.http.routers.{{ docker_adguard_sync_router_name }}.rule=Host(`{{ docker_adguard_sync_host }}`)"
+      - "traefik.http.routers.{{ docker_adguard_sync_router_name }}.entrypoints={{ docker_adguard_sync_router_entrypoints | join(',') }}"
+      - "traefik.http.routers.{{ docker_adguard_sync_router_name }}.tls=true"
+      - "traefik.http.routers.{{ docker_adguard_sync_router_name }}.tls.certresolver={{ docker_adguard_sync_tls_certresolver }}"
+      - "traefik.http.services.{{ docker_adguard_sync_router_name }}.loadbalancer.server.port={{ docker_adguard_sync_container_web_port }}"
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true
+    name: {{ docker_adguard_sync_proxy_network_name }}

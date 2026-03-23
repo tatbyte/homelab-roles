@@ -63,6 +63,27 @@
       docker_adguard_validate,
     ]
 
+- name: "Docker | Include optional docker_adguard_sync role"
+  ansible.builtin.include_role:
+    name: docker_adguard_sync
+    apply:
+      tags: [docker, docker_adguard, docker_adguard_sync]
+  when: docker_include_adguard_sync | default(false)
+  tags:
+    [
+      docker,
+      docker_adguard,
+      docker_adguard_sync,
+      assert,
+      install,
+      config,
+      validate,
+      docker_adguard_sync_assert,
+      docker_adguard_sync_install,
+      docker_adguard_sync_config,
+      docker_adguard_sync_validate,
+    ]
+
 - name: "Docker | Include optional docker_wireguard role"
   ansible.builtin.include_role:
     name: docker_wireguard

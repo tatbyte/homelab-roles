@@ -24,7 +24,57 @@
   failed_when: false
   when: bootstrap_authorized_key is defined and bootstrap_authorized_key | length > 0
 
+- name: "Validate | Read bootstrap SSH handoff drop-in"
+  ansible.builtin.slurp:
+    path: "{{ bootstrap_sshd_handoff_config_path }}"
+  register: bootstrap_sshd_handoff_config
+  changed_when: false
+  when:
+    - bootstrap_manage_sshd_handoff | bool
+    - bootstrap_sshd_allow_users | length > 0
+
+- name: "Validate | Gather service facts"
+  ansible.builtin.service_facts:
+  when: bootstrap_manage_sshd_handoff | bool
+
+- name: "Validate | Check effective AllowUsers for bootstrap SSH handoff"
+  ansible.builtin.command:
+    argv:
+      - sshd
+      - -T
+      - -C
+      - "user={{ item }},host={{ inventory_hostname }},addr={{ ansible_host | default(inventory_hostname) }}"
+  loop: "{{ bootstrap_sshd_allow_users }}"
+  loop_control:
+    label: "{{ item }}"
+  register: bootstrap_allow_users_checks
+  changed_when: false
+  when:
+    - bootstrap_manage_sshd_handoff | bool
+    - bootstrap_sshd_allow_users | length > 0
+
 - name: "Validate | Verify Admin Account Matches Configured Bootstrap Settings"
+  vars:
+    bootstrap_sshd_service_unit: >-
+      {{
+        bootstrap_sshd_service_name
+        if bootstrap_sshd_service_name.endswith('.service')
+        else (bootstrap_sshd_service_name ~ '.service')
+      }}
+    bootstrap_handoff_password_authentication: >-
+      {{ 'yes' if bootstrap_sshd_password_authentication else 'no' }}
+    bootstrap_handoff_pubkey_authentication: >-
+      {{ 'yes' if bootstrap_sshd_pubkey_authentication else 'no' }}
+    bootstrap_effective_allowusers_values: >-
+      {{
+        bootstrap_allow_users_checks.results
+        | default([])
+        | map(attribute='stdout_lines')
+        | flatten
+        | select('match', '^allowusers ')
+        | map('regex_replace', '^allowusers\\s+', '')
+        | list
+      }}
   ansible.builtin.assert:
     that:
       - bootstrap_user in bootstrap_lookup.results[0].ansible_facts.getent_passwd
@@ -54,6 +104,57 @@
           if bootstrap_authorized_key is defined and bootstrap_authorized_key | length > 0
           else true
         )
+      - >-
+        (
+          not (bootstrap_manage_sshd_handoff | bool)
+        ) or (
+          (bootstrap_sshd_allow_users | length) == 0
+        ) or (
+          (bootstrap_sshd_handoff_config.content | b64decode) is search(
+            'PasswordAuthentication ' ~ bootstrap_handoff_password_authentication
+          )
+        )
+      - >-
+        (
+          not (bootstrap_manage_sshd_handoff | bool)
+        ) or (
+          (bootstrap_sshd_allow_users | length) == 0
+        ) or (
+          (bootstrap_sshd_handoff_config.content | b64decode) is search(
+            'PubkeyAuthentication ' ~ bootstrap_handoff_pubkey_authentication
+          )
+        )
+      - >-
+        (
+          not (bootstrap_manage_sshd_handoff | bool)
+        ) or (
+          (bootstrap_sshd_allow_users | length) == 0
+        ) or (
+          bootstrap_sshd_service_unit in ansible_facts.services
+        )
+      - >-
+        (
+          not (bootstrap_manage_sshd_handoff | bool)
+        ) or (
+          (bootstrap_sshd_allow_users | length) == 0
+        ) or (
+          ansible_facts.services[bootstrap_sshd_service_unit].state == 'running'
+        )
+      - >-
+        (
+          not (bootstrap_manage_sshd_handoff | bool)
+        ) or (
+          (
+            bootstrap_sshd_allow_users
+            | difference(
+                bootstrap_effective_allowusers_values
+                | map('split', ' ')
+                | flatten
+                | list
+              )
+            | length
+          ) == 0
+        )
     fail_msg: >-
-      Validate | Admin account is not in the expected final state (uid/gid/shell/sudo group/authorized key)
+      Validate | Admin account is not in the expected final state (uid/gid/shell/sudo group/authorized key/bootstrap SSH handoff)
     quiet: true

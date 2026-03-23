@@ -8,8 +8,9 @@
 # Keep the WireGuard role enabled in the example lab.
 docker_wireguard_enabled: true
 
-# Let the role auto-detect a working Compose support package for the host.
-docker_wireguard_packages: []
+# Inherit the engine-level Compose support package choice so the service role
+# stays on the same package family as `docker_engine`.
+docker_wireguard_packages: "{{ docker_engine_compose_packages | default([]) }}"
 
 # Keep the example WireGuard project under `/srv` so backup and host-restore
 # workflows can capture the whole service layout predictably.

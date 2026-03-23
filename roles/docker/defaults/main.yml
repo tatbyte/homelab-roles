@@ -6,4 +6,5 @@
 docker_include_engine: true
 docker_include_traefik: false
 docker_include_adguard: false
+docker_include_adguard_sync: false
 docker_include_wireguard: false

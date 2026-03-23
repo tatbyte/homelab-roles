@@ -8,6 +8,25 @@ docker_engine_enabled: true
 docker_engine_packages:
   - docker.io
 
+# Ensure the engine role leaves the host with at least one working Compose
+# path after any Docker package-family cleanup.
+docker_engine_manage_compose_support: true
+docker_engine_compose_packages: []
+docker_engine_compose_package_candidates: >-
+  {{
+    (
+      ['docker-compose-v2', 'docker-compose']
+      if ('docker.io' in docker_engine_packages)
+      else ['docker-compose-plugin', 'docker-compose-v2', 'docker-compose']
+    )
+  }}
+docker_engine_compose_command_candidates:
+  - [docker, compose]
+  - [docker-compose]
+docker_engine_default_compose_command:
+  - docker
+  - compose
+
 # When the distro Docker package family is requested, remove known conflicting
 # Docker Inc. packages first so hosts can migrate cleanly without mixed package
 # ownership under /usr/libexec/docker/cli-plugins.

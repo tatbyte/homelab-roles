@@ -18,6 +18,10 @@ docker_include_traefik: false
 # the shared proxy network after Traefik.
 docker_include_adguard: false
 
+# Keep AdGuard Sync disabled by default here, then enable it only on the host
+# that should push AdGuard config to replicas.
+docker_include_adguard_sync: false
+
 # Keep WireGuard enabled in the example lab so the Docker layer also exercises
 # a `wg-easy` dashboard behind Traefik plus a direct UDP VPN listener.
 docker_include_wireguard: false

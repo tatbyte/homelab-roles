@@ -34,4 +34,5 @@ user_include_vim: true
 docker_include_engine: true
 docker_include_traefik: true
 docker_include_adguard: true
+docker_include_adguard_sync: true
 docker_include_wireguard: true

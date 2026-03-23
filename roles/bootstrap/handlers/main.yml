@@ -1,0 +1,9 @@
+---
+# roles/bootstrap/handlers/main.yml
+# Handlers for the `bootstrap` role.
+# Restarts the SSH service when the bootstrap SSH handoff policy changes.
+
+- name: Restart bootstrap SSH service
+  ansible.builtin.service:
+    name: "{{ bootstrap_sshd_service_name }}"
+    state: restarted

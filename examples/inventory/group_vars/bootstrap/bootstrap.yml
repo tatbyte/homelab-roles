@@ -1,7 +1,8 @@
 ---
 # examples/inventory/group_vars/bootstrap/bootstrap.yml
 # Shared bootstrap variables for the example lab.
-# Defines the automation account, sudo behavior, and authorized key used during the bootstrap phase.
+# Defines the automation account, sudo behavior, authorized key, and immediate
+# SSH handoff used during the bootstrap phase.
 
 # Initial ansible account created early in provisioning.
 # This user is the main management account used for SSH + sudo access.
@@ -24,6 +25,14 @@ bootstrap_user_shell: /bin/bash             # default shell for the ansible user
 # Public SSH key added to authorized_keys for passwordless admin access.
 # Store only the public key here, never a private key.
 bootstrap_authorized_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAn7kkLsf1GYLBmx4D3R4t/C3H7eWStv9u8vXJdc3LYr ansible-test"  # ansible SSH public key
+
+# Keep SSH access open for both the initial bootstrap login user and the new
+# automation account so the first post-bootstrap run can switch to the managed
+# account cleanly.
+bootstrap_manage_sshd_handoff: true
+bootstrap_sshd_allow_users:
+  - "{{ bootstrap_user }}"
+  - "{{ bootstrap_login_user }}"
 
 # Initial bootstrap login used before the managed automation account takes over.
 # Keep the example-wide login here and pull passwords from Vault-backed vars so

@@ -9,8 +9,9 @@
 # on for the example lab.
 docker_adguard_enabled: true
 
-# Let the role auto-detect a working Compose support package for the host.
-docker_adguard_packages: []
+# Inherit the engine-level Compose support package choice so the service role
+# stays on the same package family as `docker_engine`.
+docker_adguard_packages: "{{ docker_engine_compose_packages | default([]) }}"
 
 # Keep the example AdGuard project under `/srv` so backup and host-restore
 # workflows can capture the whole service layout predictably.
@@ -36,6 +37,7 @@ docker_adguard_access_group_members:
 # URL such as `adguard.lab.example.com` in the example inventory.
 docker_adguard_proxy_network_name: "{{ docker_traefik_network_name }}"
 docker_adguard_host: "adguard.{{ docker_public_host_alias }}.{{ docker_public_domain_suffix }}"
+docker_adguard_http_bind_port: 3000
 docker_adguard_router_name: adguard
 docker_adguard_router_entrypoints:
   - websecure
@@ -45,9 +47,11 @@ docker_adguard_tls_certresolver: "{{ docker_traefik_certresolver_name | default(
 # example can start without an interactive setup wizard.
 docker_adguard_admin_credentials: "{{ vault_docker_adguard_admin_credentials }}"
 
-# Keep the example DNS listener off the host's standard port because local
-# Debian-family lab hosts often already have a resolver bound to `53`.
-docker_adguard_dns_bind_port: 5353
+# Publish AdGuard on the standard DNS port so routers and clients can point at
+# the host IP directly without requiring a custom port. Keep the direct HTTP
+# bind enabled too so `adguardhome-sync` can reach each node over its LAN IP
+# plus port while end-user browser access still goes through Traefik.
+docker_adguard_dns_bind_port: 53
 docker_adguard_container_dns_port: 53
 docker_adguard_upstream_dns:
   - https://dns10.quad9.net/dns-query

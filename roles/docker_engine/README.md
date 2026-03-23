@@ -5,6 +5,7 @@ Explains how the role installs and validates Docker engine plus daemon defaults 
 
 ## Features
 - Installs requested Docker engine packages with APT
+- Ensures at least one compatible Docker Compose support package remains present after Docker package-family cleanup
 - Optionally removes conflicting Docker Inc. packages first when converging to the distro `docker.io` package family
 - Renders `/etc/docker/daemon.json` from role-managed inputs
 - Applies default Docker log-driver and log-rotation settings for all containers
@@ -20,6 +21,11 @@ Explains how the role installs and validates Docker engine plus daemon defaults 
 |----------|---------|----------|-------------|
 | `docker_engine_enabled` | `true` | no | Enables Docker engine package/service/group management in this role |
 | `docker_engine_packages` | `['docker.io']` | no | Docker engine package list installed with APT |
+| `docker_engine_manage_compose_support` | `true` | no | If true, ensure the host still has at least one working Docker Compose support package after engine install or cleanup |
+| `docker_engine_compose_packages` | `[]` | no | Explicit Compose support package list installed by this role; when empty, the role auto-detects a package from `docker_engine_compose_package_candidates` |
+| `docker_engine_compose_package_candidates` | distro-family-aware candidate list | no | Package names probed in order when auto-detecting Compose support for the selected Docker package family |
+| `docker_engine_default_compose_command` | `['docker', 'compose']` | no | Fallback Compose command used when the package-derived command cannot be inferred more specifically |
+| `docker_engine_compose_command_candidates` | `[['docker', 'compose'], ['docker-compose']]` | no | Command prefixes probed during validation; the role requires at least one working Compose command when Compose support is enabled |
 | `docker_engine_cleanup_conflicting_packages` | `{{ 'docker.io' in docker_engine_packages }}` | no | When true, purge known conflicting Docker Inc. packages before installing the requested engine packages |
 | `docker_engine_conflicting_packages` | `['containerd.io', 'docker-ce', 'docker-ce-cli', 'docker-ce-rootless-extras', 'docker-buildx-plugin', 'docker-compose-plugin']` | no | Package names removed first when the role cleans up conflicting Docker Inc. packages |
 | `docker_engine_fix_broken_apt_after_cleanup` | `true` | no | Whether to run `apt` in `fixed` mode after conflicting-package cleanup before installing the requested engine packages |
@@ -57,6 +63,9 @@ Example variables:
 docker_engine_enabled: true
 docker_engine_packages:
   - docker.io
+docker_engine_manage_compose_support: true
+docker_engine_compose_packages:
+  - docker-compose
 docker_engine_cleanup_conflicting_packages: true
 docker_engine_log_driver: json-file
 docker_engine_log_opts:
@@ -86,6 +95,12 @@ host is intentionally managed as a Docker Inc. package host.
 
 This role defaults to the distro `docker.io` family and can purge the known
 Docker Inc. conflicts before install so migrations converge cleanly.
+When Compose support is enabled, the role also auto-detects a Compose package
+that matches the selected Docker family so the host is not left without either
+`docker compose` or `docker-compose` after cleanup.
+During the same play, downstream Docker application roles can inherit the
+resolved `docker_engine_effective_compose_command` fact instead of guessing
+which Compose CLI path the host ended up with.
 Future Docker application roles should follow the same rule and avoid assuming
 that every host uses the same package family.
 

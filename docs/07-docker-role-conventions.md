@@ -15,6 +15,11 @@ rebuilds, backups, and access control stay predictable across services.
   hand on hosts.
 - Put default log-driver and log-rotation settings there so all containers
   inherit bounded logging unless a service overrides them intentionally.
+- Keep at least one Compose support path available after Docker package-family
+  cleanup. `docker_engine` may manage the baseline Compose support package, but
+  downstream service roles should still keep their own compose command inputs
+  configurable because some hosts use `docker compose` while others use
+  classic `docker-compose`.
 
 ## Role-Owned Identities
 
@@ -24,6 +29,9 @@ rebuilds, backups, and access control stay predictable across services.
 - Service roles such as `docker_traefik` should create their own identities:
   - service user: `srv_<service>`
   - feature access group: `access_<service>`
+- Exception: a tightly coupled sidecar role may explicitly reuse the primary
+  application's service user and access group when both services intentionally
+  share the same host-side files and access model.
 - Add the automation user and managed human admin user to the feature access
   group when that role owns host-side files they should inspect or maintain.
 - Avoid generic names such as `proxy` or `backup`; use role-owned names instead.

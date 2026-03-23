@@ -13,6 +13,10 @@
       - base_sshd_port is integer
       - base_sshd_port >= 1
       - base_sshd_port <= 65535
+      - base_sshd_cleanup_bootstrap_handoff is boolean
+      - base_sshd_bootstrap_handoff_config_path is string
+      - base_sshd_bootstrap_handoff_config_path | trim | length > 0
+      - base_sshd_bootstrap_handoff_config_path.startswith('/')
       - base_sshd_permit_root_login is string
       - base_sshd_permit_root_login in ['yes', 'no', 'prohibit-password', 'forced-commands-only']
       - base_sshd_password_authentication is boolean
@@ -34,7 +38,8 @@
     fail_msg: >-
       base_sshd_packages must be a list of package names, base_sshd_service_name
       must be a non-empty service name, base_sshd_port must be between 1 and
-      65535, base_sshd_permit_root_login must use a supported OpenSSH value,
+      65535, base_sshd_bootstrap_handoff_config_path must be an absolute path,
+      base_sshd_permit_root_login must use a supported OpenSSH value,
       base_sshd_password_authentication and base_sshd_pubkey_authentication
       must be booleans, and base_sshd_allow_users must be a list of non-empty
       user names without whitespace

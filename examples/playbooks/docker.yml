@@ -1,9 +1,10 @@
 ---
 # examples/playbooks/docker.yml
 # Docker phase playbook for the example lab.
-# Connects as the automation account after the user phase, loads a local Vault
-# vars file at runtime when enabled, applies the aggregate `docker` role to
-# hosts in the `docker` inventory group, and optionally re-runs
+# Connects as the automation account after the user phase, loads an optional
+# local Vault vars file from the control machine inside the Docker play so
+# `--limit` runs still receive the overrides, applies the aggregate `docker`
+# role to hosts in the `docker` inventory group, and optionally re-runs
 # `base_firewall` so Docker-declared ports can be enforced after service
 # registration.
 
@@ -34,9 +35,10 @@
         - secret_sources_use_local_vault_file | default(true)
         - not docker_local_vault_file.stat.exists
 
-    - name: Load local Vault vars file
+    - name: Load local Vault vars file on localhost
       ansible.builtin.include_vars:
         file: "{{ secret_sources_local_vault_file }}"
+      delegate_to: localhost
       become: false
       vars:
         ansible_become: false

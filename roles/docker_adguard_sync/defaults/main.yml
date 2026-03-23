@@ -1,0 +1,130 @@
+---
+# roles/docker_adguard_sync/defaults/main.yml
+# Default variables for the `docker_adguard_sync` role.
+# Defines Docker Compose, `adguardhome-sync`, Traefik proxy-network,
+# AdGuard-shared service-identity defaults, sync targets, and API inputs for a
+# Debian-family host.
+
+docker_adguard_sync_enabled: true
+
+docker_adguard_sync_packages: >-
+  {{
+    docker_engine_effective_compose_packages
+    | default(
+      docker_engine_compose_packages
+      | default(docker_adguard_packages | default([]))
+    )
+  }}
+docker_adguard_sync_compose_package_candidates: >-
+  {{
+    (
+      docker_engine_effective_compose_packages
+      if (
+        (docker_engine_effective_compose_packages is defined)
+        and ((docker_engine_effective_compose_packages | length) > 0)
+      )
+      else (
+        docker_adguard_compose_package_candidates
+        if (docker_adguard_compose_package_candidates is defined)
+        else (
+          docker_engine_compose_package_candidates
+          if (docker_engine_compose_package_candidates is defined)
+          else (
+            ['docker-compose-v2', 'docker-compose']
+            if ('docker.io' in (docker_engine_packages | default([])))
+            else ['docker-compose-plugin', 'docker-compose-v2', 'docker-compose']
+          )
+        )
+      )
+    )
+  }}
+docker_adguard_sync_compose_command: >-
+  {{
+    docker_adguard_compose_command | default(['docker', 'compose'])
+  }}
+
+docker_adguard_sync_project_dir: /srv/adguard-sync
+docker_adguard_sync_data_dir: "{{ docker_adguard_sync_project_dir }}/data"
+docker_adguard_sync_config_path: "{{ docker_adguard_sync_data_dir }}/adguardhome-sync.yaml"
+docker_adguard_sync_compose_project_name: adguard-sync
+docker_adguard_sync_compose_service_name: adguard-sync
+docker_adguard_sync_container_name: adguard-sync
+docker_adguard_sync_image: ghcr.io/bakito/adguardhome-sync:v0.7.8
+docker_adguard_sync_docker_service_name: "{{ docker_engine_service_name | default('docker') }}"
+docker_adguard_sync_service_user: "{{ docker_adguard_service_user | default('srv_adguard') }}"
+docker_adguard_sync_service_uid: "{{ docker_adguard_service_uid | default(1160) }}"
+docker_adguard_sync_access_group: "{{ docker_adguard_access_group | default('access_adguard') }}"
+docker_adguard_sync_access_gid: "{{ docker_adguard_access_gid | default(1160) }}"
+docker_adguard_sync_container_user: "{{ docker_adguard_sync_service_uid }}:{{ docker_adguard_sync_access_gid }}"
+docker_adguard_sync_service_user_shell: >-
+  {{
+    docker_adguard_service_user_shell | default('/usr/sbin/nologin')
+  }}
+docker_adguard_sync_service_user_home: >-
+  {{
+    docker_adguard_project_dir | default(docker_adguard_sync_project_dir)
+  }}
+docker_adguard_sync_manage_access_group_memberships: >-
+  {{
+    docker_adguard_manage_access_group_memberships | default(true)
+  }}
+docker_adguard_sync_access_group_members: >-
+  {{
+    (
+      docker_adguard_access_group_members
+      if (docker_adguard_access_group_members is defined)
+      else [
+        (bootstrap_user | default('admin')),
+        (user_account_name | default('admin'))
+      ]
+    )
+    | map('trim')
+    | reject('equalto', '')
+    | unique
+    | list
+  }}
+
+docker_adguard_sync_compose_file_path: "{{ docker_adguard_sync_project_dir }}/compose.yml"
+docker_adguard_sync_proxy_network_name: "{{ docker_traefik_network_name | default('traefik_proxy') }}"
+docker_adguard_sync_host: adguard-sync.example.com
+docker_adguard_sync_router_name: adguard-sync
+docker_adguard_sync_router_entrypoints:
+  - websecure
+docker_adguard_sync_tls_certresolver: "{{ docker_traefik_certresolver_name | default('letsencrypt') }}"
+docker_adguard_sync_container_web_port: 8080
+docker_adguard_sync_log_level: info
+
+docker_adguard_sync_cron: "0 */6 * * *"
+docker_adguard_sync_run_on_start: true
+docker_adguard_sync_continue_on_error: false
+
+docker_adguard_sync_origin:
+  url: ""
+  username: admin
+  password: ""
+
+docker_adguard_sync_replicas: []
+
+docker_adguard_sync_api_port: 8080
+docker_adguard_sync_api_username: admin
+docker_adguard_sync_api_password: ""
+docker_adguard_sync_api_dark_mode: true
+docker_adguard_sync_api_metrics_enabled: false
+docker_adguard_sync_api_metrics_scrape_interval: 60s
+docker_adguard_sync_api_metrics_query_log_limit: 10000
+
+docker_adguard_sync_features:
+  dns:
+    accessLists: true
+    serverConfig: true
+    rewrites: true
+  dhcp:
+    serverConfig: true
+    staticLeases: true
+  generalSettings: true
+  queryLogConfig: true
+  statsConfig: true
+  clientSettings: true
+  services: true
+  filters: true
+  theme: true

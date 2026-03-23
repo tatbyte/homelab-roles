@@ -7,14 +7,27 @@
 
 docker_wireguard_enabled: true
 
-docker_wireguard_packages: []
-docker_wireguard_compose_package_candidates:
-  - docker-compose-plugin
-  - docker-compose-v2
-  - docker-compose
-docker_wireguard_compose_command:
-  - docker
-  - compose
+docker_wireguard_packages: "{{ docker_engine_effective_compose_packages | default(docker_engine_compose_packages | default([])) }}"
+docker_wireguard_compose_package_candidates: >-
+  {{
+    (
+      docker_engine_effective_compose_packages
+      if (
+        (docker_engine_effective_compose_packages is defined)
+        and ((docker_engine_effective_compose_packages | length) > 0)
+      )
+      else (
+        docker_engine_compose_package_candidates
+        if (docker_engine_compose_package_candidates is defined)
+        else (
+          ['docker-compose-v2', 'docker-compose']
+          if ('docker.io' in (docker_engine_packages | default([])))
+          else ['docker-compose-plugin', 'docker-compose-v2', 'docker-compose']
+        )
+      )
+    )
+  }}
+docker_wireguard_compose_command: "{{ docker_engine_effective_compose_command | default(['docker', 'compose']) }}"
 
 docker_wireguard_project_dir: /srv/wireguard
 docker_wireguard_data_dir: "{{ docker_wireguard_project_dir }}/data"

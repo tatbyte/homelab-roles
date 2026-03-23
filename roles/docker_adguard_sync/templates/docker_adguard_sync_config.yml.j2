@@ -1,0 +1,95 @@
+{# roles/docker_adguard_sync/templates/docker_adguard_sync_config.yml.j2 #}
+{# Template for the managed `adguardhome-sync` configuration file in the `docker_adguard_sync` role. #}
+# Managed by Ansible: docker_adguard_sync
+# Source: roles/docker_adguard_sync/templates/docker_adguard_sync_config.yml.j2
+cron: "{{ docker_adguard_sync_cron }}"
+runOnStart: {{ docker_adguard_sync_run_on_start | to_json }}
+continueOnError: {{ docker_adguard_sync_continue_on_error | to_json }}
+origin:
+  url: "{{ docker_adguard_sync_origin.url }}"
+{% if docker_adguard_sync_origin.web_url is defined and docker_adguard_sync_origin.web_url | string | trim | length > 0 %}
+  webURL: "{{ docker_adguard_sync_origin.web_url }}"
+{% endif %}
+{% if docker_adguard_sync_origin.api_path is defined and docker_adguard_sync_origin.api_path | string | trim | length > 0 %}
+  apiPath: "{{ docker_adguard_sync_origin.api_path }}"
+{% endif %}
+  username: "{{ docker_adguard_sync_origin.username }}"
+  password: "{{ docker_adguard_sync_origin.password }}"
+{% if docker_adguard_sync_origin.cookie is defined and docker_adguard_sync_origin.cookie | string | trim | length > 0 %}
+  cookie: "{{ docker_adguard_sync_origin.cookie }}"
+{% endif %}
+{% if docker_adguard_sync_origin.request_headers is defined and docker_adguard_sync_origin.request_headers | length > 0 %}
+  requestHeaders:
+{% for key, value in docker_adguard_sync_origin.request_headers | dictsort %}
+    {{ key }}: "{{ value }}"
+{% endfor %}
+{% endif %}
+{% if docker_adguard_sync_origin.insecure_skip_verify is defined %}
+  insecureSkipVerify: {{ docker_adguard_sync_origin.insecure_skip_verify | to_json }}
+{% endif %}
+{% if docker_adguard_sync_origin.auto_setup is defined %}
+  autoSetup: {{ docker_adguard_sync_origin.auto_setup | to_json }}
+{% endif %}
+{% if docker_adguard_sync_origin.interface_name is defined and docker_adguard_sync_origin.interface_name | string | trim | length > 0 %}
+  interfaceName: "{{ docker_adguard_sync_origin.interface_name }}"
+{% endif %}
+{% if docker_adguard_sync_origin.dhcp_server_enabled is defined %}
+  dhcpServerEnabled: {{ docker_adguard_sync_origin.dhcp_server_enabled | to_json }}
+{% endif %}
+replicas:
+{% for replica in docker_adguard_sync_replicas %}
+  - url: "{{ replica.url }}"
+{% if replica.web_url is defined and replica.web_url | string | trim | length > 0 %}
+    webURL: "{{ replica.web_url }}"
+{% endif %}
+{% if replica.api_path is defined and replica.api_path | string | trim | length > 0 %}
+    apiPath: "{{ replica.api_path }}"
+{% endif %}
+    username: "{{ replica.username }}"
+    password: "{{ replica.password }}"
+{% if replica.cookie is defined and replica.cookie | string | trim | length > 0 %}
+    cookie: "{{ replica.cookie }}"
+{% endif %}
+{% if replica.request_headers is defined and replica.request_headers | length > 0 %}
+    requestHeaders:
+{% for key, value in replica.request_headers | dictsort %}
+      {{ key }}: "{{ value }}"
+{% endfor %}
+{% endif %}
+{% if replica.insecure_skip_verify is defined %}
+    insecureSkipVerify: {{ replica.insecure_skip_verify | to_json }}
+{% endif %}
+{% if replica.auto_setup is defined %}
+    autoSetup: {{ replica.auto_setup | to_json }}
+{% endif %}
+{% if replica.interface_name is defined and replica.interface_name | string | trim | length > 0 %}
+    interfaceName: "{{ replica.interface_name }}"
+{% endif %}
+{% if replica.dhcp_server_enabled is defined %}
+    dhcpServerEnabled: {{ replica.dhcp_server_enabled | to_json }}
+{% endif %}
+{% endfor %}
+api:
+  port: {{ docker_adguard_sync_api_port }}
+  username: "{{ docker_adguard_sync_api_username }}"
+  password: "{{ docker_adguard_sync_api_password }}"
+  darkMode: {{ docker_adguard_sync_api_dark_mode | to_json }}
+  metrics:
+    enabled: {{ docker_adguard_sync_api_metrics_enabled | to_json }}
+    scrapeInterval: "{{ docker_adguard_sync_api_metrics_scrape_interval }}"
+    queryLogLimit: {{ docker_adguard_sync_api_metrics_query_log_limit }}
+features:
+  dns:
+    accessLists: {{ docker_adguard_sync_features.dns.accessLists | to_json }}
+    serverConfig: {{ docker_adguard_sync_features.dns.serverConfig | to_json }}
+    rewrites: {{ docker_adguard_sync_features.dns.rewrites | to_json }}
+  dhcp:
+    serverConfig: {{ docker_adguard_sync_features.dhcp.serverConfig | to_json }}
+    staticLeases: {{ docker_adguard_sync_features.dhcp.staticLeases | to_json }}
+  generalSettings: {{ docker_adguard_sync_features.generalSettings | to_json }}
+  queryLogConfig: {{ docker_adguard_sync_features.queryLogConfig | to_json }}
+  statsConfig: {{ docker_adguard_sync_features.statsConfig | to_json }}
+  clientSettings: {{ docker_adguard_sync_features.clientSettings | to_json }}
+  services: {{ docker_adguard_sync_features.services | to_json }}
+  filters: {{ docker_adguard_sync_features.filters | to_json }}
+  theme: {{ docker_adguard_sync_features.theme | to_json }}

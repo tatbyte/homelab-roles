@@ -51,6 +51,32 @@ vault_docker_traefik_dashboard_basic_auth_users:
 vault_docker_adguard_admin_credentials: "admin:$2a$10$replace-me"
 
 # ---------------------------------------------------------------------------
+# docker_adguard_sync
+# ---------------------------------------------------------------------------
+
+# Example public host name used by Traefik for the AdGuard Sync dashboard.
+vault_docker_adguard_sync_host: "adguard-sync.example.com"
+
+# Example direct LAN IP for the origin AdGuard instance.
+vault_docker_adguard_sync_origin_ip: "192.168.1.53"
+
+# Example direct LAN IP for the replica AdGuard instance.
+vault_docker_adguard_sync_replica_ip: "192.168.1.54"
+
+# Example plaintext AdGuard admin password used by the sync tool.
+# This must match the bcrypt-backed AdGuard admin account stored in
+# `vault_docker_adguard_admin_credentials`.
+vault_docker_adguard_sync_adguard_password: "replace-me"
+
+# Example AdGuard Sync dashboard/API username.
+# Leave the committed example blank on purpose so secret scanners do not treat
+# this adjacent username/password pair as a real credential.
+vault_docker_adguard_sync_api_username: ""
+
+# Example AdGuard Sync dashboard/API password.
+vault_docker_adguard_sync_api_password: ""
+
+# ---------------------------------------------------------------------------
 # docker_wireguard
 # ---------------------------------------------------------------------------
 

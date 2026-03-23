@@ -1,0 +1,9 @@
+{# roles/bootstrap/templates/bootstrap_sshd_handoff.conf.j2 #}
+{# Template for the managed bootstrap SSH handoff drop-in file in the `bootstrap` role. #}
+# Managed by Ansible: bootstrap
+# Source: roles/bootstrap/templates/bootstrap_sshd_handoff.conf.j2
+PasswordAuthentication {{ 'yes' if bootstrap_sshd_password_authentication else 'no' }}
+PubkeyAuthentication {{ 'yes' if bootstrap_sshd_pubkey_authentication else 'no' }}
+{% if bootstrap_sshd_allow_users | length > 0 %}
+AllowUsers {{ bootstrap_sshd_allow_users | join(' ') }}
+{% endif %}

@@ -23,7 +23,7 @@ WireGuard UDP listener, and `/srv`-based persistence on Debian-family hosts.
 |----------|---------|----------|-------------|
 | `docker_wireguard_enabled` | `true` | no | Enables WireGuard package, file, and Docker Compose management |
 | `docker_wireguard_packages` | `[]` | no | Explicit package list installed to support the chosen Compose command; when empty, the role auto-detects an available package |
-| `docker_wireguard_compose_package_candidates` | `['docker-compose-plugin', 'docker-compose-v2', 'docker-compose']` | no | Candidate package names probed when auto-detecting Compose support on Debian-family hosts |
+| `docker_wireguard_compose_package_candidates` | inherits `docker_engine_compose_package_candidates` or `['docker-compose-plugin', 'docker-compose-v2', 'docker-compose']` fallback | no | Candidate package names probed when auto-detecting Compose support on Debian-family hosts; inherit the engine package-family preference when available |
 | `docker_wireguard_compose_command` | `['docker', 'compose']` | no | Command prefix used for Compose operations such as `up`, `down`, `ps`, and `version`; override with `['docker-compose']` on hosts that use the classic Compose binary |
 | `docker_wireguard_project_dir` | `/srv/wireguard` | no | Directory that stores the managed Compose project files |
 | `docker_wireguard_data_dir` | `/srv/wireguard/data` | no | Directory that stores persistent `wg-easy` state for backup-friendly restores |
