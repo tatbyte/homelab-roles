@@ -1,0 +1,211 @@
+---
+# roles/docker_adguard_sync/tasks/config.yml
+# Config phase tasks for the `docker_adguard_sync` role.
+# Reuses the AdGuard-owned access identities by default, renders the managed
+# sync config plus Compose files, and starts the Docker Compose project behind
+# the existing Traefik proxy network.
+
+- name: "Config | Ensure AdGuard Sync access group exists"
+  ansible.builtin.group:
+    name: "{{ docker_adguard_sync_access_group }}"
+    gid: "{{ docker_adguard_sync_access_gid }}"
+    state: present
+  when: docker_adguard_sync_enabled | bool
+
+- name: "Config | Ensure AdGuard Sync service user exists"
+  ansible.builtin.user:
+    name: "{{ docker_adguard_sync_service_user }}"
+    uid: "{{ docker_adguard_sync_service_uid }}"
+    group: "{{ docker_adguard_sync_access_group }}"
+    shell: "{{ docker_adguard_sync_service_user_shell }}"
+    home: "{{ docker_adguard_sync_service_user_home }}"
+    create_home: false
+    state: present
+    comment: "AdGuard Sync service account managed by Ansible"
+  when: docker_adguard_sync_enabled | bool
+
+- name: "Config | Collect existing user entries for AdGuard Sync access-group management"
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ item }}"
+  register: docker_adguard_sync_config_passwd_lookup
+  changed_when: false
+  failed_when: false
+  loop: "{{ docker_adguard_sync_access_group_members }}"
+  loop_control:
+    label: "{{ item }}"
+  when:
+    - docker_adguard_sync_enabled | bool
+    - docker_adguard_sync_manage_access_group_memberships | bool
+    - docker_adguard_sync_access_group_members | length > 0
+
+- name: "Config | Ensure AdGuard Sync access-group membership for existing users"
+  ansible.builtin.user:
+    name: "{{ item.item }}"
+    state: present
+    groups: "{{ docker_adguard_sync_access_group }}"
+    append: true
+  loop: "{{ docker_adguard_sync_config_passwd_lookup.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when:
+    - docker_adguard_sync_enabled | bool
+    - docker_adguard_sync_manage_access_group_memberships | bool
+    - item.item in (item.ansible_facts.getent_passwd | default({}))
+
+- name: "Config | Check whether a managed Docker Compose file already exists"
+  ansible.builtin.stat:
+    path: "{{ docker_adguard_sync_compose_file_path }}"
+  register: docker_adguard_sync_compose_file_stat
+  changed_when: false
+
+- name: "Config | Stop managed Docker Compose project when AdGuard Sync is disabled"
+  ansible.builtin.command:
+    argv: >-
+      {{
+        docker_adguard_sync_compose_command
+        + [
+            '--project-name',
+            docker_adguard_sync_compose_project_name,
+            '--file',
+            docker_adguard_sync_compose_file_path,
+            'down',
+          ]
+      }}
+  register: docker_adguard_sync_compose_down
+  changed_when: docker_adguard_sync_compose_file_stat.stat.exists
+  when:
+    - not docker_adguard_sync_enabled | bool
+    - docker_adguard_sync_compose_file_stat.stat.exists
+
+- name: "Config | Inspect required Traefik proxy network"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - network
+      - inspect
+      - "{{ docker_adguard_sync_proxy_network_name }}"
+  register: docker_adguard_sync_config_proxy_network
+  changed_when: false
+  failed_when: false
+  when: docker_adguard_sync_enabled | bool
+
+- name: "Config | Require Traefik proxy network before starting AdGuard Sync"
+  ansible.builtin.assert:
+    that:
+      - docker_adguard_sync_config_proxy_network.rc == 0
+    fail_msg: >-
+      docker_adguard_sync requires the external proxy network
+      {{ docker_adguard_sync_proxy_network_name }}. Run docker_traefik first
+      or point docker_adguard_sync_proxy_network_name at an existing Traefik
+      network.
+    quiet: true
+  when: docker_adguard_sync_enabled | bool
+
+- name: "Config | Ensure AdGuard Sync project directory exists"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - path: "{{ docker_adguard_sync_project_dir }}"
+      owner: root
+      group: "{{ docker_adguard_sync_access_group }}"
+      mode: "0750"
+    - path: "{{ docker_adguard_sync_data_dir }}"
+      owner: "{{ docker_adguard_sync_service_user }}"
+      group: "{{ docker_adguard_sync_access_group }}"
+      mode: "0750"
+  loop_control:
+    label: "{{ item.path }}"
+  when: docker_adguard_sync_enabled | bool
+
+- name: "Config | Render AdGuard Sync configuration file"
+  ansible.builtin.template:
+    src: docker_adguard_sync_config.yml.j2
+    dest: "{{ docker_adguard_sync_config_path }}"
+    owner: root
+    group: "{{ docker_adguard_sync_access_group }}"
+    mode: "0640"
+  register: docker_adguard_sync_config_template_result
+  when: docker_adguard_sync_enabled | bool
+
+- name: "Config | Render Docker Compose file"
+  ansible.builtin.template:
+    src: docker_adguard_sync_compose.yml.j2
+    dest: "{{ docker_adguard_sync_compose_file_path }}"
+    owner: root
+    group: "{{ docker_adguard_sync_access_group }}"
+    mode: "0640"
+  register: docker_adguard_sync_compose_template_result
+  when: docker_adguard_sync_enabled | bool
+
+- name: "Config | Read current Docker Compose running services"
+  ansible.builtin.command:
+    argv: >-
+      {{
+        docker_adguard_sync_compose_command
+        + [
+            '--project-name',
+            docker_adguard_sync_compose_project_name,
+            '--file',
+            docker_adguard_sync_compose_file_path,
+            'ps',
+            '--services',
+            '--status',
+            'running',
+          ]
+      }}
+  register: docker_adguard_sync_compose_ps
+  changed_when: false
+  failed_when: false
+  when: docker_adguard_sync_enabled | bool
+
+- name: "Config | Inspect running AdGuard Sync container"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - inspect
+      - "{{ docker_adguard_sync_container_name }}"
+  register: docker_adguard_sync_container_inspect
+  changed_when: false
+  failed_when: false
+  when: docker_adguard_sync_enabled | bool
+
+- name: "Config | Derive whether Docker Compose reconciliation is required"
+  ansible.builtin.set_fact:
+    docker_adguard_sync_requires_compose_up: >-
+      {{
+        docker_adguard_sync_config_template_result.changed
+        or docker_adguard_sync_compose_template_result.changed
+        or (docker_adguard_sync_container_inspect.rc != 0)
+        or (
+          docker_adguard_sync_compose_service_name
+          not in (docker_adguard_sync_compose_ps.stdout_lines | default([]))
+        )
+      }}
+  changed_when: false
+  when: docker_adguard_sync_enabled | bool
+
+- name: "Config | Reconcile Docker Compose project"
+  ansible.builtin.command:
+    argv: >-
+      {{
+        docker_adguard_sync_compose_command
+        + [
+            '--project-name',
+            docker_adguard_sync_compose_project_name,
+            '--file',
+            docker_adguard_sync_compose_file_path,
+            'up',
+            '--detach',
+            '--force-recreate',
+          ]
+      }}
+  register: docker_adguard_sync_compose_up
+  changed_when: docker_adguard_sync_requires_compose_up | bool
+  when:
+    - docker_adguard_sync_enabled | bool
+    - docker_adguard_sync_requires_compose_up | bool

@@ -3,6 +3,27 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v2.7.0]
+### Added
+- Added standalone `docker_adguard_sync` with Compose-managed AdGuard Home Sync, Traefik routing, Vault-backed credentials, and shared AdGuard service/access identity support.
+- Added bootstrap SSH handoff support so freshly bootstrapped hosts can admit the managed automation user before the recurring base SSH policy is applied.
+- Added engine-level Docker Compose package detection so `docker_engine` can restore baseline Compose support after cleaning conflicting Docker package families.
+
+### Changed
+- Extended the aggregate Docker role and example inventory to include optional `docker_adguard_sync` coverage alongside Traefik, AdGuard, and WireGuard.
+- Updated Docker application roles to inherit the engine-managed Compose package family and effective Compose command by default, reducing host-level Compose override noise.
+- Updated example bootstrap and Docker playbooks to load controller-local Vault data from delegated `pre_tasks` within the target play so `--limit <host>` runs still resolve local secrets correctly.
+- Updated the example inventory and Vault template to cover AdGuard Sync host, origin/replica LAN IPs, direct AdGuard HTTP publishing, and replica enablement patterns.
+
+### Fixed
+- Fixed bootstrap/base SSH interplay by cleaning up the temporary bootstrap `AllowUsers` drop-in once `base_sshd` takes ownership of the long-term SSH policy.
+- Fixed `docker_engine` and downstream Docker-role convergence so hosts with only classic `docker-compose` still validate and use the matching Compose command.
+- Fixed `docker_adguard_sync` runtime compatibility for the pinned image by aligning the rendered config schema and container runtime user/group handling with the shared AdGuard identity model.
+- Fixed example local-Vault workflows and example secrets so pre-commit checks, GitGuardian scanning, and `ansible-lint` all pass on the repository branch.
+
+### Documentation
+- Updated repository, Vault, examples, bootstrap, base SSH, and Docker role documentation to cover the new AdGuard Sync role, bootstrap SSH handoff lifecycle, Compose-family inheritance, and the `--limit`-safe local-Vault loading pattern.
+
 ## [v2.6.1]
 ### Changed
 - Extended `base_dns` with a pre-config detect phase that inspects `/etc/resolv.conf`, `systemd-resolved`, `NetworkManager`, `resolvectl`, and `nmcli`, then fails early on resolver-mode mismatch or ambiguous DNS ownership.

@@ -1,7 +1,8 @@
 ---
 # roles/bootstrap/defaults/main.yml
 # Default variables for the `bootstrap` role.
-# Defines the automation account, privilege settings, and SSH key input used during bootstrap.
+# Defines the automation account, privilege settings, SSH key input, and
+# post-bootstrap SSH handoff used during bootstrap.
 
 # Automation account created during bootstrap and used by later Ansible runs.
 bootstrap_user: admin
@@ -21,3 +22,24 @@ bootstrap_user_shell: /bin/bash
 
 # Public SSH key installed into the automation user's authorized_keys file.
 bootstrap_authorized_key: ""
+
+# If true, ensure SSH immediately allows the post-bootstrap automation account
+# to connect before the later base phase converges the broader daemon policy.
+bootstrap_manage_sshd_handoff: true
+bootstrap_sshd_service_name: ssh
+bootstrap_sshd_dropin_dir: /etc/ssh/sshd_config.d
+bootstrap_sshd_handoff_config_path: "{{ bootstrap_sshd_dropin_dir }}/80-bootstrap-access.conf"
+bootstrap_sshd_password_authentication: true
+bootstrap_sshd_pubkey_authentication: true
+bootstrap_sshd_allow_users: >-
+  {{
+    [
+      bootstrap_user,
+      (bootstrap_login_user | default(''))
+    ]
+    | map('string')
+    | map('trim')
+    | reject('equalto', '')
+    | unique
+    | list
+  }}

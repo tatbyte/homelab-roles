@@ -90,6 +90,9 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/<t
   Traefik proxy network, so roles such as `docker_adguard` and
   `docker_wireguard` can publish web UIs through Compose labels without adding
   more Traefik file-provider config.
+- The example can also exercise sidecar roles such as `docker_adguard_sync`
+  through the same aggregate-toggle-plus-role-scoped-vars pattern used by the
+  other optional Docker child roles.
 - The Traefik and AdGuard example URLs are derived from the inventory `alias`
   plus the Vault-backed `vault_docker_public_domain_suffix`, so an inventory host with
   `alias=proxy1` gets URLs like `traefik.proxy1.example.com` and
@@ -107,4 +110,8 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/<t
 - Add layer-specific role inputs under the matching directory in `examples/inventory/group_vars/`.
 - Enable optional child roles per host in `examples/inventory/host_vars/<host>/vars.yml`.
 - Reuse `examples/inventory/group_vars/all/secret_sources.yml` for future playbooks that optionally load controller-local secret files.
+- When a future example playbook loads that controller-local secret file, do it
+  from delegated `pre_tasks` inside the target play rather than a separate
+  `hosts: localhost` play so limited runs keep the same Vault-loading
+  behavior.
 - Keep role-specific behavior details in role READMEs so this file remains concise.

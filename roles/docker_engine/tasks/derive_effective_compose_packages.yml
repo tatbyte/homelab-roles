@@ -1,0 +1,56 @@
+---
+# roles/docker_engine/tasks/derive_effective_compose_packages.yml
+# Helper tasks for the `docker_engine` role.
+# Derives the effective Compose support packages, auto-detecting an available
+# package when none are set explicitly.
+
+- name: "Derive Compose Packages | Probe available Compose support packages"
+  ansible.builtin.command:
+    argv:
+      - apt-cache
+      - show
+      - "{{ item }}"
+  register: docker_engine_compose_package_probe
+  changed_when: false
+  failed_when: false
+  loop: "{{ docker_engine_compose_package_candidates }}"
+  loop_control:
+    label: "{{ item }}"
+  when:
+    - docker_engine_enabled | bool
+    - docker_engine_manage_compose_support | bool
+    - docker_engine_compose_packages | length == 0
+
+- name: "Derive Compose Packages | Build effective Compose package list"
+  ansible.builtin.set_fact:
+    docker_engine_effective_compose_packages: >-
+      {{
+        docker_engine_compose_packages
+        if (docker_engine_compose_packages | length > 0)
+        else (
+          docker_engine_compose_package_probe.results
+          | default([])
+          | selectattr('rc', 'equalto', 0)
+          | map(attribute='item')
+          | list
+        )[:1]
+      }}
+  changed_when: false
+  when:
+    - docker_engine_enabled | bool
+    - docker_engine_manage_compose_support | bool
+
+- name: "Derive Compose Packages | Assert an installable Compose support package exists"
+  ansible.builtin.assert:
+    that:
+      - docker_engine_effective_compose_packages is sequence
+      - docker_engine_effective_compose_packages is not string
+      - docker_engine_effective_compose_packages | length > 0
+    fail_msg: >-
+      No installable Docker Compose support package was found. Set
+      docker_engine_compose_packages explicitly or extend
+      docker_engine_compose_package_candidates for this host family.
+    quiet: true
+  when:
+    - docker_engine_enabled | bool
+    - docker_engine_manage_compose_support | bool

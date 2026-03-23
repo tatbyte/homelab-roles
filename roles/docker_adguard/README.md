@@ -23,7 +23,7 @@ Traefik-connected proxy-network deployment, role-owned access identities, and
 |----------|---------|----------|-------------|
 | `docker_adguard_enabled` | `true` | no | Enables AdGuard package, file, and Docker Compose management |
 | `docker_adguard_packages` | `[]` | no | Explicit package list installed to support the chosen Compose command; when empty, the role auto-detects an available package |
-| `docker_adguard_compose_package_candidates` | `['docker-compose-plugin', 'docker-compose-v2', 'docker-compose']` | no | Candidate package names probed when auto-detecting Compose support on Debian-family hosts |
+| `docker_adguard_compose_package_candidates` | inherits `docker_engine_compose_package_candidates` or `['docker-compose-plugin', 'docker-compose-v2', 'docker-compose']` fallback | no | Candidate package names probed when auto-detecting Compose support on Debian-family hosts; inherit the engine package-family preference when available |
 | `docker_adguard_compose_command` | `['docker', 'compose']` | no | Command prefix used for Compose operations such as `up`, `down`, `ps`, and `version`; override with `['docker-compose']` on hosts that use the classic Compose binary |
 | `docker_adguard_project_dir` | `/srv/adguard` | no | Directory that stores the managed Compose project files |
 | `docker_adguard_data_dir` | `/srv/adguard/data` | no | Directory that stores AdGuard persistent data for backup-friendly restores |
@@ -81,7 +81,7 @@ docker_public_domain_suffix: "{{ vault_docker_public_domain_suffix }}"
 docker_adguard_host: "adguard.{{ docker_public_host_alias }}.{{ docker_public_domain_suffix }}"
 docker_adguard_http_bind_port: 3000
 docker_adguard_admin_credentials: "{{ vault_docker_adguard_admin_credentials }}"
-docker_adguard_dns_bind_port: 5353
+docker_adguard_dns_bind_port: 53
 docker_adguard_container_dns_port: 53
 docker_adguard_firewall_rules:
   - rule: allow

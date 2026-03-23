@@ -19,6 +19,13 @@
     insertbefore: BOF
   notify: Restart SSH service
 
+- name: "Config | Remove bootstrap SSH handoff drop-in when base policy takes over"
+  ansible.builtin.file:
+    path: "{{ base_sshd_bootstrap_handoff_config_path }}"
+    state: absent
+  notify: Restart SSH service
+  when: base_sshd_cleanup_bootstrap_handoff | bool
+
 - name: "Config | Render SSH daemon drop-in"
   ansible.builtin.template:
     src: sshd_base.conf.j2

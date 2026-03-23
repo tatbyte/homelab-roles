@@ -131,7 +131,10 @@ For future example playbooks, prefer this pattern:
 
 1. Read the shared `secret_sources_*` vars from `group_vars/all/`.
 2. Load the local file only when the switch is enabled.
-3. Override canonical inventory vars such as `bootstrap_login_password`
+3. Load it from delegated `pre_tasks` inside the target play rather than from
+   a separate `hosts: localhost` pre-play, so `--limit <host>` runs still load
+   the local Vault values.
+4. Override canonical inventory vars such as `bootstrap_login_password`
    instead of introducing playbook-only secret variable names.
 
 Correct:
@@ -176,6 +179,10 @@ those derived hostnames resolve correctly.
   password hashes in Vault. The shared dashboard domain suffix also lives in
   Vault, while the final Traefik and AdGuard hostnames stay derived in normal
   vars files from `alias`.
+- For `adguardhome-sync`, keep the sync UI host, direct AdGuard LAN IPs or
+  URLs, and plaintext API passwords in Vault-backed vars because the sync tool
+  needs live login input rather than the bcrypt hash used by AdGuard Home
+  itself.
 - Treat role names here as examples, not a fixed list, so new secret-bearing
   roles can adopt Vault without needing this doc rewritten.
 

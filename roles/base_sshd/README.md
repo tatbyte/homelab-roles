@@ -24,6 +24,8 @@ Explains how the role manages a Debian-family SSH daemon baseline during the bas
 | `base_sshd_password_authentication` | `true` | no | Whether password authentication stays enabled in the managed SSH daemon drop-in |
 | `base_sshd_pubkey_authentication` | `true` | no | Whether public-key authentication stays enabled in the managed SSH daemon drop-in |
 | `base_sshd_allow_users` | `[]` | no | Optional login allow-list written to `AllowUsers`; when set, validation requires those users to be present in the effective `AllowUsers` result |
+| `base_sshd_cleanup_bootstrap_handoff` | `true` | no | If true, remove the earlier bootstrap SSH handoff drop-in so the base SSH policy becomes the sole managed source of `AllowUsers` decisions |
+| `base_sshd_bootstrap_handoff_config_path` | `/etc/ssh/sshd_config.d/80-bootstrap-access.conf` | no | Path of the bootstrap handoff drop-in removed when `base_sshd_cleanup_bootstrap_handoff` is enabled |
 
 ## Usage
 
@@ -50,6 +52,9 @@ base_sshd_allow_users:
 
 This role manages a dedicated drop-in under `/etc/ssh/sshd_config.d/` so Debian-family package defaults and other local drop-ins can stay separate from the base-phase policy.
 It also ensures the main `/etc/ssh/sshd_config` contains `Include /etc/ssh/sshd_config.d/*.conf` near the top so the managed drop-in is actually loaded on hosts with older or hand-written SSH daemon configs.
+By default it also removes the bootstrap handoff drop-in created by the
+`bootstrap` role so the later base SSH policy can tighten `AllowUsers`
+cleanly instead of inheriting the bootstrap-era allow-list forever.
 If `base_sshd_allow_users` is empty, this role does not add an `AllowUsers` line of its own; any existing `AllowUsers` setting from other SSH daemon config files remains outside this role's management.
 If `base_sshd_allow_users` is set, the role validates that those users are allowed after OpenSSH merges all config sources, but it does not require this role to be the only source of `AllowUsers` entries.
 General validation for settings such as `Port`, `PermitRootLogin`, `PasswordAuthentication`, and `PubkeyAuthentication` uses baseline `sshd -T` output rather than trying to validate every external `Match` rule interaction on the host.

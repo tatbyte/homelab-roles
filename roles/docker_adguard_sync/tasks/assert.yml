@@ -1,0 +1,201 @@
+---
+# roles/docker_adguard_sync/tasks/assert.yml
+# Assert phase tasks for the `docker_adguard_sync` role.
+# Validates Docker Compose, `adguardhome-sync`, Traefik proxy-network,
+# AdGuard-target, identity, and API inputs before configuration starts.
+
+- name: "Assert | Validate docker_adguard_sync variable structure"
+  ansible.builtin.assert:
+    that:
+      - docker_adguard_sync_enabled is boolean
+      - docker_adguard_sync_run_on_start is boolean
+      - docker_adguard_sync_continue_on_error is boolean
+      - docker_adguard_sync_api_dark_mode is boolean
+      - docker_adguard_sync_api_metrics_enabled is boolean
+      - docker_adguard_sync_packages is sequence
+      - docker_adguard_sync_packages is not string
+      - docker_adguard_sync_compose_package_candidates is sequence
+      - docker_adguard_sync_compose_package_candidates is not string
+      - docker_adguard_sync_compose_command is sequence
+      - docker_adguard_sync_compose_command is not string
+      - docker_adguard_sync_access_group_members is sequence
+      - docker_adguard_sync_access_group_members is not string
+      - docker_adguard_sync_router_entrypoints is sequence
+      - docker_adguard_sync_router_entrypoints is not string
+      - docker_adguard_sync_replicas is sequence
+      - docker_adguard_sync_replicas is not string
+      - docker_adguard_sync_manage_access_group_memberships is boolean
+      - docker_adguard_sync_origin is mapping
+      - docker_adguard_sync_features is mapping
+      - docker_adguard_sync_features.dns is mapping
+      - docker_adguard_sync_features.dhcp is mapping
+      - docker_adguard_sync_features.dns.accessLists is boolean
+      - docker_adguard_sync_features.dns.serverConfig is boolean
+      - docker_adguard_sync_features.dns.rewrites is boolean
+      - docker_adguard_sync_features.dhcp.serverConfig is boolean
+      - docker_adguard_sync_features.dhcp.staticLeases is boolean
+      - docker_adguard_sync_features.generalSettings is boolean
+      - docker_adguard_sync_features.queryLogConfig is boolean
+      - docker_adguard_sync_features.statsConfig is boolean
+      - docker_adguard_sync_features.clientSettings is boolean
+      - docker_adguard_sync_features.services is boolean
+      - docker_adguard_sync_features.filters is boolean
+      - docker_adguard_sync_features.theme is boolean
+      - docker_adguard_sync_project_dir is string
+      - docker_adguard_sync_project_dir.startswith('/')
+      - docker_adguard_sync_data_dir is string
+      - docker_adguard_sync_data_dir.startswith('/')
+      - docker_adguard_sync_config_path is string
+      - docker_adguard_sync_config_path.startswith('/')
+      - docker_adguard_sync_service_user_home is string
+      - docker_adguard_sync_service_user_home.startswith('/')
+      - docker_adguard_sync_compose_project_name is string
+      - docker_adguard_sync_compose_project_name | trim | length > 0
+      - docker_adguard_sync_compose_service_name is string
+      - docker_adguard_sync_compose_service_name | trim | length > 0
+      - docker_adguard_sync_container_name is string
+      - docker_adguard_sync_container_name | trim | length > 0
+      - docker_adguard_sync_image is string
+      - docker_adguard_sync_image | trim | length > 0
+      - docker_adguard_sync_container_user is string
+      - docker_adguard_sync_container_user | trim | length > 0
+      - docker_adguard_sync_docker_service_name is string
+      - docker_adguard_sync_docker_service_name | trim | length > 0
+      - docker_adguard_sync_service_user is string
+      - docker_adguard_sync_service_user | trim | length > 0
+      - docker_adguard_sync_service_uid is number
+      - docker_adguard_sync_service_uid | int >= 1000
+      - docker_adguard_sync_access_group is string
+      - docker_adguard_sync_access_group | trim | length > 0
+      - docker_adguard_sync_access_gid is number
+      - docker_adguard_sync_access_gid | int >= 1000
+      - docker_adguard_sync_service_user_shell is string
+      - docker_adguard_sync_service_user_shell | trim | length > 0
+      - docker_adguard_sync_proxy_network_name is string
+      - docker_adguard_sync_proxy_network_name | trim | length > 0
+      - docker_adguard_sync_host is string
+      - docker_adguard_sync_host | trim | length > 0
+      - docker_adguard_sync_host == (docker_adguard_sync_host | trim)
+      - docker_adguard_sync_host is not match('.*\\s+.*')
+      - >-
+        docker_adguard_sync_host is match(
+          '^(?=.{1,253}$)(?!-)[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\\.(?!-)[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$'
+        )
+      - docker_adguard_sync_router_name is string
+      - docker_adguard_sync_router_name | trim | length > 0
+      - docker_adguard_sync_tls_certresolver is string
+      - docker_adguard_sync_tls_certresolver | trim | length > 0
+      - docker_adguard_sync_container_web_port is integer
+      - docker_adguard_sync_container_web_port > 0
+      - docker_adguard_sync_log_level is string
+      - docker_adguard_sync_log_level | trim | length > 0
+      - docker_adguard_sync_cron is string
+      - docker_adguard_sync_cron | trim | length > 0
+      - docker_adguard_sync_origin.url is defined
+      - docker_adguard_sync_origin.url is string
+      - docker_adguard_sync_origin.url | trim | length > 0
+      - docker_adguard_sync_origin.username is defined
+      - docker_adguard_sync_origin.username is string
+      - docker_adguard_sync_origin.username | trim | length > 0
+      - docker_adguard_sync_origin.password is defined
+      - docker_adguard_sync_origin.password is string
+      - docker_adguard_sync_origin.password | trim | length > 0
+      - docker_adguard_sync_api_port is integer
+      - docker_adguard_sync_api_port > 0
+      - docker_adguard_sync_api_port == docker_adguard_sync_container_web_port
+      - docker_adguard_sync_api_username is string
+      - docker_adguard_sync_api_username | trim | length > 0
+      - docker_adguard_sync_api_password is string
+      - docker_adguard_sync_api_password | trim | length > 0
+      - docker_adguard_sync_api_metrics_scrape_interval is string
+      - docker_adguard_sync_api_metrics_scrape_interval | trim | length > 0
+      - docker_adguard_sync_api_metrics_query_log_limit is integer
+      - docker_adguard_sync_api_metrics_query_log_limit >= 0
+      - (docker_adguard_sync_packages | map('string') | list | length) == (docker_adguard_sync_packages | length)
+      - >-
+        (
+          docker_adguard_sync_packages | map('trim') | reject('equalto', '') | list | length
+        ) == (docker_adguard_sync_packages | length)
+      - >-
+        (
+          docker_adguard_sync_compose_package_candidates | map('string') | list | length
+        ) == (docker_adguard_sync_compose_package_candidates | length)
+      - >-
+        (
+          docker_adguard_sync_compose_package_candidates
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_adguard_sync_compose_package_candidates | length)
+      - (docker_adguard_sync_compose_command | length) > 0
+      - >-
+        (
+          docker_adguard_sync_compose_command | map('string') | list | length
+        ) == (docker_adguard_sync_compose_command | length)
+      - >-
+        (
+          docker_adguard_sync_compose_command
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_adguard_sync_compose_command | length)
+      - >-
+        (
+          docker_adguard_sync_access_group_members | map('string') | list | length
+        ) == (docker_adguard_sync_access_group_members | length)
+      - >-
+        (
+          docker_adguard_sync_access_group_members
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_adguard_sync_access_group_members | length)
+      - >-
+        (
+          docker_adguard_sync_access_group_members | unique | list | length
+        ) == (docker_adguard_sync_access_group_members | length)
+      - >-
+        (
+          docker_adguard_sync_router_entrypoints | map('string') | list | length
+        ) == (docker_adguard_sync_router_entrypoints | length)
+      - >-
+        (
+          docker_adguard_sync_router_entrypoints
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_adguard_sync_router_entrypoints | length)
+      - docker_adguard_sync_replicas | length > 0
+    fail_msg: >-
+      docker_adguard_sync variables must define valid booleans, non-empty
+      strings, absolute project and data paths, valid fixed IDs, a DNS-safe
+      Traefik host, a non-empty origin config, at least one replica, and a
+      non-empty API login. The container user must also be a non-empty string.
+    quiet: true
+
+- name: "Assert | Validate requested replica structure"
+  ansible.builtin.assert:
+    that:
+      - item is mapping
+      - item.url is defined
+      - item.url is string
+      - item.url | trim | length > 0
+      - item.username is defined
+      - item.username is string
+      - item.username | trim | length > 0
+      - item.password is defined
+      - item.password is string
+      - item.password | trim | length > 0
+      - item.url != docker_adguard_sync_origin.url
+    fail_msg: >-
+      Each docker_adguard_sync_replicas item must include non-empty url,
+      username, and password fields, and replica URLs must differ from the
+      origin URL.
+    quiet: true
+  loop: "{{ docker_adguard_sync_replicas }}"
+  loop_control:
+    label: "{{ item.url | default('docker-adguard-sync-replica') }}"

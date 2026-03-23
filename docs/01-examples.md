@@ -99,6 +99,10 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/<t
   Traefik proxy network, so service roles such as `docker_adguard` and
   `docker_wireguard` can expose web UIs through Compose labels while still
   keeping host data under `/srv`.
+- The example Docker layer can also exercise sidecar services such as
+  `docker_adguard_sync`, where a dedicated role-scoped vars file lives under
+  `examples/inventory/group_vars/docker/` and the optional aggregate toggle is
+  still enabled per host from `examples/inventory/host_vars/lab/vars.yml`.
 - The example Docker layer derives Traefik and AdGuard web URLs from the
   inventory `alias` plus the Vault-backed
   `vault_docker_public_domain_suffix`, so each host can keep a predictable
@@ -112,3 +116,7 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/<t
 - Future example playbooks that support controller-local secrets should reuse
   `secret_sources_use_local_vault_file` and
   `secret_sources_local_vault_file` instead of hard-coding paths in each file.
+- When those example playbooks load controller-local secrets, do it from
+  delegated `pre_tasks` inside the target play rather than a separate
+  `hosts: localhost` play so `--limit <host>` still exercises the same secret
+  loading path.

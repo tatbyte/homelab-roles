@@ -9,6 +9,15 @@
       - docker_engine_enabled is boolean
       - docker_engine_packages is sequence
       - docker_engine_packages is not string
+      - docker_engine_manage_compose_support is boolean
+      - docker_engine_compose_packages is sequence
+      - docker_engine_compose_packages is not string
+      - docker_engine_compose_package_candidates is sequence
+      - docker_engine_compose_package_candidates is not string
+      - docker_engine_compose_command_candidates is sequence
+      - docker_engine_compose_command_candidates is not string
+      - docker_engine_default_compose_command is sequence
+      - docker_engine_default_compose_command is not string
       - docker_engine_cleanup_conflicting_packages is boolean
       - docker_engine_conflicting_packages is sequence
       - docker_engine_conflicting_packages is not string
@@ -33,6 +42,22 @@
       - docker_engine_user_group_memberships is not string
       - (docker_engine_packages | map('string') | list | length) == (docker_engine_packages | length)
       - (docker_engine_packages | map('trim') | reject('equalto', '') | list | length) == (docker_engine_packages | length)
+      - (docker_engine_compose_packages | map('string') | list | length) == (docker_engine_compose_packages | length)
+      - (docker_engine_compose_packages | map('trim') | reject('equalto', '') | list | length) == (docker_engine_compose_packages | length)
+      - (docker_engine_compose_package_candidates | map('string') | list | length) == (docker_engine_compose_package_candidates | length)
+      - (docker_engine_compose_package_candidates | map('trim') | reject('equalto', '') | list | length) == (docker_engine_compose_package_candidates | length)
+      - >-
+        (
+          docker_engine_compose_command_candidates | length
+        ) == 0 or (
+          (
+            docker_engine_compose_command_candidates
+            | map('type_debug')
+            | unique
+            | list
+          ) == ['list']
+        )
+      - (docker_engine_default_compose_command | length) > 0
       - (docker_engine_conflicting_packages | map('string') | list | length) == (docker_engine_conflicting_packages | length)
       - (docker_engine_conflicting_packages | map('trim') | reject('equalto', '') | list | length) == (docker_engine_conflicting_packages | length)
       - (docker_engine_conflicting_packages | unique | list | length) == (docker_engine_conflicting_packages | length)
@@ -61,14 +86,54 @@
       - (docker_engine_group_members | unique | list | length) == (docker_engine_group_members | length)
       - >-
         (
+          docker_engine_compose_command_candidates
+          | map('map', 'string')
+          | map('list')
+          | map('length')
+          | min
+          | default(1, true)
+        ) > 0
+      - >-
+        (
+          docker_engine_compose_command_candidates
+          | map('map', 'string')
+          | map('map', 'trim')
+          | map('list')
+          | map('select', 'equalto', '')
+          | map('list')
+          | map('length')
+          | max
+          | default(0, true)
+        ) == 0
+      - >-
+        (
+          docker_engine_default_compose_command | map('string') | list | length
+        ) == (docker_engine_default_compose_command | length)
+      - >-
+        (
+          docker_engine_default_compose_command
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (docker_engine_default_compose_command | length)
+      - >-
+        (
           docker_engine_user_group_memberships | length
         ) == 0 or (
           (docker_engine_user_group_memberships | map('type_debug') | unique | list) == ['dict']
         )
     fail_msg: >-
-      docker_engine_enabled and docker_engine_manage_group_memberships must be booleans,
-      docker_engine_packages, docker_engine_conflicting_packages, and
-      docker_engine_group_members must be lists of unique non-empty strings,
+      docker_engine_enabled, docker_engine_manage_compose_support, and
+      docker_engine_manage_group_memberships must be booleans,
+      docker_engine_packages, docker_engine_compose_packages,
+      docker_engine_compose_package_candidates,
+      docker_engine_conflicting_packages, and docker_engine_group_members must
+      be lists of unique non-empty strings where required,
+      docker_engine_default_compose_command must be a non-empty command-argv
+      list,
+      docker_engine_compose_command_candidates must be a list of non-empty
+      command-argv lists,
       daemon config paths must be absolute, Docker daemon log settings must be
       non-empty mappings, docker_engine_service_name and
       docker_engine_group_name must be non-empty strings, cleanup toggles must

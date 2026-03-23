@@ -33,3 +33,42 @@
   when:
     - docker_engine_enabled | bool
     - docker_engine_packages | length > 0
+
+- name: "Install | Derive effective Compose support packages"
+  ansible.builtin.import_tasks: derive_effective_compose_packages.yml
+  when:
+    - docker_engine_enabled | bool
+    - docker_engine_manage_compose_support | bool
+
+- name: "Install | Ensure Docker Compose support packages are present"
+  ansible.builtin.apt:
+    name: "{{ docker_engine_effective_compose_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when:
+    - docker_engine_enabled | bool
+    - docker_engine_manage_compose_support | bool
+    - docker_engine_effective_compose_packages | length > 0
+
+- name: "Install | Derive effective Docker Compose command"
+  ansible.builtin.set_fact:
+    docker_engine_effective_compose_command: >-
+      {{
+        ['docker', 'compose']
+        if (
+          docker_engine_effective_compose_packages
+          | intersect(['docker-compose-plugin', 'docker-compose-v2'])
+          | length
+        ) > 0
+        else (
+          ['docker-compose']
+          if ('docker-compose' in docker_engine_effective_compose_packages)
+          else docker_engine_default_compose_command
+        )
+      }}
+  changed_when: false
+  when:
+    - docker_engine_enabled | bool
+    - docker_engine_manage_compose_support | bool
+    - docker_engine_effective_compose_packages | length > 0

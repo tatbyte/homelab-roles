@@ -48,7 +48,7 @@ homelab-roles/
 ## Available Roles
 - `bootstrap`: standalone bootstrap role for initial automation-account setup.
 - `base`: aggregate base-phase role with required foundation plus optional hardening and maintenance child roles.
-- `docker`: aggregate Docker-phase role with Docker-related child roles such as `docker_engine`, `docker_traefik`, `docker_adguard`, and `docker_wireguard`.
+- `docker`: aggregate Docker-phase role with Docker-related child roles such as `docker_engine`, `docker_traefik`, `docker_adguard`, `docker_adguard_sync`, and `docker_wireguard`.
 - `user`: aggregate human-admin role with account baseline plus optional user-environment child roles.
 - `monitoring`: aggregate monitoring namespace currently delegating to focused monitoring child roles.
 - `base_*`, `docker_*`, `user_*`, and other standalone roles: focused capabilities grouped by domain and consumed either directly or via aggregate roles.

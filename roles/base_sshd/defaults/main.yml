@@ -11,3 +11,5 @@ base_sshd_permit_root_login: "no"
 base_sshd_password_authentication: true
 base_sshd_pubkey_authentication: true
 base_sshd_allow_users: []
+base_sshd_cleanup_bootstrap_handoff: true
+base_sshd_bootstrap_handoff_config_path: /etc/ssh/sshd_config.d/80-bootstrap-access.conf

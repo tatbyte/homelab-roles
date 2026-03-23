@@ -8,6 +8,12 @@
     path: /etc/ssh/sshd_config.d/90-base-sshd.conf
   register: base_sshd_config_file
 
+- name: "Validate | Stat bootstrap SSH handoff drop-in"
+  ansible.builtin.stat:
+    path: "{{ base_sshd_bootstrap_handoff_config_path }}"
+  register: base_sshd_bootstrap_handoff_stat
+  changed_when: false
+
 - name: "Validate | Read main sshd_config"
   ansible.builtin.slurp:
     path: /etc/ssh/sshd_config
@@ -67,6 +73,12 @@
       - ('permitrootlogin ' ~ base_sshd_permit_root_login) in base_sshd_effective_config.stdout_lines
       - ('passwordauthentication ' ~ base_sshd_expected_password_authentication) in base_sshd_effective_config.stdout_lines
       - ('pubkeyauthentication ' ~ base_sshd_expected_pubkey_authentication) in base_sshd_effective_config.stdout_lines
+      - >-
+        (
+          not (base_sshd_cleanup_bootstrap_handoff | bool)
+        ) or (
+          not base_sshd_bootstrap_handoff_stat.stat.exists
+        )
     fail_msg: >-
       Configured SSH daemon state does not match the requested base_sshd
       values

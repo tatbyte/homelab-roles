@@ -12,6 +12,16 @@
   ansible.builtin.service_facts:
   when: docker_engine_enabled | bool
 
+- name: "Validate | Check available Docker Compose command paths"
+  ansible.builtin.command:
+    argv: "{{ docker_engine_effective_compose_command + ['version'] }}"
+  register: docker_engine_compose_command_check
+  changed_when: false
+  failed_when: false
+  when:
+    - docker_engine_enabled | bool
+    - docker_engine_manage_compose_support | bool
+
 - name: "Validate | Read Docker daemon configuration"
   ansible.builtin.slurp:
     path: "{{ docker_engine_daemon_config_path }}"
@@ -68,11 +78,30 @@
           | b64decode
           | from_json
         ) == docker_engine_expected_daemon_config
+      - >-
+        (
+          not (docker_engine_manage_compose_support | bool)
+        ) or (
+          (
+            docker_engine_effective_compose_packages
+            | default(docker_engine_compose_packages)
+            | difference(ansible_facts.packages.keys() | list)
+            | length
+          ) == 0
+        )
+      - >-
+        (
+          not (docker_engine_manage_compose_support | bool)
+        ) or (
+          (
+            docker_engine_compose_command_check.rc | default(1)
+          ) == 0
+        )
       - docker_engine_service_unit in ansible_facts.services
       - ansible_facts.services[docker_engine_service_unit].status in ['enabled', 'enabled-runtime']
       - ansible_facts.services[docker_engine_service_unit].state == 'running'
     fail_msg: >-
-      Configured Docker engine state does not match the requested docker_engine values
+      Configured Docker engine or Compose support state does not match the requested docker_engine values
     quiet: true
   when: docker_engine_enabled | bool
 

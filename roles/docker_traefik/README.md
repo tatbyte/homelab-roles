@@ -23,7 +23,7 @@ Explains how the role manages a Traefik reverse proxy through Docker Compose wit
 |----------|---------|----------|-------------|
 | `docker_traefik_enabled` | `true` | no | Enables Traefik package, file, and Docker Compose management |
 | `docker_traefik_packages` | `[]` | no | Explicit package list installed to support the chosen Compose command; when empty, the role auto-detects an available package |
-| `docker_traefik_compose_package_candidates` | `['docker-compose-plugin', 'docker-compose-v2', 'docker-compose']` | no | Candidate package names probed when auto-detecting Compose support on Debian-family hosts |
+| `docker_traefik_compose_package_candidates` | inherits `docker_engine_compose_package_candidates` or `['docker-compose-plugin', 'docker-compose-v2', 'docker-compose']` fallback | no | Candidate package names probed when auto-detecting Compose support on Debian-family hosts; inherit the engine package-family preference when available |
 | `docker_traefik_compose_command` | `['docker', 'compose']` | no | Command prefix used for Compose operations such as `up`, `down`, `ps`, and `version`; override with `['docker-compose']` on hosts that use the classic Compose binary |
 | `docker_traefik_project_dir` | `/srv/traefik` | no | Directory that stores the managed Compose project files |
 | `docker_traefik_data_dir` | `/srv/traefik/data` | no | Directory that stores Traefik persistent data for backup-friendly restores |

@@ -35,3 +35,49 @@
     state: present
     key: "{{ bootstrap_authorized_key }}"
   when: bootstrap_authorized_key is defined and bootstrap_authorized_key | length > 0
+
+- name: "Config | Ensure sshd drop-in directory exists for bootstrap handoff"
+  ansible.builtin.file:
+    path: "{{ bootstrap_sshd_dropin_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: bootstrap_manage_sshd_handoff | bool
+
+- name: "Config | Ensure main sshd_config includes drop-in directory for bootstrap handoff"
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^Include /etc/ssh/sshd_config\.d/\*\.conf$'
+    line: 'Include /etc/ssh/sshd_config.d/*.conf'
+    insertbefore: BOF
+  notify: Restart bootstrap SSH service
+  when: bootstrap_manage_sshd_handoff | bool
+
+- name: "Config | Render bootstrap SSH handoff drop-in"
+  ansible.builtin.template:
+    src: bootstrap_sshd_handoff.conf.j2
+    dest: "{{ bootstrap_sshd_handoff_config_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart bootstrap SSH service
+  when:
+    - bootstrap_manage_sshd_handoff | bool
+    - bootstrap_sshd_allow_users | length > 0
+
+- name: "Config | Validate SSH daemon syntax for bootstrap handoff"
+  ansible.builtin.command: sshd -t -f /etc/ssh/sshd_config
+  changed_when: false
+  when: bootstrap_manage_sshd_handoff | bool
+
+- name: "Config | Ensure SSH service is enabled and running for bootstrap handoff"
+  ansible.builtin.service:
+    name: "{{ bootstrap_sshd_service_name }}"
+    enabled: true
+    state: started
+  when: bootstrap_manage_sshd_handoff | bool
+
+- name: "Config | Flush bootstrap SSH handler"
+  ansible.builtin.meta: flush_handlers
+  when: bootstrap_manage_sshd_handoff | bool

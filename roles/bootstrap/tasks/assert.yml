@@ -15,6 +15,22 @@
       - bootstrap_user_shell is defined
       - bootstrap_user_shell | length > 0
       - bootstrap_user_shell.startswith('/')
+      - bootstrap_manage_sshd_handoff is boolean
+      - bootstrap_sshd_service_name is defined
+      - bootstrap_sshd_service_name | length > 0
+      - bootstrap_sshd_dropin_dir is defined
+      - bootstrap_sshd_dropin_dir | length > 0
+      - bootstrap_sshd_dropin_dir.startswith('/')
+      - bootstrap_sshd_handoff_config_path is defined
+      - bootstrap_sshd_handoff_config_path | length > 0
+      - bootstrap_sshd_handoff_config_path.startswith('/')
+      - bootstrap_sshd_password_authentication is boolean
+      - bootstrap_sshd_pubkey_authentication is boolean
+      - bootstrap_sshd_allow_users is sequence
+      - bootstrap_sshd_allow_users is not string
+      - (bootstrap_sshd_allow_users | map('string') | list | length) == (bootstrap_sshd_allow_users | length)
+      - (bootstrap_sshd_allow_users | map('trim') | reject('equalto', '') | list | length) == (bootstrap_sshd_allow_users | length)
+      - (bootstrap_sshd_allow_users | unique | list | length) == (bootstrap_sshd_allow_users | length)
     fail_msg: "bootstrap_user/shell and puid/pgid must be defined and valid"
     quiet: true
 
