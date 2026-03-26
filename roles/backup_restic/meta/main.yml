@@ -1,0 +1,7 @@
+---
+# roles/backup_restic/meta/main.yml
+# Role metadata for `backup_restic`.
+# Leaves dependencies empty because execution order is defined in the consumer
+# playbook or example playbook that applies the role.
+
+dependencies: []

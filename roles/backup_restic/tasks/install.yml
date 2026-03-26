@@ -1,0 +1,11 @@
+---
+# roles/backup_restic/tasks/install.yml
+# Install phase tasks for the `backup_restic` role.
+# Installs the Restic and JSON-processing packages needed by the managed
+# backup script.
+
+- name: "Install | Ensure backup_restic packages are present"
+  ansible.builtin.package:
+    name: "{{ backup_restic_packages }}"
+    state: present
+  when: backup_restic_enabled

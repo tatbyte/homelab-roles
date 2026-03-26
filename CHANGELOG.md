@@ -3,6 +3,26 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v2.8.1]
+### Added
+- Added shared companion roles `backup_restic_init` and `backup_restic_now` so any consumer repo can initialize a missing Restic repository once and run an immediate backup validation pass without re-implementing local helper roles.
+
+### Changed
+- Extended the example lab with dedicated `examples/playbooks/backup_restic_init.yml` and `examples/playbooks/backup_restic_now.yml` playbooks that mirror the same first-run and on-demand backup workflow now available to consumer repositories.
+
+### Documentation
+- Updated repository and example documentation to explain why the shared backup workflow now includes explicit init and validation playbooks alongside the recurring `backup_restic` role.
+
+## [v2.8.0]
+### Added
+- Added standalone `backup_restic` with Restic package management, a host-local backup script, a systemd service/timer, and stable `/var/lib/monitor/restic-backup.json` status output for future monitoring consumers.
+
+### Changed
+- Extended the example inventory and playbook flow with a dedicated `backup` group, `examples/playbooks/backup.yml`, Vault-backed Restic inputs, and a post-Docker backup phase in `examples/playbooks/site.yml`.
+
+### Documentation
+- Updated repository and example documentation to cover the new backup role, the dedicated backup inventory layer, and the Vault-backed Restic repository workflow.
+
 ## [v2.7.0]
 ### Added
 - Added standalone `docker_adguard_sync` with Compose-managed AdGuard Home Sync, Traefik routing, Vault-backed credentials, and shared AdGuard service/access identity support.

@@ -1,0 +1,38 @@
+---
+# roles/backup_restic_init/tasks/assert.yml
+# Assert phase tasks for the `backup_restic_init` role.
+# Validates the repository and environment inputs before probing or
+# initializing the Restic repository.
+
+- name: "Assert | Validate backup_restic_init variables"
+  ansible.builtin.assert:
+    that:
+      - backup_restic_init_enabled is boolean
+      - backup_restic_init_repository is string
+      - backup_restic_init_repository | length > 0
+      - backup_restic_init_password is string
+      - backup_restic_init_password | length > 0
+      - backup_restic_init_extra_environment is mapping
+      - backup_restic_init_environment is mapping
+      - backup_restic_init_missing_repository_markers is sequence
+      - backup_restic_init_missing_repository_markers | length > 0
+      - >-
+        backup_restic_init_missing_repository_markers
+        | select('string')
+        | list
+        | length
+        == backup_restic_init_missing_repository_markers | length
+    fail_msg: >-
+      backup_restic_init requires a repository, password, environment
+      mapping, and one or more repository-missing marker strings
+    quiet: true
+  when: backup_restic_init_enabled
+
+- name: "Assert | Check restic binary availability"
+  ansible.builtin.command:
+    argv:
+      - restic
+      - version
+  register: backup_restic_init_restic_version
+  changed_when: false
+  when: backup_restic_init_enabled

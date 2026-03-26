@@ -36,3 +36,17 @@ docker_include_traefik: true
 docker_include_adguard: true
 docker_include_adguard_sync: true
 docker_include_wireguard: true
+backup_include_restic: true
+
+# Stop only the shared example containers with writable application state
+# before the Restic backup runs. Traefik stays up because its state is
+# low-churn and rebuild-friendly compared with the service data under `/srv`.
+backup_restic_docker_stop_containers:
+  - "{{ docker_adguard_container_name }}"
+  - "{{ docker_adguard_sync_container_name }}"
+  - "{{ docker_wireguard_container_name }}"
+
+# Keep the example host on one exact backup time so timer behavior is easy to
+# inspect while testing the role collection.
+backup_restic_timer_on_calendar: "*-*-* 03:30:00"
+backup_restic_timer_randomized_delay_sec: 0

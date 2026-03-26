@@ -1,0 +1,14 @@
+---
+# roles/backup_restic_now/defaults/main.yml
+# Default variables for the `backup_restic_now` role.
+# Defines the on-demand service unit, JSON status path, and pass/fail policy
+# used when forcing an immediate Restic backup test run.
+
+backup_restic_now_enabled: true
+backup_restic_now_service_unit: "{{ backup_restic_service_unit | default('backup-restic.service') }}"
+backup_restic_now_status_path: "{{ backup_restic_status_path | default('/var/lib/monitor/restic-backup.json') }}"
+backup_restic_now_script_path: "{{ backup_restic_script_path | default('/usr/local/bin/backup-restic.sh') }}"
+backup_restic_now_allowed_statuses:
+  - ok
+  - warn
+backup_restic_now_require_exit_code_zero: true

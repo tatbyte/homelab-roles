@@ -17,6 +17,7 @@ The current role set is centered on:
 - recurring base host configuration and hardening
 - recurring Docker engine setup and access policy
 - recurring human admin account management
+- recurring Restic backup scheduling with machine-readable host backup status
 - monitoring-related access primitives
 
 This is a roles repository, not the full infrastructure repository.
@@ -50,6 +51,9 @@ homelab-roles/
 - `base`: aggregate base-phase role with required foundation plus optional hardening and maintenance child roles.
 - `docker`: aggregate Docker-phase role with Docker-related child roles such as `docker_engine`, `docker_traefik`, `docker_adguard`, `docker_adguard_sync`, and `docker_wireguard`.
 - `user`: aggregate human-admin role with account baseline plus optional user-environment child roles.
+- `backup_restic`: standalone backup role that installs Restic, schedules recurring backups through systemd, and writes stable JSON backup status under `/var/lib/monitor/`.
+- `backup_restic_now`: companion validation role that runs the managed backup service immediately and checks the resulting JSON status output.
+- `backup_restic_init`: companion operational role that probes the configured backend and initializes a missing Restic repository once.
 - `monitoring`: aggregate monitoring namespace currently delegating to focused monitoring child roles.
 - `base_*`, `docker_*`, `user_*`, and other standalone roles: focused capabilities grouped by domain and consumed either directly or via aggregate roles.
 
@@ -106,6 +110,12 @@ Example infra playbook:
   roles:
     - role: docker
 
+- name: Apply backup schedule
+  hosts: backup
+  become: true
+  roles:
+    - role: backup_restic
+
 - name: Apply monitoring access
   hosts: monitoring_targets
   become: true
@@ -130,7 +140,8 @@ The example inventory keeps aggregate layer toggles in
 `examples/inventory/group_vars/all/` and layer-specific role inputs under the
 matching group directories such as `examples/inventory/group_vars/base/`,
 `examples/inventory/group_vars/user/`, `examples/inventory/group_vars/docker/`,
-and `examples/inventory/group_vars/bootstrap/`.
+`examples/inventory/group_vars/backup/`, and
+`examples/inventory/group_vars/bootstrap/`.
 Optional aggregate `*_include_*` toggles stay disabled by default in
 `group_vars/all/`, and the example host re-enables them through
 `examples/inventory/host_vars/lab/vars.yml`.
@@ -145,6 +156,9 @@ Equivalent direct phase commands:
 
 ```sh
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/docker.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/backup.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/backup_restic_init.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/backup_restic_now.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/user.yml
 ```
 

@@ -1,0 +1,81 @@
+---
+# roles/backup_restic/tasks/validate.yml
+# Validate phase tasks for the `backup_restic` role.
+# Verifies the Restic binary, rendered files, and timer state after
+# configuration.
+
+- name: "Validate | Check restic binary version"
+  ansible.builtin.command:
+    cmd: restic version
+  register: backup_restic_version
+  changed_when: false
+  when: backup_restic_enabled
+
+- name: "Validate | Stat backup_restic managed paths"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ backup_restic_environment_file_path }}"
+    - "{{ backup_restic_script_path }}"
+    - "/etc/systemd/system/{{ backup_restic_service_unit }}"
+    - "/etc/systemd/system/{{ backup_restic_timer_unit }}"
+    - "{{ backup_restic_status_dir }}"
+  register: backup_restic_managed_paths
+  when: backup_restic_enabled
+
+- name: "Validate | Stat backup_restic timer enablement symlink"
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/timers.target.wants/{{ backup_restic_timer_unit }}"
+  register: backup_restic_timer_enabled_symlink
+  when: backup_restic_enabled
+
+- name: "Validate | Read backup_restic timer systemd state" # noqa: command-instead-of-module
+  ansible.builtin.command:
+    argv:
+      - systemctl
+      - show
+      - "{{ backup_restic_timer_unit }}"
+      - --property=LoadState
+      - --property=ActiveState
+      - --property=UnitFileState
+      - --property=SubState
+  register: backup_restic_timer_state
+  changed_when: false
+  when: backup_restic_enabled
+
+- name: "Validate | Assert backup_restic final state when enabled"
+  ansible.builtin.assert:
+    that:
+      - backup_restic_version.rc == 0
+      - backup_restic_managed_paths.results | map(attribute='stat.exists') | min
+      - backup_restic_timer_enabled_symlink.stat.exists
+      - backup_restic_timer_state.rc == 0
+      - "'LoadState=loaded' in backup_restic_timer_state.stdout_lines"
+      - "'ActiveState=active' in backup_restic_timer_state.stdout_lines"
+      - "'UnitFileState=enabled' in backup_restic_timer_state.stdout_lines"
+    fail_msg: >-
+      backup_restic is enabled, but the expected binary, files, or timer state
+      were not validated successfully
+    quiet: true
+  when: backup_restic_enabled
+
+- name: "Validate | Stat backup_restic managed files when disabled"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ backup_restic_environment_file_path }}"
+    - "{{ backup_restic_script_path }}"
+    - "/etc/systemd/system/{{ backup_restic_service_unit }}"
+    - "/etc/systemd/system/{{ backup_restic_timer_unit }}"
+  register: backup_restic_removed_paths
+  when: not backup_restic_enabled
+
+- name: "Validate | Assert backup_restic cleanup when disabled"
+  ansible.builtin.assert:
+    that:
+      - not (backup_restic_removed_paths.results | map(attribute='stat.exists') | max)
+    fail_msg: >-
+      backup_restic is disabled, but one or more managed files still exist on
+      the host
+    quiet: true
+  when: not backup_restic_enabled

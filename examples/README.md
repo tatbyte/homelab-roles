@@ -17,22 +17,28 @@ Variables and defaults are intentionally simple and should be adapted before pro
 - `inventory/group_vars/base/`: recurring base-layer role inputs.
 - `inventory/group_vars/user/`: recurring user-layer role inputs.
 - `inventory/group_vars/docker/`: recurring Docker-layer role inputs.
+- `inventory/group_vars/backup/`: recurring backup-layer role inputs.
+- `inventory/group_vars/all/backup.yml`: backup-layer opt-in switch.
 - `inventory/group_vars/all/secret_sources.yml`: shared secret-source switch for example playbooks.
 - `inventory/host_vars/lab/vars.yml`: host-specific enable flags for optional aggregate child roles.
 - `playbooks/bootstrap.yml`: bootstrap phase.
 - `playbooks/base.yml`: base phase.
 - `playbooks/user.yml`: user phase.
 - `playbooks/docker.yml`: Docker phase.
-- `playbooks/site.yml`: post-bootstrap entrypoint (`base`, `user`, then `docker`).
+- `playbooks/backup.yml`: backup phase.
+- `playbooks/backup_restic_init.yml`: one-time backup repository bootstrap helper.
+- `playbooks/backup_restic_now.yml`: on-demand backup validation helper.
+- `playbooks/site.yml`: post-bootstrap entrypoint (`base`, `user`, `docker`, then `backup`).
 - `playbooks/tests/`: optional integration tests.
 
 ## Variable Conventions
 
 - Keep aggregate toggles in aggregate files (`base.yml`, `docker.yml`, `user.yml`).
+- Keep the backup layer opt-in in `group_vars/all/backup.yml`.
 - Keep optional aggregate `*_include_*` toggles disabled by default in `group_vars/all/`.
 - Enable those optional child roles per host in `inventory/host_vars/<host>/vars.yml`.
 - Keep layer-specific role inputs under the matching inventory group directory.
-- Put a host in `[base]`, `[user]`, `[docker]`, or `[bootstrap]` when you want that layer's grouped vars and playbook to apply.
+- Put a host in `[base]`, `[user]`, `[docker]`, `[backup]`, or `[bootstrap]` when you want that layer's grouped vars and playbook to apply.
 - Add new role coverage by adding a role-scoped file and a toggle, not by rewriting this README.
 
 ## Usage
@@ -61,6 +67,9 @@ Direct phase runs:
 ```sh
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/base.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/docker.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/backup.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/backup_restic_init.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/backup_restic_now.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/user.yml
 ```
 
@@ -69,6 +78,9 @@ From the `examples/` directory:
 ```sh
 ansible-playbook playbooks/bootstrap.yml
 ansible-playbook playbooks/site.yml
+ansible-playbook playbooks/backup.yml
+ansible-playbook playbooks/backup_restic_init.yml
+ansible-playbook playbooks/backup_restic_now.yml
 ```
 
 Optional integration tests:
@@ -80,12 +92,18 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/<t
 ## Notes
 
 - `playbooks/base.yml` uses `serial: 1` for safer reboot-capable runs.
-- `playbooks/base.yml`, `playbooks/user.yml`, and `playbooks/docker.yml` now target the matching inventory groups `base`, `user`, and `docker` so hosts opt into each recurring layer explicitly.
+- `playbooks/base.yml`, `playbooks/user.yml`, `playbooks/docker.yml`, and `playbooks/backup.yml` target the matching inventory groups so hosts opt into each recurring layer explicitly.
 - The example host then opts back into the optional child roles through `inventory/host_vars/lab/vars.yml`, so the example behavior stays broad without making `group_vars/all/` implicitly enable everything for every future host.
 - The example may intentionally fail when strict restart/reboot follow-up checks are enabled.
 - The Docker example keeps service projects under `/srv/<service>` and
   persistent service data under `/srv/<service>/data` so backup-friendly host
   restores stay predictable.
+- The backup example keeps its repository target and password in the
+  controller-local Vault file so the tracked example inventory never stores
+  live Restic secrets.
+- The shared backup workflow now also includes one explicit first-run init
+  playbook and one explicit on-demand validation playbook so consumer repos
+  can follow the same operational flow shown by the example lab.
 - The Docker example can optionally layer downstream services onto the shared
   Traefik proxy network, so roles such as `docker_adguard` and
   `docker_wireguard` can publish web UIs through Compose labels without adding
@@ -108,6 +126,7 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/<t
 - Add or update aggregate toggles in `examples/inventory/group_vars/all/`.
 - Keep those aggregate toggles disabled by default unless every future example host should inherit them.
 - Add layer-specific role inputs under the matching directory in `examples/inventory/group_vars/`.
+- Add backup-role inputs under `examples/inventory/group_vars/backup/` when a recurring backup role is meant to track the dedicated `backup` inventory group.
 - Enable optional child roles per host in `examples/inventory/host_vars/<host>/vars.yml`.
 - Reuse `examples/inventory/group_vars/all/secret_sources.yml` for future playbooks that optionally load controller-local secret files.
 - When a future example playbook loads that controller-local secret file, do it

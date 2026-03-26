@@ -1,0 +1,72 @@
+---
+# examples/inventory/group_vars/backup/backup_restic.yml
+# Shared Restic backup variables for the example lab.
+# Defines the repository, password, tags, timer schedule, and optional backend
+# environment used by the `backup_restic` role on hosts in the `backup` group.
+
+# Keep the example backup role enabled so the example lab also exercises the
+# shared Restic timer and JSON-status contract.
+backup_restic_enabled: true
+
+# Load the example IDrive e2 repository and password from the
+# controller-local Vault file.
+backup_restic_repository: "{{ vault_backup_restic_idrive_e2_repository }}"
+backup_restic_password: "{{ vault_backup_restic_password }}"
+
+# IDrive e2 S3-compatible settings for the Restic S3 backend.
+backup_restic_extra_environment:
+  AWS_S3_FORCE_PATH_STYLE: "true"
+  AWS_DEFAULT_REGION: "{{ vault_backup_restic_idrive_e2_region }}"
+  AWS_ACCESS_KEY_ID: "{{ vault_backup_restic_idrive_e2_access_key_id }}"
+  AWS_SECRET_ACCESS_KEY: "{{ vault_backup_restic_idrive_e2_secret_access_key }}"
+
+# Tag snapshots so example-lab data stays easy to filter from other backup
+# sources that may share the same repository backend.
+backup_restic_tags:
+  - ansible-managed
+  - example-lab
+  - "{{ alias | default(inventory_hostname) }}"
+
+# Keep the JSON status output path explicit in inventory so monitoring and
+# validation consumers can see and override it without opening the shared role
+# defaults.
+backup_restic_status_dir: /var/lib/monitor
+backup_restic_status_path: "{{ backup_restic_status_dir }}/restic-backup.json"
+
+# Keep the shared example default empty so each host can choose only the
+# stateful containers it actually runs. The shared-repo candidates are AdGuard
+# Home, AdGuard Sync, and WireGuard.
+backup_restic_docker_stop_containers: []
+
+# Keep the example backup scope explicit in inventory so it is easy to inspect
+# and tune while validating the role.
+backup_restic_paths:
+  - /srv
+  - /home
+  - /root
+  - /etc/ssh
+  - /etc/systemd/system
+  - /var/lib
+
+# Remove optional paths here when the example host should not warn about them
+# being absent.
+backup_restic_excludes:
+  - /tmp
+  - /run
+  - /proc
+  - /sys
+  - /dev
+  - /mnt
+  - /media
+  - /var/cache
+  - /var/tmp
+  - /var/log/*
+  - /var/lib/apt/lists/*
+  - /var/lib/docker/tmp/*
+  - /var/lib/docker/overlay2/*
+  - /var/lib/docker/image/*
+  - /var/lib/docker/containers/*/*-json.log
+
+# Keep the example timer deterministic enough for inspection while still using
+# the same systemd timer path as production.
+backup_restic_timer_on_calendar: "*-*-* 03:30:00"
