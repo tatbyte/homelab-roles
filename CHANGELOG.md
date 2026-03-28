@@ -3,6 +3,22 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v2.9.0]
+### Added
+- Added the aggregate `backup` role so consumer repos can converge the recurring Restic layer through one steady-state entrypoint.
+- Added companion roles `backup_restic_prune` and `backup_restic_check`, each with their own systemd service/timer, managed script, environment file, and dedicated JSON status output under `/var/lib/monitor/`.
+- Added dedicated rendered backup-scope files for `backup_restic`, so the recurring backup script now reads managed include paths from `backup.paths` and excludes from `exclude.txt`.
+
+### Changed
+- Updated the recurring backup flow so the aggregate `backup` role now applies `backup_restic`, initializes a missing repository with `backup_restic_init`, and can optionally manage recurring prune and repository-check timers in the same layer.
+- Removed the standalone example `backup_restic_init.yml` playbook and moved repository initialization into the normal `examples/playbooks/backup.yml` steady-state path.
+- Simplified the prune/check companions so they operate only on the Restic repository, without pausing host containers or emitting Docker coordination in their own status JSON payloads.
+- Changed the default prune host filter to empty, so the normal per-repository retention path can still prune older snapshots after a host rename unless a shared multi-host repository explicitly opts into host scoping.
+- Updated `backup_restic_now` example usage to run one host at a time and added explicit zsh keybinding support in `user_zshell`.
+
+### Documentation
+- Updated repository, workflow, example, and role documentation to match the new aggregate backup layer and companion-role flow.
+
 ## [v2.8.1]
 ### Added
 - Added shared companion roles `backup_restic_init` and `backup_restic_now` so any consumer repo can initialize a missing Restic repository once and run an immediate backup validation pass without re-implementing local helper roles.
