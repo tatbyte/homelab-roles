@@ -1,0 +1,24 @@
+---
+# examples/inventory/group_vars/backup/backup_restic_check.yml
+# Shared Restic repository-check variables for the example lab.
+# Defines the timer schedule, check mode, and status path used by the
+# `backup_restic_check` role on hosts in the `backup` group.
+
+# Keep the example check role enabled so the example lab also exercises the
+# recurring repository-health path and its separate JSON-status contract.
+backup_restic_check_enabled: true
+
+# Keep the check JSON status output explicit in inventory so monitoring and
+# validation consumers can see and override it without opening the shared role
+# defaults.
+backup_restic_check_status_dir: /var/lib/monitor
+backup_restic_check_status_path: "{{ backup_restic_check_status_dir }}/restic-check.json"
+
+# Keep the example default on metadata-only checks. Override
+# `backup_restic_check_read_data_subset` later if you want periodic data-read
+# verification too, for example `10%` or `100%`.
+backup_restic_check_read_data_subset: ""
+
+# Keep the example check window deterministic enough for inspection.
+backup_restic_check_timer_on_calendar: "Mon *-*-* 04:30:00"
+backup_restic_check_timer_randomized_delay_sec: 0

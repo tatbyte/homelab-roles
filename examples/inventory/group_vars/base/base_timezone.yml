@@ -3,6 +3,7 @@
 # Shared timezone variables for the example lab.
 # Defines the timezone package and timezone enforced during the base phase.
 
+base_timezone_enabled: true
 # Package list installed with APT to provide timezone data on the host.
 base_timezone_packages:
   - tzdata            # timezone database package used by the base_timezone role

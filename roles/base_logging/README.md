@@ -23,7 +23,8 @@ Explains how the role manages a persistent local journald baseline on Debian-fam
 
 ## Usage
 
-The `base` role can include `base_logging` when `base_include_logging: true`.
+The aggregate `base` role reads `base_logging_enabled` from the role-scoped
+base vars file.
 
 Direct usage:
 
@@ -37,7 +38,7 @@ Direct usage:
 Example variables:
 
 ```yaml
-base_include_logging: true
+base_logging_enabled: true
 base_logging_packages:
   - systemd
 base_logging_storage: persistent

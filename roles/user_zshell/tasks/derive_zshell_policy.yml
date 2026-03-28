@@ -52,6 +52,11 @@
 - name: "Derive | Build Managed Human Admin Zsh Policy"
   ansible.builtin.set_fact:
     user_zshell_rc_path: "{{ user_zshell_home.rstrip('/') ~ '/.zshrc' }}"
+    user_zshell_effective_aliases: >-
+      {{
+        user_zshell_aliases
+        | combine(user_zshell_additional_aliases | default({}))
+      }}
     user_zshell_effective_rc_template_name: >-
       {{
         user_zshell_rc_template_name

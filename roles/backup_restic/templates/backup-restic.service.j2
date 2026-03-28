@@ -1,0 +1,16 @@
+{# roles/backup_restic/templates/backup-restic.service.j2 #}
+{# Template for the managed systemd service unit in the `backup_restic` role. #}
+[Unit]
+Description=Run managed Restic backup
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User={{ backup_restic_service_user }}
+Group={{ backup_restic_service_group }}
+EnvironmentFile={{ backup_restic_environment_file_path }}
+ExecStart={{ backup_restic_script_path }}
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

@@ -25,7 +25,8 @@ Explains how the role applies explicit APT package upgrades on Debian-family hos
 
 ## Usage
 
-The `base` role can include `base_upgrade` when `base_include_upgrade: true`.
+The aggregate `base` role reads `base_upgrade_enabled` from the role-scoped
+base vars file.
 
 Direct usage:
 
@@ -40,7 +41,7 @@ Direct usage:
 Example variables:
 
 ```yaml
-base_include_upgrade: true
+base_upgrade_enabled: true
 base_upgrade_mode: safe
 base_upgrade_autoremove: false
 base_upgrade_allow_reboot: false

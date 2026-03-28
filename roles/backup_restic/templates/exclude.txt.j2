@@ -1,0 +1,7 @@
+{# roles/backup_restic/templates/exclude.txt.j2 #}
+{# Template for the managed exclude list in the `backup_restic` role. #}
+# Managed by Ansible: backup_restic
+# Source: roles/backup_restic/templates/exclude.txt.j2
+{% for item in backup_restic_excludes %}
+{{ item }}
+{% endfor %}

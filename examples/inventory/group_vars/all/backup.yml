@@ -1,0 +1,13 @@
+---
+# examples/inventory/group_vars/all/backup.yml
+# Shared backup-layer toggle variables for the example lab.
+# Defines the opt-in switch for the recurring backup layer and its companion
+# operational playbooks. Keep this disabled by default here, then enable it
+# per host in `examples/inventory/host_vars/<host>/vars.yml`.
+
+# Keep the backup layer disabled by default in shared example vars so hosts
+# must opt in explicitly through host vars, matching the pattern used by the
+# other recurring layers.
+backup_include_restic: false
+backup_include_restic_prune: false
+backup_include_restic_check: false

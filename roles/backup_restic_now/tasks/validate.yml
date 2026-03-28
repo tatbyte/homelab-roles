@@ -1,0 +1,140 @@
+---
+# roles/backup_restic_now/tasks/validate.yml
+# Validate phase tasks for the `backup_restic_now` role.
+# Starts the managed oneshot backup service immediately, reads the resulting
+# JSON status file, prints a short summary, and fails when the run result is
+# not acceptable.
+
+- name: "Validate | Stat backup_restic service unit"
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/{{ backup_restic_now_service_unit }}"
+  register: backup_restic_now_service_unit_stat
+  when: backup_restic_now_enabled
+
+- name: "Validate | Stat backup_restic script path"
+  ansible.builtin.stat:
+    path: "{{ backup_restic_now_script_path }}"
+  register: backup_restic_now_script_stat
+  when: backup_restic_now_enabled
+
+- name: "Validate | Assert backup_restic service artifacts exist"
+  ansible.builtin.assert:
+    that:
+      - backup_restic_now_service_unit_stat.stat.exists
+      - backup_restic_now_script_stat.stat.exists
+    fail_msg: >-
+      backup_restic_now expects the recurring backup_restic role to be applied
+      first so the managed service unit and script already exist
+    quiet: true
+  when: backup_restic_now_enabled
+
+- name: "Validate | Stat backup_restic status file before run"
+  ansible.builtin.stat:
+    path: "{{ backup_restic_now_status_path }}"
+    checksum_algorithm: sha1
+  register: backup_restic_now_status_file_before
+  when: backup_restic_now_enabled
+
+- name: "Validate | Start backup_restic oneshot service now"
+  ansible.builtin.systemd_service:
+    name: "{{ backup_restic_now_service_unit }}"
+    state: started
+  register: backup_restic_now_service_start
+  failed_when: false
+  when: backup_restic_now_enabled
+
+- name: "Validate | Wait for backup_restic status file"
+  ansible.builtin.stat:
+    path: "{{ backup_restic_now_status_path }}"
+    checksum_algorithm: sha1
+  register: backup_restic_now_status_file
+  retries: 10
+  delay: 1
+  until: >-
+    backup_restic_now_status_file.stat.exists
+    and (
+      not (backup_restic_now_status_file_before.stat.exists | default(false))
+      or (backup_restic_now_status_file.stat.checksum | default(''))
+         != (backup_restic_now_status_file_before.stat.checksum | default(''))
+      or (backup_restic_now_status_file.stat.mtime | default(0))
+         > (backup_restic_now_status_file_before.stat.mtime | default(0))
+    )
+  failed_when: false
+  when: backup_restic_now_enabled
+
+- name: "Validate | Derive backup_restic status freshness"
+  ansible.builtin.set_fact:
+    backup_restic_now_status_is_fresh: >-
+      {{
+        (backup_restic_now_status_file.stat.exists | default(false))
+        and (
+          not (backup_restic_now_status_file_before.stat.exists | default(false))
+          or (backup_restic_now_status_file.stat.checksum | default(''))
+             != (backup_restic_now_status_file_before.stat.checksum | default(''))
+          or (backup_restic_now_status_file.stat.mtime | default(0))
+             > (backup_restic_now_status_file_before.stat.mtime | default(0))
+        )
+      }}
+  changed_when: false
+  when: backup_restic_now_enabled
+
+- name: "Validate | Assert backup_restic status file was refreshed"
+  ansible.builtin.assert:
+    that:
+      - backup_restic_now_status_is_fresh
+    fail_msg: >-
+      backup_restic_now did not observe a freshly updated status file for the
+      current run.
+      systemd_msg={{ backup_restic_now_service_start.msg | default('') }}
+      previous_exists={{ backup_restic_now_status_file_before.stat.exists | default(false) }}
+      current_exists={{ backup_restic_now_status_file.stat.exists | default(false) }}
+      previous_mtime={{ backup_restic_now_status_file_before.stat.mtime | default('n/a') }}
+      current_mtime={{ backup_restic_now_status_file.stat.mtime | default('n/a') }}
+      previous_checksum={{ backup_restic_now_status_file_before.stat.checksum | default('n/a') }}
+      current_checksum={{ backup_restic_now_status_file.stat.checksum | default('n/a') }}
+    quiet: true
+  when: backup_restic_now_enabled
+
+- name: "Validate | Read backup_restic status JSON"
+  ansible.builtin.slurp:
+    src: "{{ backup_restic_now_status_path }}"
+  register: backup_restic_now_status_slurp
+  when: backup_restic_now_enabled
+
+- name: "Validate | Parse backup_restic status JSON"
+  ansible.builtin.set_fact:
+    backup_restic_now_status: "{{ backup_restic_now_status_slurp.content | b64decode | from_json }}"
+  changed_when: false
+  when: backup_restic_now_enabled
+
+- name: "Validate | Print backup_restic run summary"
+  ansible.builtin.debug:
+    msg: >-
+      [backup_restic_now] host={{ inventory_hostname }}
+      | status={{ backup_restic_now_status.status | default('unknown') }}
+      | exit_code={{ backup_restic_now_status.exit_code | default('n/a') }}
+      | snapshot_id={{ backup_restic_now_status.snapshot_id | default('') or 'n/a' }}
+      | bytes_added={{ backup_restic_now_status.bytes_added | default('n/a') }}
+      | duration_seconds={{ backup_restic_now_status.duration_seconds | default('n/a') }}
+      | docker_ok={{ backup_restic_now_status.docker_coordination.ok | default('n/a') }}
+      | docker_stopped={{ backup_restic_now_status.docker_coordination.stopped_containers | default([]) | join(',') or 'none' }}
+      | docker_restarted={{ backup_restic_now_status.docker_coordination.restarted_containers | default([]) | join(',') or 'none' }}
+  when: backup_restic_now_enabled
+
+- name: "Validate | Assert backup_restic run result is acceptable"
+  ansible.builtin.assert:
+    that:
+      - not (backup_restic_now_service_start.failed | default(false))
+      - (backup_restic_now_status.status | default('')) in backup_restic_now_allowed_statuses
+      - >-
+        (not backup_restic_now_require_exit_code_zero)
+        or ((backup_restic_now_status.exit_code | default(1) | int) == 0)
+    fail_msg: >-
+      backup_restic_now run failed.
+      systemd_msg={{ backup_restic_now_service_start.msg | default('') }}
+      status={{ backup_restic_now_status.status | default('unknown') }}
+      exit_code={{ backup_restic_now_status.exit_code | default('n/a') }}
+      error={{ backup_restic_now_status.error | default('') }}
+      warnings={{ backup_restic_now_status.warnings | default([]) | join('; ') }}
+    quiet: true
+  when: backup_restic_now_enabled

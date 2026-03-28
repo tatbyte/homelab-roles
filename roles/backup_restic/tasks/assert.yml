@@ -1,0 +1,67 @@
+---
+# roles/backup_restic/tasks/assert.yml
+# Assert phase tasks for the `backup_restic` role.
+# Validates the repository, schedule, path, and environment inputs before the
+# managed Restic timer and script are rendered.
+
+- name: "Assert | Validate backup_restic variables when enabled"
+  ansible.builtin.assert:
+    that:
+      - backup_restic_enabled is boolean
+      - backup_restic_repository is string
+      - backup_restic_repository | length > 0
+      - backup_restic_password is string
+      - backup_restic_password | length > 0
+      - backup_restic_repository_label is string
+      - backup_restic_repository_label | length > 0
+      - backup_restic_status_host is string
+      - backup_restic_status_host | length > 0
+      - backup_restic_snapshot_host is string
+      - backup_restic_snapshot_host | length > 0
+      - backup_restic_job_name is string
+      - backup_restic_job_name | length > 0
+      - backup_restic_json_schema is string
+      - backup_restic_json_schema | length > 0
+      - backup_restic_packages is sequence
+      - backup_restic_packages | length > 0
+      - backup_restic_packages | select('string') | list | length == backup_restic_packages | length
+      - backup_restic_paths is sequence
+      - backup_restic_paths | length > 0
+      - backup_restic_paths | select('string') | list | length == backup_restic_paths | length
+      - backup_restic_excludes is sequence
+      - backup_restic_excludes | select('string') | list | length == backup_restic_excludes | length
+      - backup_restic_tags is sequence
+      - backup_restic_tags | select('string') | list | length == backup_restic_tags | length
+      - backup_restic_extra_args is sequence
+      - backup_restic_extra_args | select('string') | list | length == backup_restic_extra_args | length
+      - backup_restic_docker_stop_containers is sequence
+      - backup_restic_docker_stop_containers | select('string') | list | length == backup_restic_docker_stop_containers | length
+      - backup_restic_extra_environment is mapping
+      - backup_restic_lock_wait is string
+      - backup_restic_timer_on_calendar is string
+      - backup_restic_timer_on_calendar | length > 0
+      - backup_restic_timer_randomized_delay_sec is string or backup_restic_timer_randomized_delay_sec is number
+      - >-
+        (
+          backup_restic_timer_randomized_delay_sec is string
+          and backup_restic_timer_randomized_delay_sec | length > 0
+        )
+        or (backup_restic_timer_randomized_delay_sec is number)
+      - backup_restic_timer_accuracy_sec is string
+      - backup_restic_timer_accuracy_sec | length > 0
+      - backup_restic_timer_persistent is boolean
+      - backup_restic_one_file_system is boolean
+    fail_msg: >-
+      backup_restic requires a non-empty repository, password, backup path
+      list, package list, timer schedule, and valid string-or-mapping inputs
+      when the role is enabled
+    quiet: true
+  when: backup_restic_enabled
+
+- name: "Assert | Validate backup_restic variables when disabled"
+  ansible.builtin.assert:
+    that:
+      - backup_restic_enabled is boolean
+    fail_msg: "backup_restic_enabled must be a boolean"
+    quiet: true
+  when: not backup_restic_enabled

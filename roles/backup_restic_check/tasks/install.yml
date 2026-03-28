@@ -1,0 +1,11 @@
+---
+# roles/backup_restic_check/tasks/install.yml
+# Install phase tasks for the `backup_restic_check` role.
+# Installs the Restic and JSON-processing packages needed by the managed
+# repository-check script.
+
+- name: "Install | Ensure backup_restic_check packages are present"
+  ansible.builtin.package:
+    name: "{{ backup_restic_check_packages }}"
+    state: present
+  when: backup_restic_check_enabled

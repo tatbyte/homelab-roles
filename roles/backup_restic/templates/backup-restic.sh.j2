@@ -1,0 +1,555 @@
+{# roles/backup_restic/templates/backup-restic.sh.j2 #}
+{# Template for the managed Restic backup script in the `backup_restic` role. #}
+#!/usr/bin/env bash
+# Managed by Ansible: backup_restic
+# Source: roles/backup_restic/templates/backup-restic.sh.j2
+
+set -u -o pipefail
+umask 077
+
+status_path={{ backup_restic_status_path | to_json }}
+repository_label={{ backup_restic_repository_label | to_json }}
+host_name={{ backup_restic_status_host | to_json }}
+job_name={{ backup_restic_job_name | to_json }}
+json_schema={{ backup_restic_json_schema | to_json }}
+snapshot_host={{ backup_restic_snapshot_host | to_json }}
+paths_file={{ backup_restic_paths_file_path | to_json }}
+excludes_file={{ backup_restic_excludes_file_path | to_json }}
+
+configured_paths=()
+configured_excludes=()
+
+configured_tags=(
+{% for item in backup_restic_tags %}
+  {{ item | to_json }}
+{% endfor %}
+)
+
+configured_extra_args=(
+{% for item in backup_restic_extra_args %}
+  {{ item | to_json }}
+{% endfor %}
+)
+
+configured_docker_stop_containers=(
+{% for item in backup_restic_docker_stop_containers %}
+  {{ item | to_json }}
+{% endfor %}
+)
+
+cleanup_files=()
+stopped_docker_containers=()
+restarted_docker_containers=()
+docker_missing_containers=()
+docker_not_running_containers=()
+docker_failed_stop_containers=()
+docker_failed_restart_containers=()
+docker_restart_done=false
+register_cleanup_file() {
+  cleanup_files+=("$1")
+}
+
+append_warning() {
+  script_warnings+=("$1")
+}
+
+load_entries_from_file() {
+  local file_path="$1"
+  local target_name="$2"
+  local line
+
+  if [ ! -f "$file_path" ]; then
+    return 1
+  fi
+
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in
+      ''|'#'*)
+        continue
+        ;;
+    esac
+    eval "$target_name+=(\"\$line\")"
+  done < "$file_path"
+
+  return 0
+}
+
+restart_stopped_docker_containers() {
+  local container
+  local restart_failures=()
+
+  if [ "$docker_restart_done" = "true" ]; then
+    return 0
+  fi
+
+  docker_restart_done=true
+
+  for container in "${stopped_docker_containers[@]}"; do
+    if ! docker start "$container" >/dev/null 2>&1; then
+      restart_failures+=("$container")
+      docker_failed_restart_containers+=("$container")
+      append_warning "failed to restart docker container: $container"
+    else
+      restarted_docker_containers+=("$container")
+    fi
+  done
+
+  restart_failures_count="$(printf '%s\n' "${restart_failures[@]}" | sed '/^$/d' | wc -l)"
+  if [ "$restart_failures_count" -gt 0 ]; then
+    return 1
+  fi
+
+  return 0
+}
+
+cleanup() {
+  local path
+  restart_stopped_docker_containers || true
+  for path in "${cleanup_files[@]}"; do
+    rm -f "$path"
+  done
+}
+
+trap cleanup EXIT
+
+status_dir="$(dirname "$status_path")"
+mkdir -p "$status_dir"
+
+tmp_stdout="$(mktemp)"
+register_cleanup_file "$tmp_stdout"
+tmp_stderr="$(mktemp)"
+register_cleanup_file "$tmp_stderr"
+tmp_json="$(mktemp)"
+register_cleanup_file "$tmp_json"
+
+script_warnings=()
+script_warnings_json='[]'
+existing_paths=()
+
+stop_configured_docker_containers() {
+  local container
+  local container_running
+
+  configured_docker_stop_containers_count="$(printf '%s\n' "${configured_docker_stop_containers[@]}" | sed '/^$/d' | wc -l)"
+  if [ "$configured_docker_stop_containers_count" -eq 0 ]; then
+    return 0
+  fi
+
+  if ! command -v docker >/dev/null 2>&1; then
+    append_warning "docker CLI missing: cannot stop configured containers before backup"
+    return 0
+  fi
+
+  for container in "${configured_docker_stop_containers[@]}"; do
+    if ! docker container inspect "$container" >/dev/null 2>&1; then
+      docker_missing_containers+=("$container")
+      append_warning "configured docker container missing: $container"
+      continue
+    fi
+
+    container_running="$(docker inspect -f '{% raw %}{{.State.Running}}{% endraw %}' "$container" 2>/dev/null || printf 'false')"
+    if [ "$container_running" != "true" ]; then
+      docker_not_running_containers+=("$container")
+      append_warning "configured docker container not running: $container"
+      continue
+    fi
+
+    if docker stop "$container" >/dev/null 2>&1; then
+      stopped_docker_containers+=("$container")
+    else
+      docker_failed_stop_containers+=("$container")
+      append_warning "failed to stop docker container: $container"
+      return 1
+    fi
+  done
+
+  return 0
+}
+
+write_status_json() {
+  local timestamp="$1"
+  local status="$2"
+  local snapshot_id="$3"
+  local duration_seconds="$4"
+  local files_new="$5"
+  local files_changed="$6"
+  local files_unmodified="$7"
+  local dirs_new="$8"
+  local dirs_changed="$9"
+  local dirs_unmodified="${10}"
+  local bytes_added="${11}"
+  local total_files_processed="${12}"
+  local warnings_json="${13}"
+  local error_text="${14}"
+  local exit_code="${15}"
+  local docker_configured_json
+  local docker_stopped_json
+  local docker_restarted_json
+  local docker_missing_json
+  local docker_not_running_json
+  local docker_failed_stop_json
+  local docker_failed_restart_json
+
+  docker_configured_json="$(
+    printf '%s\n' "${configured_docker_stop_containers[@]}" \
+      | jq -R -s 'split("\n") | map(select(length > 0))'
+  )"
+  docker_stopped_json="$(
+    printf '%s\n' "${stopped_docker_containers[@]}" \
+      | jq -R -s 'split("\n") | map(select(length > 0))'
+  )"
+  docker_restarted_json="$(
+    printf '%s\n' "${restarted_docker_containers[@]}" \
+      | jq -R -s 'split("\n") | map(select(length > 0))'
+  )"
+  docker_missing_json="$(
+    printf '%s\n' "${docker_missing_containers[@]}" \
+      | jq -R -s 'split("\n") | map(select(length > 0))'
+  )"
+  docker_not_running_json="$(
+    printf '%s\n' "${docker_not_running_containers[@]}" \
+      | jq -R -s 'split("\n") | map(select(length > 0))'
+  )"
+  docker_failed_stop_json="$(
+    printf '%s\n' "${docker_failed_stop_containers[@]}" \
+      | jq -R -s 'split("\n") | map(select(length > 0))'
+  )"
+  docker_failed_restart_json="$(
+    printf '%s\n' "${docker_failed_restart_containers[@]}" \
+      | jq -R -s 'split("\n") | map(select(length > 0))'
+  )"
+
+  jq -n \
+    --arg schema "$json_schema" \
+    --arg host "$host_name" \
+    --arg job "$job_name" \
+    --arg timestamp "$timestamp" \
+    --arg status "$status" \
+    --arg repository "$repository_label" \
+    --arg snapshot_id "$snapshot_id" \
+    --arg error "$error_text" \
+    --argjson duration_seconds "$duration_seconds" \
+    --argjson files_new "$files_new" \
+    --argjson files_changed "$files_changed" \
+    --argjson files_unmodified "$files_unmodified" \
+    --argjson dirs_new "$dirs_new" \
+    --argjson dirs_changed "$dirs_changed" \
+    --argjson dirs_unmodified "$dirs_unmodified" \
+    --argjson bytes_added "$bytes_added" \
+    --argjson total_files_processed "$total_files_processed" \
+    --argjson warnings "$warnings_json" \
+    --argjson exit_code "$exit_code" \
+    --argjson docker_configured "$docker_configured_json" \
+    --argjson docker_stopped "$docker_stopped_json" \
+    --argjson docker_restarted "$docker_restarted_json" \
+    --argjson docker_missing "$docker_missing_json" \
+    --argjson docker_not_running "$docker_not_running_json" \
+    --argjson docker_failed_stop "$docker_failed_stop_json" \
+    --argjson docker_failed_restart "$docker_failed_restart_json" \
+    '{
+      schema: $schema,
+      host: $host,
+      job: $job,
+      timestamp: $timestamp,
+      status: $status,
+      repository: $repository,
+      snapshot_id: $snapshot_id,
+      duration_seconds: $duration_seconds,
+      files_new: $files_new,
+      files_changed: $files_changed,
+      files_unmodified: $files_unmodified,
+      dirs_new: $dirs_new,
+      dirs_changed: $dirs_changed,
+      dirs_unmodified: $dirs_unmodified,
+      bytes_added: $bytes_added,
+      total_files_processed: $total_files_processed,
+      warnings: $warnings,
+      docker_coordination: {
+        ok: (($docker_failed_stop | length) == 0 and ($docker_failed_restart | length) == 0),
+        configured_containers: $docker_configured,
+        stopped_containers: $docker_stopped,
+        restarted_containers: $docker_restarted,
+        missing_containers: $docker_missing,
+        not_running_containers: $docker_not_running,
+        failed_stop_containers: $docker_failed_stop,
+        failed_restart_containers: $docker_failed_restart
+      },
+      error: $error,
+      exit_code: $exit_code
+    }' >"$tmp_json"
+
+  install -m 0644 "$tmp_json" "$status_path"
+}
+
+if ! load_entries_from_file "$paths_file" configured_paths; then
+  write_status_json \
+    "$(date --iso-8601=seconds)" \
+    "error" \
+    "" \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    "$script_warnings_json" \
+    "Configured backup paths file is missing: $paths_file" \
+    1
+  exit 1
+fi
+
+if ! load_entries_from_file "$excludes_file" configured_excludes; then
+  write_status_json \
+    "$(date --iso-8601=seconds)" \
+    "error" \
+    "" \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    "$script_warnings_json" \
+    "Configured backup exclude file is missing: $excludes_file" \
+    1
+  exit 1
+fi
+
+for path in "${configured_paths[@]}"; do
+  if [ -e "$path" ]; then
+    existing_paths+=("$path")
+  else
+    script_warnings+=("configured backup path missing: $path")
+  fi
+done
+
+script_warnings_json="$(
+  printf '%s\n' "${script_warnings[@]}" \
+    | jq -R -s 'split("\n") | map(select(length > 0))'
+)"
+
+existing_paths_count="$(printf '%s\n' "${existing_paths[@]}" | sed '/^$/d' | wc -l)"
+if [ "$existing_paths_count" -eq 0 ]; then
+  write_status_json \
+    "$(date --iso-8601=seconds)" \
+    "error" \
+    "" \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    "$script_warnings_json" \
+    "No configured backup paths exist on this host" \
+    1
+  exit 1
+fi
+
+start_epoch="$(date +%s)"
+
+if ! stop_configured_docker_containers; then
+  restart_stopped_docker_containers || true
+  script_warnings_json="$(
+    printf '%s\n' "${script_warnings[@]}" \
+      | jq -R -s 'split("\n") | map(select(length > 0))'
+  )"
+  write_status_json \
+    "$(date --iso-8601=seconds)" \
+    "error" \
+    "" \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    "$script_warnings_json" \
+    "Failed to stop one or more configured Docker containers before backup" \
+    1
+  exit 1
+fi
+
+restic_global_args=()
+
+{% if backup_restic_lock_wait | trim | length > 0 %}
+restic_global_args+=(
+  --lock-wait {{ backup_restic_lock_wait | to_json }}
+)
+{% endif %}
+
+restic_backup_args=(
+  backup
+  --json
+  --host "$snapshot_host"
+)
+
+{% if backup_restic_one_file_system %}
+restic_backup_args+=(--one-file-system)
+{% endif %}
+
+for tag in "${configured_tags[@]}"; do
+  restic_backup_args+=(--tag "$tag")
+done
+
+for exclude in "${configured_excludes[@]}"; do
+  restic_backup_args+=(--exclude "$exclude")
+done
+
+configured_extra_args_count="$(printf '%s\n' "${configured_extra_args[@]}" | sed '/^$/d' | wc -l)"
+if [ "$configured_extra_args_count" -gt 0 ]; then
+  restic_backup_args+=("${configured_extra_args[@]}")
+fi
+
+restic_backup_args+=("${existing_paths[@]}")
+
+if restic "${restic_global_args[@]}" "${restic_backup_args[@]}" >"$tmp_stdout" 2>"$tmp_stderr"; then
+  restic_rc=0
+else
+  restic_rc=$?
+fi
+
+if ! restart_stopped_docker_containers; then
+  if [ "$restic_rc" -eq 0 ]; then
+    restic_rc=1
+  fi
+fi
+
+script_warnings_json="$(
+  printf '%s\n' "${script_warnings[@]}" \
+    | jq -R -s 'split("\n") | map(select(length > 0))'
+)"
+
+end_epoch="$(date +%s)"
+fallback_duration="$(( end_epoch - start_epoch ))"
+
+if [ -s "$tmp_stderr" ]; then
+  stderr_warnings_json="$(
+    jq -R -s '
+      split("\n")
+      | map(select(length > 0))
+      | map(. as $line | ((fromjson? // $line) | if type == "object" then (.error.message // .message // $line) else . end))
+    ' "$tmp_stderr"
+  )"
+else
+  stderr_warnings_json='[]'
+fi
+
+warnings_json="$(
+  jq -cn \
+    --argjson script "$script_warnings_json" \
+    --argjson stderr "$stderr_warnings_json" \
+    '$script + $stderr'
+)"
+
+summary_json="$(
+  jq -cs 'map(select(.message_type == "summary")) | last // {}' "$tmp_stdout" \
+    2>/dev/null || printf '{}'
+)"
+
+if [ "$summary_json" = "{}" ] && [ "$restic_rc" -eq 0 ]; then
+  warnings_json="$(
+    jq -cn \
+      --argjson warnings "$warnings_json" \
+      '$warnings + ["restic summary output missing from stdout"]'
+  )"
+fi
+
+warning_count="$(
+  jq -nr --argjson warnings "$warnings_json" '$warnings | length'
+)"
+
+json_status="ok"
+error_text=""
+if [ "$restic_rc" -ne 0 ]; then
+  json_status="error"
+  error_text="$(
+    jq -nr --argjson warnings "$warnings_json" '$warnings | join(" | ")'
+  )"
+  if [ -z "$error_text" ]; then
+    error_text="restic backup failed with exit code $restic_rc"
+  fi
+elif [ "$warning_count" -gt 0 ]; then
+  json_status="warn"
+fi
+
+timestamp="$(
+  jq -nr \
+    --argjson summary "$summary_json" \
+    --arg now "$(date --iso-8601=seconds)" \
+    '$summary.backup_end // $summary.backup_start // $now'
+)"
+
+duration_seconds="$(
+  jq -nr \
+    --argjson summary "$summary_json" \
+    --argjson fallback "$fallback_duration" \
+    '($summary.total_duration // $fallback) | floor'
+)"
+
+snapshot_id="$(
+  jq -nr --argjson summary "$summary_json" '$summary.snapshot_id // ""'
+)"
+
+files_new="$(
+  jq -nr --argjson summary "$summary_json" '$summary.files_new // 0'
+)"
+
+files_changed="$(
+  jq -nr --argjson summary "$summary_json" '$summary.files_changed // 0'
+)"
+
+files_unmodified="$(
+  jq -nr --argjson summary "$summary_json" '$summary.files_unmodified // 0'
+)"
+
+dirs_new="$(
+  jq -nr --argjson summary "$summary_json" '$summary.dirs_new // 0'
+)"
+
+dirs_changed="$(
+  jq -nr --argjson summary "$summary_json" '$summary.dirs_changed // 0'
+)"
+
+dirs_unmodified="$(
+  jq -nr --argjson summary "$summary_json" '$summary.dirs_unmodified // 0'
+)"
+
+bytes_added="$(
+  jq -nr --argjson summary "$summary_json" '$summary.data_added // 0'
+)"
+
+total_files_processed="$(
+  jq -nr --argjson summary "$summary_json" '$summary.total_files_processed // 0'
+)"
+
+write_status_json \
+  "$timestamp" \
+  "$json_status" \
+  "$snapshot_id" \
+  "$duration_seconds" \
+  "$files_new" \
+  "$files_changed" \
+  "$files_unmodified" \
+  "$dirs_new" \
+  "$dirs_changed" \
+  "$dirs_unmodified" \
+  "$bytes_added" \
+  "$total_files_processed" \
+  "$warnings_json" \
+  "$error_text" \
+  "$restic_rc"
+
+exit "$restic_rc"

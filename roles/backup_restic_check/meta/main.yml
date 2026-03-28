@@ -1,0 +1,18 @@
+---
+# roles/backup_restic_check/meta/main.yml
+# Role metadata for `backup_restic_check`.
+
+galaxy_info:
+  author: tatbyte
+  description: Recurring Restic repository integrity check
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - all
+    - name: Ubuntu
+      versions:
+        - all
+
+dependencies: []

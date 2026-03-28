@@ -1,0 +1,12 @@
+---
+# roles/backup_restic_now/tasks/main.yml
+# Task entrypoint for the `backup_restic_now` role.
+# Imports the assert and validate phase files in order.
+
+- name: Assert
+  ansible.builtin.import_tasks: assert.yml
+  tags: [assert, backup_restic_now, backup_restic_now_assert]
+
+- name: Validate
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate, backup_restic_now, backup_restic_now_validate]

@@ -1,0 +1,7 @@
+{# roles/backup_restic/templates/backup.paths.j2 #}
+{# Template for the managed backup path list in the `backup_restic` role. #}
+# Managed by Ansible: backup_restic
+# Source: roles/backup_restic/templates/backup.paths.j2
+{% for item in backup_restic_paths %}
+{{ item }}
+{% endfor %}

@@ -20,7 +20,8 @@ Explains how the role manages a minimal AppArmor baseline on Debian-family hosts
 
 ## Usage
 
-The `base` role can include `base_apparmor` when `base_include_apparmor: true`.
+The aggregate `base` role reads `base_apparmor_enabled` from the role-scoped
+base vars file.
 
 Direct usage:
 
@@ -34,7 +35,6 @@ Direct usage:
 Example variables:
 
 ```yaml
-base_include_apparmor: true
 base_apparmor_packages:
   - apparmor
   - apparmor-utils

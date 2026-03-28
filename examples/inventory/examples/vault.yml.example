@@ -106,3 +106,24 @@ vault_docker_wireguard_admin_password: "replace-me"
 vault_docker_wireguard_init_dns:
   - "192.168.1.53"
   - "192.168.1.54"
+
+# ---------------------------------------------------------------------------
+# backup_restic
+# ---------------------------------------------------------------------------
+
+# Example Restic repository target for IDrive e2 through the S3-compatible
+# API.
+# Replace the region, bucket, and path with your real IDrive e2 values.
+vault_backup_restic_idrive_e2_repository: "s3:https://s3.ca-east-1.idrivee2.com/example-lab/restic"
+
+# Example IDrive e2 region used by the S3-compatible API.
+vault_backup_restic_idrive_e2_region: "ca-east-1"
+
+# Example IDrive e2 access key ID for the S3-compatible API.
+vault_backup_restic_idrive_e2_access_key_id: "replace-me"
+
+# Example IDrive e2 secret access key for the S3-compatible API.
+vault_backup_restic_idrive_e2_secret_access_key: "replace-me"
+
+# Example Restic repository password.
+vault_backup_restic_password: "replace-me"

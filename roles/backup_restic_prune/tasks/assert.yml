@@ -1,0 +1,76 @@
+---
+# roles/backup_restic_prune/tasks/assert.yml
+# Assert phase tasks for the `backup_restic_prune` role.
+# Validates the retention policy, repository, and schedule inputs before the
+# managed Restic prune timer and script are rendered.
+
+- name: "Assert | Validate backup_restic_prune variables when enabled"
+  ansible.builtin.assert:
+    that:
+      - backup_restic_prune_enabled is boolean
+      - backup_restic_prune_repository is string
+      - backup_restic_prune_repository | length > 0
+      - backup_restic_prune_password is string
+      - backup_restic_prune_password | length > 0
+      - backup_restic_prune_repository_label is string
+      - backup_restic_prune_repository_label | length > 0
+      - backup_restic_prune_status_host is string
+      - backup_restic_prune_status_host | length > 0
+      - backup_restic_prune_job_name is string
+      - backup_restic_prune_job_name | length > 0
+      - backup_restic_prune_json_schema is string
+      - backup_restic_prune_json_schema | length > 0
+      - backup_restic_prune_packages is sequence
+      - backup_restic_prune_packages | length > 0
+      - backup_restic_prune_packages | select('string') | list | length == backup_restic_prune_packages | length
+      - backup_restic_prune_extra_environment is mapping
+      - backup_restic_prune_host_filter is string
+      - backup_restic_prune_extra_args is sequence
+      - backup_restic_prune_extra_args | select('string') | list | length == backup_restic_prune_extra_args | length
+      - backup_restic_prune_lock_wait is string
+      - backup_restic_prune_keep_last is number
+      - backup_restic_prune_keep_last >= 0
+      - backup_restic_prune_keep_hourly is number
+      - backup_restic_prune_keep_hourly >= 0
+      - backup_restic_prune_keep_daily is number
+      - backup_restic_prune_keep_daily >= 0
+      - backup_restic_prune_keep_weekly is number
+      - backup_restic_prune_keep_weekly >= 0
+      - backup_restic_prune_keep_monthly is number
+      - backup_restic_prune_keep_monthly >= 0
+      - backup_restic_prune_keep_yearly is number
+      - backup_restic_prune_keep_yearly >= 0
+      - >-
+        (
+          (backup_restic_prune_keep_last | int) > 0
+          or (backup_restic_prune_keep_hourly | int) > 0
+          or (backup_restic_prune_keep_daily | int) > 0
+          or (backup_restic_prune_keep_weekly | int) > 0
+          or (backup_restic_prune_keep_monthly | int) > 0
+          or (backup_restic_prune_keep_yearly | int) > 0
+        )
+      - backup_restic_prune_timer_on_calendar is string
+      - backup_restic_prune_timer_on_calendar | length > 0
+      - backup_restic_prune_timer_randomized_delay_sec is string or backup_restic_prune_timer_randomized_delay_sec is number
+      - >-
+        (
+          backup_restic_prune_timer_randomized_delay_sec is string
+          and backup_restic_prune_timer_randomized_delay_sec | length > 0
+        )
+        or (backup_restic_prune_timer_randomized_delay_sec is number)
+      - backup_restic_prune_timer_accuracy_sec is string
+      - backup_restic_prune_timer_accuracy_sec | length > 0
+      - backup_restic_prune_timer_persistent is boolean
+    fail_msg: >-
+      backup_restic_prune requires repository credentials, a non-empty timer
+      schedule, and at least one positive keep policy when the role is enabled
+    quiet: true
+  when: backup_restic_prune_enabled
+
+- name: "Assert | Validate backup_restic_prune variables when disabled"
+  ansible.builtin.assert:
+    that:
+      - backup_restic_prune_enabled is boolean
+    fail_msg: "backup_restic_prune_enabled must be a boolean"
+    quiet: true
+  when: not backup_restic_prune_enabled

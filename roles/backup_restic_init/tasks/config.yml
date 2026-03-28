@@ -1,0 +1,68 @@
+---
+# roles/backup_restic_init/tasks/config.yml
+# Config phase tasks for the `backup_restic_init` role.
+# Detects whether the target Restic repository already exists and initializes
+# it when the backend reports a missing repository.
+
+- name: "Config | Query backup_restic repository state"
+  ansible.builtin.command:
+    argv:
+      - restic
+      - snapshots
+      - --json
+  environment: "{{ backup_restic_init_environment }}"
+  register: backup_restic_init_snapshots_probe
+  changed_when: false
+  failed_when: false
+  when: backup_restic_init_enabled
+
+- name: "Config | Derive backup_restic repository probe result"
+  vars:
+    backup_restic_init_probe_output_joined: >-
+      {{
+        [
+          backup_restic_init_snapshots_probe.stdout | default(''),
+          backup_restic_init_snapshots_probe.stderr | default(''),
+        ] | join('\n')
+      }}
+  ansible.builtin.set_fact:
+    backup_restic_init_probe_output: "{{ backup_restic_init_probe_output_joined }}"
+    backup_restic_init_repository_missing: >-
+      {{
+        (backup_restic_init_snapshots_probe.rc | default(1) | int) != 0
+        and (
+          backup_restic_init_missing_repository_markers
+          | select('in', backup_restic_init_probe_output_joined)
+          | list
+          | length
+        ) > 0
+      }}
+  changed_when: false
+  when: backup_restic_init_enabled
+
+- name: "Config | Fail on unexpected backup_restic repository probe error"
+  ansible.builtin.assert:
+    that:
+      - >-
+        (
+          backup_restic_init_snapshots_probe.rc | default(1) | int
+        ) == 0
+        or backup_restic_init_repository_missing
+    fail_msg: >-
+      backup_restic_init could not probe the repository state and the
+      backend error did not look like a missing repository.
+      {{ backup_restic_init_probe_output | trim }}
+    quiet: true
+  when: backup_restic_init_enabled
+
+- name: "Config | Initialize backup_restic repository if missing"
+  ansible.builtin.command:
+    argv:
+      - restic
+      - init
+  environment: "{{ backup_restic_init_environment }}"
+  register: backup_restic_init_init
+  changed_when: true
+  when:
+    - backup_restic_init_enabled
+    - backup_restic_init_repository_missing

@@ -1,0 +1,22 @@
+---
+# roles/backup_restic_init/defaults/main.yml
+# Default variables for the `backup_restic_init` role.
+# Defines the Restic environment and repository-detection strings used when
+# initializing a missing repository on demand.
+
+backup_restic_init_enabled: true
+backup_restic_init_repository: "{{ backup_restic_repository }}"
+backup_restic_init_password: "{{ backup_restic_password }}"
+backup_restic_init_extra_environment: "{{ backup_restic_extra_environment | default({}) }}"
+backup_restic_init_environment: >-
+  {{
+    {
+      'RESTIC_REPOSITORY': backup_restic_init_repository,
+      'RESTIC_PASSWORD': backup_restic_init_password,
+    }
+    | combine(backup_restic_init_extra_environment)
+  }}
+backup_restic_init_missing_repository_markers:
+  - "unable to open config file"
+  - "Is there a repository at the following location?"
+  - "The specified key does not exist"

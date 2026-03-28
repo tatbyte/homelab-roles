@@ -25,6 +25,17 @@ user_zshell_rc_template_name: ""
 # Optional shell aliases written into the managed `.zshrc`.
 user_zshell_aliases: {}
 
+# Optional host- or inventory-specific aliases merged on top of
+# `user_zshell_aliases`.
+user_zshell_additional_aliases: {}
+
+# Prompt expression assigned to `PROMPT` in the managed `.zshrc`.
+# Keep the full zsh prompt expression here so inventories can customize the
+# prompt without replacing the whole template.
+user_zshell_prompt: >-
+  $'%(?..%F{red}[exit %?]%f\n)%F{81}[::]%f %F{45}%n%f@%F{141}%m%f
+  %F{39}[%~]%f${vcs_info_msg_0_} %F{220}[⚙]%f '
+
 # Optional environment variables written into the managed `.zshrc`.
 user_zshell_environment: {}
 

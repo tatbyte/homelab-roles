@@ -1,0 +1,91 @@
+---
+# roles/backup/tasks/main.yml
+# Task entrypoint for the `backup` role.
+# Defines the aggregate backup-role execution order through explicit role
+# includes.
+
+- name: "Backup | Include optional backup_restic role"
+  ansible.builtin.include_role:
+    name: backup_restic
+    apply:
+      tags: [backup, backup_restic]
+  when: backup_include_restic | default(false)
+  tags:
+    [
+      backup,
+      backup_restic,
+      assert,
+      install,
+      config,
+      validate,
+      backup_restic_assert,
+      backup_restic_install,
+      backup_restic_config,
+      backup_restic_validate,
+    ]
+
+- name: "Backup | Include optional backup_restic_init role"
+  ansible.builtin.include_role:
+    name: backup_restic_init
+    apply:
+      tags: [backup, backup_restic_init]
+  when:
+    - backup_include_restic | default(false)
+    - backup_restic_enabled | default(true)
+  tags:
+    [
+      backup,
+      backup_restic_init,
+      assert,
+      config,
+      validate,
+      backup_restic_init_assert,
+      backup_restic_init_config,
+      backup_restic_init_validate,
+    ]
+
+- name: "Backup | Include optional backup_restic_prune role"
+  ansible.builtin.include_role:
+    name: backup_restic_prune
+    apply:
+      tags: [backup, backup_restic_prune]
+  when:
+    - backup_include_restic | default(false)
+    - backup_include_restic_prune | default(false)
+    - backup_restic_prune_enabled | default(true)
+  tags:
+    [
+      backup,
+      backup_restic_prune,
+      assert,
+      install,
+      config,
+      validate,
+      backup_restic_prune_assert,
+      backup_restic_prune_install,
+      backup_restic_prune_config,
+      backup_restic_prune_validate,
+    ]
+
+- name: "Backup | Include optional backup_restic_check role"
+  ansible.builtin.include_role:
+    name: backup_restic_check
+    apply:
+      tags: [backup, backup_restic_check]
+  when:
+    - backup_include_restic | default(false)
+    - backup_include_restic_check | default(false)
+    - backup_restic_check_enabled | default(true)
+  tags:
+    [
+      backup,
+      backup_restic_check,
+      assert,
+      install,
+      config,
+      validate,
+      backup_restic_check_assert,
+      backup_restic_check_install,
+      backup_restic_check_config,
+      backup_restic_check_validate,
+    ]

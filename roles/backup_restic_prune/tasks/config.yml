@@ -1,0 +1,94 @@
+---
+# roles/backup_restic_prune/tasks/config.yml
+# Config phase tasks for the `backup_restic_prune` role.
+# Renders the managed Restic prune environment file, script, and systemd
+# timer/service units, or removes them when the role is disabled.
+
+- name: "Config | Ensure backup_restic_prune directories exist"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - path: "{{ backup_restic_prune_state_dir }}"
+      mode: "0700"
+    - path: "{{ backup_restic_prune_status_dir }}"
+      mode: "{{ backup_restic_prune_status_dir_mode }}"
+  when: backup_restic_prune_enabled
+
+- name: "Config | Render backup_restic_prune environment file"
+  ansible.builtin.template:
+    src: backup-restic-prune.env.j2
+    dest: "{{ backup_restic_prune_environment_file_path }}"
+    owner: "{{ backup_restic_prune_environment_owner }}"
+    group: "{{ backup_restic_prune_environment_group }}"
+    mode: "{{ backup_restic_prune_environment_mode }}"
+  when: backup_restic_prune_enabled
+
+- name: "Config | Render backup_restic_prune script"
+  ansible.builtin.template:
+    src: backup-restic-prune.sh.j2
+    dest: "{{ backup_restic_prune_script_path }}"
+    owner: "{{ backup_restic_prune_script_owner }}"
+    group: "{{ backup_restic_prune_script_group }}"
+    mode: "{{ backup_restic_prune_script_mode }}"
+  when: backup_restic_prune_enabled
+
+- name: "Config | Render backup_restic_prune systemd units"
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "/etc/systemd/system/{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - src: backup-restic-prune.service.j2
+      dest: "{{ backup_restic_prune_service_unit }}"
+    - src: backup-restic-prune.timer.j2
+      dest: "{{ backup_restic_prune_timer_unit }}"
+  when: backup_restic_prune_enabled
+
+- name: "Config | Reload systemd after backup_restic_prune unit updates"
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when: backup_restic_prune_enabled
+
+- name: "Config | Ensure backup_restic_prune timer is enabled and started"
+  ansible.builtin.systemd_service:
+    name: "{{ backup_restic_prune_timer_unit }}"
+    enabled: true
+    state: started
+  when: backup_restic_prune_enabled
+
+- name: "Config | Stop and disable backup_restic_prune timer when disabled"
+  ansible.builtin.systemd_service:
+    name: "{{ backup_restic_prune_timer_unit }}"
+    enabled: false
+    state: stopped
+  failed_when: false
+  when: not backup_restic_prune_enabled
+
+- name: "Config | Stop backup_restic_prune service when disabled"
+  ansible.builtin.systemd_service:
+    name: "{{ backup_restic_prune_service_unit }}"
+    state: stopped
+  failed_when: false
+  when: not backup_restic_prune_enabled
+
+- name: "Config | Remove backup_restic_prune managed files when disabled"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ backup_restic_prune_environment_file_path }}"
+    - "{{ backup_restic_prune_script_path }}"
+    - "/etc/systemd/system/{{ backup_restic_prune_service_unit }}"
+    - "/etc/systemd/system/{{ backup_restic_prune_timer_unit }}"
+  when: not backup_restic_prune_enabled
+
+- name: "Config | Reload systemd after backup_restic_prune cleanup"
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when: not backup_restic_prune_enabled

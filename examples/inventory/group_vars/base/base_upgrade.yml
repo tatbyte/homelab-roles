@@ -3,6 +3,7 @@
 # Shared upgrade variables for the example lab.
 # Defines the immediate APT upgrade behavior available during the base phase.
 
+base_upgrade_enabled: false
 # Refresh package metadata on every explicit upgrade run in the example lab.
 base_upgrade_cache_valid_time: 0
 

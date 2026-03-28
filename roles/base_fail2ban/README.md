@@ -24,7 +24,8 @@ Explains how the role manages a minimal Fail2ban SSH jail baseline on Debian-fam
 
 ## Usage
 
-The `base` role can include `base_fail2ban` when `base_include_fail2ban: true`.
+The aggregate `base` role reads `base_fail2ban_enabled` from the role-scoped
+base vars file.
 
 Direct usage:
 
@@ -38,7 +39,7 @@ Direct usage:
 Example variables:
 
 ```yaml
-base_include_fail2ban: true
+base_fail2ban_enabled: true
 base_fail2ban_packages:
   - fail2ban
 base_fail2ban_backend: systemd

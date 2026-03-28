@@ -1,0 +1,16 @@
+{# roles/backup_restic_prune/templates/backup-restic-prune.service.j2 #}
+{# Template for the managed systemd service unit in `backup_restic_prune`. #}
+[Unit]
+Description=Run managed Restic prune
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User={{ backup_restic_prune_service_user }}
+Group={{ backup_restic_prune_service_group }}
+EnvironmentFile={{ backup_restic_prune_environment_file_path }}
+ExecStart={{ backup_restic_prune_script_path }}
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

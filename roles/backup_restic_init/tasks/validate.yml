@@ -1,0 +1,42 @@
+---
+# roles/backup_restic_init/tasks/validate.yml
+# Validate phase tasks for the `backup_restic_init` role.
+# Re-queries the repository after initialization, prints a short summary, and
+# asserts that the repository is now readable.
+
+- name: "Validate | Query backup_restic repository after init"
+  ansible.builtin.command:
+    argv:
+      - restic
+      - snapshots
+      - --json
+  environment: "{{ backup_restic_init_environment }}"
+  register: backup_restic_init_snapshots_final
+  changed_when: false
+  failed_when: false
+  when: backup_restic_init_enabled
+
+- name: "Validate | Print backup_restic init summary"
+  ansible.builtin.debug:
+    msg: >-
+      [backup_restic_init] host={{ inventory_hostname }}
+      | repository={{ backup_restic_init_repository }}
+      | initialized={{ 'yes' if (backup_restic_init_repository_missing | default(false)) else 'no' }}
+      | snapshots_probe_rc={{ backup_restic_init_snapshots_probe.rc | default('n/a') }}
+      | snapshots_final_rc={{ backup_restic_init_snapshots_final.rc | default('n/a') }}
+  when: backup_restic_init_enabled
+
+- name: "Validate | Assert backup_restic repository is readable"
+  ansible.builtin.assert:
+    that:
+      - (backup_restic_init_snapshots_final.rc | default(1) | int) == 0
+    fail_msg: >-
+      backup_restic_init did not leave the repository in a readable state.
+      {{
+        [
+          backup_restic_init_snapshots_final.stdout | default(''),
+          backup_restic_init_snapshots_final.stderr | default(''),
+        ] | join('\n') | trim
+      }}
+    quiet: true
+  when: backup_restic_init_enabled

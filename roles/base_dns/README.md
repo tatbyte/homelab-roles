@@ -28,7 +28,8 @@ Explains how the role manages a minimal DNS resolver baseline on Debian-family h
 
 ## Usage
 
-The `base` role can include `base_dns` when `base_include_dns: true`.
+The aggregate `base` role reads `base_dns_enabled` from the role-scoped base
+vars file.
 
 Direct usage:
 
@@ -42,7 +43,7 @@ Direct usage:
 Example variables:
 
 ```yaml
-base_include_dns: true
+base_dns_enabled: true
 base_dns_resolver_mode: systemd_resolved
 base_dns_servers:
   - 192.168.0.1

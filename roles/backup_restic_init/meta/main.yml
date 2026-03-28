@@ -1,0 +1,7 @@
+---
+# roles/backup_restic_init/meta/main.yml
+# Role metadata for `backup_restic_init`.
+# Leaves dependencies empty because callers decide whether they want to
+# converge the recurring `backup_restic` role before this one runs.
+
+dependencies: []

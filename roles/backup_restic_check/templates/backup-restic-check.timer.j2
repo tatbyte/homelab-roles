@@ -1,0 +1,14 @@
+{# roles/backup_restic_check/templates/backup-restic-check.timer.j2 #}
+{# Template for the managed systemd timer unit in `backup_restic_check`. #}
+[Unit]
+Description=Schedule managed Restic repository check
+
+[Timer]
+OnCalendar={{ backup_restic_check_timer_on_calendar }}
+RandomizedDelaySec={{ backup_restic_check_timer_randomized_delay_sec }}
+AccuracySec={{ backup_restic_check_timer_accuracy_sec }}
+Persistent={{ backup_restic_check_timer_persistent | ternary('true', 'false') }}
+Unit={{ backup_restic_check_service_unit }}
+
+[Install]
+WantedBy=timers.target

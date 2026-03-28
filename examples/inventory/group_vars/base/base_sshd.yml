@@ -3,6 +3,7 @@
 # Shared SSH daemon variables for the example lab.
 # Defines the SSH daemon package, service, and managed policy enforced during the base phase.
 
+base_sshd_enabled: true
 # Package list installed with APT to provide the SSH daemon on the host.
 base_sshd_packages:
   - openssh-server    # OpenSSH server package for Debian-family hosts

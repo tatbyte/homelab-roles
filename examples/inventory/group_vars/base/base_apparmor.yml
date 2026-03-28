@@ -12,7 +12,8 @@ base_apparmor_packages:
 # AppArmor service name managed and validated during the base phase.
 base_apparmor_service_name: apparmor
 
-# Keep AppArmor enabled and running in the example lab.
-# Set this to false only on hosts where you explicitly want the package
-# baseline installed without the service being active.
-base_apparmor_enabled: true
+# Keep AppArmor disabled in shared example vars, then enable it per host when
+# the kernel and policy baseline are ready there.
+# Set this to false when you explicitly want the package baseline installed
+# without the service being active.
+base_apparmor_enabled: false

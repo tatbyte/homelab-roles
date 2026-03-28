@@ -1,0 +1,7 @@
+---
+# roles/backup_restic_now/meta/main.yml
+# Role metadata for `backup_restic_now`.
+# Leaves dependencies empty because the caller decides when the recurring
+# `backup_restic` role should already have been applied.
+
+dependencies: []

@@ -1,0 +1,55 @@
+---
+# roles/backup_restic_check/tasks/assert.yml
+# Assert phase tasks for the `backup_restic_check` role.
+# Validates the repository, schedule, and check-mode inputs before the managed
+# Restic check timer and script are rendered.
+
+- name: "Assert | Validate backup_restic_check variables when enabled"
+  ansible.builtin.assert:
+    that:
+      - backup_restic_check_enabled is boolean
+      - backup_restic_check_repository is string
+      - backup_restic_check_repository | length > 0
+      - backup_restic_check_password is string
+      - backup_restic_check_password | length > 0
+      - backup_restic_check_repository_label is string
+      - backup_restic_check_repository_label | length > 0
+      - backup_restic_check_status_host is string
+      - backup_restic_check_status_host | length > 0
+      - backup_restic_check_job_name is string
+      - backup_restic_check_job_name | length > 0
+      - backup_restic_check_json_schema is string
+      - backup_restic_check_json_schema | length > 0
+      - backup_restic_check_packages is sequence
+      - backup_restic_check_packages | length > 0
+      - backup_restic_check_packages | select('string') | list | length == backup_restic_check_packages | length
+      - backup_restic_check_extra_environment is mapping
+      - backup_restic_check_read_data_subset is string
+      - backup_restic_check_extra_args is sequence
+      - backup_restic_check_extra_args | select('string') | list | length == backup_restic_check_extra_args | length
+      - backup_restic_check_lock_wait is string
+      - backup_restic_check_timer_on_calendar is string
+      - backup_restic_check_timer_on_calendar | length > 0
+      - backup_restic_check_timer_randomized_delay_sec is string or backup_restic_check_timer_randomized_delay_sec is number
+      - >-
+        (
+          backup_restic_check_timer_randomized_delay_sec is string
+          and backup_restic_check_timer_randomized_delay_sec | length > 0
+        )
+        or (backup_restic_check_timer_randomized_delay_sec is number)
+      - backup_restic_check_timer_accuracy_sec is string
+      - backup_restic_check_timer_accuracy_sec | length > 0
+      - backup_restic_check_timer_persistent is boolean
+    fail_msg: >-
+      backup_restic_check requires repository credentials, a non-empty timer
+      schedule, and valid check arguments when the role is enabled
+    quiet: true
+  when: backup_restic_check_enabled
+
+- name: "Assert | Validate backup_restic_check variables when disabled"
+  ansible.builtin.assert:
+    that:
+      - backup_restic_check_enabled is boolean
+    fail_msg: "backup_restic_check_enabled must be a boolean"
+    quiet: true
+  when: not backup_restic_check_enabled

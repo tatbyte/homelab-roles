@@ -1,0 +1,14 @@
+{# roles/backup_restic_prune/templates/backup-restic-prune.timer.j2 #}
+{# Template for the managed systemd timer unit in `backup_restic_prune`. #}
+[Unit]
+Description=Schedule managed Restic prune
+
+[Timer]
+OnCalendar={{ backup_restic_prune_timer_on_calendar }}
+RandomizedDelaySec={{ backup_restic_prune_timer_randomized_delay_sec }}
+AccuracySec={{ backup_restic_prune_timer_accuracy_sec }}
+Persistent={{ backup_restic_prune_timer_persistent | ternary('true', 'false') }}
+Unit={{ backup_restic_prune_service_unit }}
+
+[Install]
+WantedBy=timers.target

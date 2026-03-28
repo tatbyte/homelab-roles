@@ -1,0 +1,25 @@
+---
+# roles/backup_restic_now/tasks/assert.yml
+# Assert phase tasks for the `backup_restic_now` role.
+# Validates the on-demand backup-run inputs before the managed service is
+# started manually.
+
+- name: "Assert | Validate backup_restic_now variables"
+  ansible.builtin.assert:
+    that:
+      - backup_restic_now_enabled is boolean
+      - backup_restic_now_service_unit is string
+      - backup_restic_now_service_unit | length > 0
+      - backup_restic_now_status_path is string
+      - backup_restic_now_status_path | length > 0
+      - backup_restic_now_script_path is string
+      - backup_restic_now_script_path | length > 0
+      - backup_restic_now_allowed_statuses is sequence
+      - backup_restic_now_allowed_statuses | length > 0
+      - backup_restic_now_allowed_statuses | select('string') | list | length == backup_restic_now_allowed_statuses | length
+      - backup_restic_now_require_exit_code_zero is boolean
+    fail_msg: >-
+      backup_restic_now requires a service unit name, script path, status path,
+      allowed status list, and boolean control flags
+    quiet: true
+  when: backup_restic_now_enabled

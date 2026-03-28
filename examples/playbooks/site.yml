@@ -1,8 +1,9 @@
 ---
 # examples/playbooks/site.yml
 # Post-bootstrap entry playbook for the example lab.
-# Imports `base.yml`, `user.yml`, and `docker.yml` so the recurring host baseline,
-# human-admin user layer, and Docker layer can be run through a stable entrypoint.
+# Imports `base.yml`, `user.yml`, `docker.yml`, and `backup.yml` so the
+# recurring host baseline, human-admin user layer, Docker layer, and backup
+# timer layer can be run through a stable entrypoint.
 
 - name: Include base playbook
   ansible.builtin.import_playbook: base.yml
@@ -12,3 +13,6 @@
 
 - name: Include docker playbook
   ansible.builtin.import_playbook: docker.yml
+
+- name: Include backup playbook
+  ansible.builtin.import_playbook: backup.yml

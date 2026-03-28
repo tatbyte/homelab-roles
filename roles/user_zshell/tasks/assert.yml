@@ -27,6 +27,9 @@
       - user_zshell_login_shell is not match('.*\\s+.*')
       - (user_zshell_login_shell | basename) == 'zsh'
       - user_zshell_aliases is mapping
+      - user_zshell_additional_aliases is mapping
+      - user_zshell_prompt is string
+      - user_zshell_prompt | trim | length > 0
       - user_zshell_environment is mapping
       - user_zshell_path_additions is sequence
       - user_zshell_path_additions is not string
@@ -34,6 +37,10 @@
         (user_zshell_aliases | dict2items | rejectattr('key', 'match', '^[^\\s=]+$') | list | length) == 0
       - >-
         (user_zshell_aliases | dict2items | rejectattr('value', 'string') | list | length) == 0
+      - >-
+        (user_zshell_additional_aliases | dict2items | rejectattr('key', 'match', '^[^\\s=]+$') | list | length) == 0
+      - >-
+        (user_zshell_additional_aliases | dict2items | rejectattr('value', 'string') | list | length) == 0
       - >-
         (user_zshell_environment | dict2items | rejectattr('key', 'match', '^[A-Za-z_][A-Za-z0-9_]*$') | list | length) == 0
       - >-
@@ -47,8 +54,9 @@
     fail_msg: >-
       user_zshell_user/group/home/login_shell must be valid non-empty values
       without whitespace, the login shell must be zsh, alias and environment
-      mappings must contain valid string values, and PATH additions must be
-      absolute string paths without whitespace
+      mappings must contain valid string values, the prompt must be a
+      non-empty string, and PATH additions must be absolute string paths
+      without whitespace
     quiet: true
 
 - name: "Assert | Derive Managed Human Admin Zsh Policy"

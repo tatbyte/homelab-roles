@@ -1,0 +1,11 @@
+---
+# roles/backup_restic_prune/tasks/install.yml
+# Install phase tasks for the `backup_restic_prune` role.
+# Installs the Restic and JSON-processing packages needed by the managed
+# prune script.
+
+- name: "Install | Ensure backup_restic_prune packages are present"
+  ansible.builtin.package:
+    name: "{{ backup_restic_prune_packages }}"
+    state: present
+  when: backup_restic_prune_enabled

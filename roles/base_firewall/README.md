@@ -36,15 +36,14 @@ Explains how the role manages a UFW baseline on Debian-family hosts during the b
 
 ## Usage
 
-The `base` role can include `base_firewall` when `base_include_firewall: true`.
+The aggregate `base` role reads `base_firewall_enabled` from the role-scoped
+base vars file.
 
 Usage through the aggregate `base` role:
 
 ```yaml
 - hosts: all
   become: true
-  vars:
-    base_include_firewall: true
   roles:
     - base
 
@@ -57,7 +56,7 @@ Usage through the aggregate `base` role:
 Example variables:
 
 ```yaml
-base_include_firewall: true
+base_firewall_enabled: true
 base_firewall_default_incoming_policy: deny
 base_firewall_default_outgoing_policy: allow
 base_firewall_purge_unmanaged_rules: false
