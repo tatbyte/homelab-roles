@@ -10,7 +10,7 @@ backup_restic_enabled: true
 
 # Load the example IDrive e2 repository and password from the
 # controller-local Vault file.
-backup_restic_repository: "{{ vault_backup_restic_idrive_e2_repository }}"
+backup_restic_repository: "{{ vault_backup_restic_idrive_e2_repository }}/{{ alias | default(inventory_hostname) }}"
 backup_restic_password: "{{ vault_backup_restic_password }}"
 
 # IDrive e2 S3-compatible settings for the Restic S3 backend.

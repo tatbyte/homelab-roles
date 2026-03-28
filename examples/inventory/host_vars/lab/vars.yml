@@ -3,17 +3,17 @@
 # Host-specific variables for the `lab` example host.
 # Enables the optional aggregate-role features exercised by the example stack.
 
-# Optional base layer roles enabled for this host.
-base_include_hosts: true
-base_include_dns: true
-base_include_firewall: true
-base_include_fail2ban: true
-base_include_logging: true
-base_include_updates: true
-base_include_apparmor: true
-base_include_auditd: true
-base_include_upgrade: true
-base_include_needrestart: true
+# Base layer role overrides for this host.
+base_hosts_enabled: true
+base_dns_enabled: true
+base_firewall_enabled: true
+base_fail2ban_enabled: true
+base_logging_enabled: true
+base_updates_enabled: true
+base_apparmor_enabled: true
+base_auditd_enabled: true
+base_upgrade_enabled: true
+base_needrestart_enabled: true
 
 # This example host keeps the shared `systemd_resolved` DNS default.
 # The role removes any old role-managed NetworkManager DNS override here so
@@ -29,6 +29,7 @@ user_include_profile: true
 user_include_directories: true
 user_include_git: true
 user_include_vim: true
+user_zshell_additional_aliases: {}
 
 # Optional Docker layer roles enabled for this host.
 docker_include_engine: true

@@ -23,7 +23,8 @@ Explains how the role manages a minimal Linux audit daemon baseline on Debian-fa
 
 ## Usage
 
-The `base` role can include `base_auditd` when `base_include_auditd: true`.
+The aggregate `base` role reads `base_auditd_enabled` from the role-scoped
+base vars file.
 
 Direct usage:
 
@@ -37,7 +38,6 @@ Direct usage:
 Example variables:
 
 ```yaml
-base_include_auditd: true
 base_auditd_packages:
   - auditd
 base_auditd_enabled: true

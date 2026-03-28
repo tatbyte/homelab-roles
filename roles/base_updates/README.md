@@ -23,7 +23,8 @@ Explains how the role manages a minimal unattended-upgrades baseline on Debian-f
 
 ## Usage
 
-The `base` role can include `base_updates` when `base_include_updates: true`.
+The aggregate `base` role reads `base_updates_enabled` from the role-scoped
+base vars file.
 
 Direct usage:
 
@@ -37,7 +38,7 @@ Direct usage:
 Example variables:
 
 ```yaml
-base_include_updates: true
+base_updates_enabled: true
 base_updates_packages:
   - unattended-upgrades
 base_updates_unattended_upgrade: true

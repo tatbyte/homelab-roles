@@ -24,6 +24,8 @@ Explains how the role manages one human admin zsh login shell and managed
 | `user_zshell_login_shell` | `/usr/bin/zsh` | yes | Zsh login shell path to enforce |
 | `user_zshell_rc_template_name` | `` | no | Optional template override name in `roles/user_zshell/templates/` |
 | `user_zshell_aliases` | `{}` | no | Mapping of alias names to shell commands written into the managed `.zshrc` |
+| `user_zshell_additional_aliases` | `{}` | no | Extra alias mapping merged on top of `user_zshell_aliases` so host vars can add aliases without replacing the shared baseline |
+| `user_zshell_prompt` | built-in git-aware zsh prompt | no | Full zsh prompt expression assigned to `PROMPT` in the managed `.zshrc` |
 | `user_zshell_environment` | `{}` | no | Mapping of environment variable names to string values exported from the managed `.zshrc` |
 | `user_zshell_path_additions` | `[]` | no | Ordered list of absolute PATH entries prepended when the directories exist |
 
@@ -46,6 +48,9 @@ Direct usage:
         user_zshell_login_shell: /usr/bin/zsh
         user_zshell_aliases:
           ll: ls -alF
+        user_zshell_additional_aliases:
+          gs: git status
+        user_zshell_prompt: "$'%F{54}╭─%f %F{117}%n@%m%f\n%F{54}╰─%f %F{93}λ%f '"
         user_zshell_environment:
           EDITOR: vim
 ```
@@ -70,6 +75,12 @@ Prefer the new `user_ssh` role for managed `authorized_keys`, optional `~/.ssh/c
 Prefer the new `user_profile` role for shared login/session defaults such as `.profile`, `.bash_profile`, common exports, and PATH bootstrap that should stay separate from interactive zsh-rc behavior.
 The managed `.zshrc` sources `.profile` when it exists, then applies any zsh-specific overrides from `user_zshell`.
 Keep prompt, completion, aliases, and other zsh-specific interactive shell behavior in `user_zshell`.
+For most prompt customization, prefer `user_zshell_prompt` in inventory instead
+of replacing the whole template. Use `user_zshell_rc_template_name` only when
+the rendered `.zshrc` structure itself needs to diverge from the shared role.
+Use `user_zshell_additional_aliases` in host vars when you want to add a few
+host-specific aliases without replacing the shared `user_zshell_aliases`
+baseline.
 
 ### `.zshrc` Template Override Contract
 

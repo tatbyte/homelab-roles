@@ -21,7 +21,8 @@ Explains how the role manages inventory-driven and optional manual cluster host 
 
 ## Usage
 
-The `base` role can include `base_hosts` when `base_include_hosts: true`.
+The aggregate `base` role reads `base_hosts_enabled` from the role-scoped base
+vars file.
 
 Direct usage:
 
@@ -35,7 +36,7 @@ Direct usage:
 Example variables:
 
 ```yaml
-base_include_hosts: true
+base_hosts_enabled: true
 base_hosts_inventory_group: all
 base_hosts_manual_entries:
   - ip: 192.168.0.10

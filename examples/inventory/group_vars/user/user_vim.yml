@@ -17,3 +17,6 @@ user_vim_users:
       - set wildmenu
       - set ignorecase
       - set smartcase
+      - syntax on
+      - set background=dark
+      - colorscheme desert

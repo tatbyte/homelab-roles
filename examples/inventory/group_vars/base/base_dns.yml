@@ -3,6 +3,7 @@
 # Shared DNS variables for the example lab.
 # Defines the resolver mode, DNS servers, and optional search domains enforced during the base phase.
 
+base_dns_enabled: false
 # Resolver backend managed during the base phase.
 # Choose this manually after checking the host:
 #   ls -l /etc/resolv.conf

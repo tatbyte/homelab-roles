@@ -47,7 +47,11 @@ For aggregate roles such as `base`, `docker`, and `user`:
 
 - Keep execution order explicit with `ansible.builtin.include_role` in `tasks/main.yml`.
 - Keep required baseline roles first, then optional follow-up roles.
-- Gate optional child roles with aggregate toggles (`base_include_*`, `user_include_*`).
+- Gate optional child roles with the aggregate pattern that matches that layer.
+- For `base`, prefer role-scoped `base_<role>_enabled` inputs in the matching
+  `group_vars/base/<role>.yml` file, with legacy `base_include_*` values kept
+  only as compatibility fallbacks inside the aggregate role.
+- For `user` and `docker`, keep aggregate toggles such as `user_include_*`.
 - Keep include-task tags aligned with child role phase tags and role-specific tags.
 - Treat aggregate `tasks/main.yml` as the source of truth for current order.
 
@@ -56,7 +60,8 @@ This avoids frequent documentation churn when new child roles are introduced.
 ## Adding A New Optional Child Role
 
 1. Add an explicit `include_role` entry in the aggregate `tasks/main.yml`.
-2. Add one aggregate toggle in aggregate defaults (`<aggregate>_include_<role>`).
+2. Add one aggregate enable input in the source-of-truth vars location for
+   that layer.
 3. Add or update one role-scoped vars file in examples (`<role>.yml`).
 4. Keep docs generic and link to source-of-truth files instead of listing every child role by name.
 
@@ -76,8 +81,8 @@ If child-role tags change, update aggregate include-task tags in the same change
 
 ## Toggle Naming Convention
 
-- Use `base_include_<role>` when a child role is optional in `base`.
+- Use `base_<role>_enabled` when a child role belongs to `base`.
 - Use `user_include_<role>` when a child role is optional in `user`.
-- Use `<role>_enabled` only for installable services where disabled is a supported steady state.
-
-Keep aggregate toggles separate from child-role behavior inputs.
+- Use `docker_include_<role>` when a child role is optional in `docker`.
+- Keep legacy `base_include_*` values only as aggregate compatibility fallbacks
+  while existing inventories migrate.

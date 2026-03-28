@@ -1,37 +1,26 @@
 ---
 # examples/inventory/group_vars/all/base.yml
 # Shared aggregate base-role variables for the example lab.
-# Defines the optional aggregate-role toggles for the example base layer.
-# Keep these disabled by default here, then enable them per host in
-# `examples/inventory/host_vars/<host>/vars.yml`.
+# Defines disabled-by-default base-role toggles for the whole example
+# inventory. The matching `examples/inventory/group_vars/base/*.yml` files
+# re-enable the normal base-group defaults, and
+# `examples/inventory/host_vars/<host>/vars.yml` can still override
+# individual roles per host when needed.
 
-# Keep inventory-driven hosts-file management enabled in the example lab so
-# hosts can resolve one another without depending on external DNS.
-base_include_hosts: false
-
-# Keep the explicit DNS resolver baseline enabled in the example lab.
-base_include_dns: false
-
-# Keep the additive firewall baseline enabled in the example lab.
-base_include_firewall: false
-
-# Keep the managed SSH jail baseline enabled in the example lab.
-base_include_fail2ban: false
-
-# Keep persistent local journald storage enabled in the example lab.
-base_include_logging: false
-
-# Keep unattended-upgrades enabled in the example lab.
-base_include_updates: false
-
-# Keep AppArmor enabled in the example lab.
-base_include_apparmor: false
-
-# Keep the audit daemon enabled in the example lab.
-base_include_auditd: false
-
-# Keep the explicit immediate-upgrade pass enabled in the example lab.
-base_include_upgrade: false
-
-# Keep restart-check reporting enabled after the example upgrade run.
-base_include_needrestart: false
+base_packages_enabled: false
+base_locale_enabled: false
+base_timezone_enabled: false
+base_ntp_enabled: false
+base_hostname_enabled: false
+base_hosts_enabled: false
+base_dns_enabled: false
+base_sudo_enabled: false
+base_sshd_enabled: false
+base_firewall_enabled: false
+base_fail2ban_enabled: false
+base_logging_enabled: false
+base_updates_enabled: false
+base_apparmor_enabled: false
+base_auditd_enabled: false
+base_upgrade_enabled: false
+base_needrestart_enabled: false

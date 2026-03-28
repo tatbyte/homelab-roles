@@ -3,6 +3,7 @@
 # Shared logging variables for the example lab.
 # Defines the journald package, service, storage, and retention values used during the base phase.
 
+base_logging_enabled: false
 # Package list installed with APT before journald configuration.
 # Keep `systemd` here in the example lab so the journald package baseline is
 # explicitly present before the role manages configuration.

@@ -23,7 +23,8 @@ Explains how the role installs `needrestart` and reports restart follow-up state
 
 ## Usage
 
-The `base` role can include `base_needrestart` when `base_include_needrestart: true`.
+The aggregate `base` role reads `base_needrestart_enabled` from the
+role-scoped base vars file.
 
 Direct usage:
 
@@ -37,7 +38,7 @@ Direct usage:
 Example variables:
 
 ```yaml
-base_include_needrestart: true
+base_needrestart_enabled: true
 base_needrestart_mode: l
 base_needrestart_fail_if_reboot_required: true
 base_needrestart_fail_if_service_restart_required: true

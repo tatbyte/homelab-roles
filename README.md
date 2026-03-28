@@ -1,64 +1,34 @@
 # README.md
 
 Repository overview for `homelab-roles`.
-Explains the role collection layout, the intended consumption pattern from another repository, and the local example workflow.
+Explains the role collection, how to consume it from another repo, and where the example lab fits.
 
 ## Overview
-This repository is a personal Ansible role collection for managing a homelab across multiple hosts.
-It is intended to be consumed by a separate infra repository that contains your environment-specific inventory and playbooks, while `examples/` provides a local validation harness for the roles themselves.
+This repository contains reusable Ansible roles for a Debian-family homelab.
+It is meant to be consumed by a separate infra repo that owns inventory, secrets, and environment-specific playbooks.
+The `examples/` directory is the local validation harness for the shared roles.
 
-It is being built to learn Ansible and Linux at the same time through repeatable, real-world automation instead of one-off host changes.
-The goal is to keep host setup explicit, rebuildable, and easy to evolve over time so it can serve as a solid baseline for backup, monitoring, recovery, and host recreation workflows in a small self-hosted environment.
+## Role Families
 
-## Current Focus
-The current role set is centered on:
-
-- bootstrap access for the automation account
-- recurring base host configuration and hardening
-- recurring Docker engine setup and access policy
-- recurring human admin account management
-- recurring Restic backup scheduling with machine-readable host backup status
-- monitoring-related access primitives
-
-This is a roles repository, not the full infrastructure repository.
-Inventory, host grouping, secrets, and environment-specific playbooks are expected to live in a separate consumer repo.
+- `bootstrap`: initial automation-account setup.
+- `base`: recurring host baseline, hardening, and maintenance building blocks.
+- `user`: recurring human-admin account and shell/tooling workflow.
+- `docker`: Docker engine plus optional service roles.
+- `backup_restic`, `backup_restic_init`, `backup_restic_now`: recurring backup plus init and validation helpers.
+- `monitoring` and focused standalone roles: supporting capabilities consumed directly or through aggregates.
 
 ## Supported Platforms
 This repository currently targets Debian-family hosts such as Debian and Ubuntu.
 Role implementations, package-management tasks, and example configuration assume APT and Debian-family filesystem conventions.
 
 ## Repository Layout
-```text
-homelab-roles/
-├── roles/
-│   ├── base/                  # aggregate base workflow
-│   ├── docker/                # aggregate Docker workflow
-│   ├── user/                  # aggregate human-admin workflow
-│   ├── bootstrap/             # bootstrap-phase automation account setup
-│   ├── monitoring/            # aggregate monitoring workflow
-│   └── <role_name>/           # standalone and aggregate child roles
-├── examples/
-│   ├── ansible.cfg
-│   ├── inventory/
-│   └── playbooks/
-├── docs/
-├── CHANGELOG.md
-└── README.md
-```
 
-## Available Roles
-- `bootstrap`: standalone bootstrap role for initial automation-account setup.
-- `base`: aggregate base-phase role with required foundation plus optional hardening and maintenance child roles.
-- `docker`: aggregate Docker-phase role with Docker-related child roles such as `docker_engine`, `docker_traefik`, `docker_adguard`, `docker_adguard_sync`, and `docker_wireguard`.
-- `user`: aggregate human-admin role with account baseline plus optional user-environment child roles.
-- `backup_restic`: standalone backup role that installs Restic, schedules recurring backups through systemd, and writes stable JSON backup status under `/var/lib/monitor/`.
-- `backup_restic_now`: companion validation role that runs the managed backup service immediately and checks the resulting JSON status output.
-- `backup_restic_init`: companion operational role that probes the configured backend and initializes a missing Restic repository once.
-- `monitoring`: aggregate monitoring namespace currently delegating to focused monitoring child roles.
-- `base_*`, `docker_*`, `user_*`, and other standalone roles: focused capabilities grouped by domain and consumed either directly or via aggregate roles.
+- `roles/`: shared aggregate and standalone roles.
+- `examples/`: local lab inventory and playbooks for validating this repo.
+- `docs/`: repository conventions that apply across roles.
 
-Role details live in each role README under `roles/<role>/README.md`.
-Aggregate execution order is documented by, and sourced from, `roles/base/tasks/main.yml`, `roles/docker/tasks/main.yml`, and `roles/user/tasks/main.yml`.
+Role details live in `roles/<role>/README.md`.
+Aggregate execution order lives in `roles/base/tasks/main.yml`, `roles/user/tasks/main.yml`, and `roles/docker/tasks/main.yml`.
 
 ## Docker Role Conventions
 
@@ -72,7 +42,9 @@ When adding future `docker_*` roles in this repository:
 - document any firewall rules, proxy-network assumptions, and first-run initialization caveats in the role README
 
 ## Consume From Another Repo
-Recommended pattern: add this repository to your infra repository (submodule or vendored checkout), then point `roles_path` to `homelab-roles/roles`.
+
+Recommended pattern: add this repo to your infra repo, then point `roles_path`
+at `homelab-roles/roles`.
 
 Example infra repo `ansible.cfg`:
 
@@ -124,42 +96,18 @@ Example infra playbook:
 ```
 
 ## Local Role Testing
-This repository keeps a local test harness in `examples/`.
 
-Run bootstrap first from repo root:
+Run the example lab from repo root:
 
 ```sh
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/bootstrap.yml
-```
-
-The example bootstrap flow expects its login password to come from
-Vault-backed variables in inventory YAML, and the example Ansible config
-explicitly uses `~/.config/ansible/vault.pass` as the Vault password
-file path.
-The example inventory keeps aggregate layer toggles in
-`examples/inventory/group_vars/all/` and layer-specific role inputs under the
-matching group directories such as `examples/inventory/group_vars/base/`,
-`examples/inventory/group_vars/user/`, `examples/inventory/group_vars/docker/`,
-`examples/inventory/group_vars/backup/`, and
-`examples/inventory/group_vars/bootstrap/`.
-Optional aggregate `*_include_*` toggles stay disabled by default in
-`group_vars/all/`, and the example host re-enables them through
-`examples/inventory/host_vars/lab/vars.yml`.
-
-Then run the full post-bootstrap stack:
-
-```sh
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/site.yml
 ```
 
-Equivalent direct phase commands:
+Dedicated maintenance stays separate:
 
 ```sh
-ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/docker.yml
-ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/backup.yml
-ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/backup_restic_init.yml
-ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/backup_restic_now.yml
-ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/user.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/base_maintenance.yml
 ```
 
 Optional `base_sshd` integration check:
@@ -175,10 +123,8 @@ ansible-playbook playbooks/bootstrap.yml
 ansible-playbook playbooks/site.yml
 ```
 
-See [examples/README.md](examples/README.md) and [docs/01-examples.md](docs/01-examples.md) for lab details.
-The current example lab intentionally keeps `base_upgrade` and strict `base_needrestart` follow-up enabled, so a base run may fail when pending reboot or service-restart work is detected after upgrades.
-The current example lab enables the aggregate Docker layer after the user phase so Docker engine package, daemon, and group-access behavior are validated once both target accounts exist.
-The current example lab also enables a representative set of optional `user_*` roles so the human-admin layer exercises account access, shell/profile, workspace, and editor/Git workflows; replace example identity values, password material, and demo SSH keys before using the pattern on real hosts.
+See [examples/README.md](examples/README.md) for the runbook and
+[docs/01-examples.md](docs/01-examples.md) for the stable layout rules.
 
 ## Linting
 Pre-commit and linting are configured in this repository.
@@ -202,11 +148,11 @@ See [docs/00-pre-commit.mb](docs/00-pre-commit.mb) for full setup details.
 ## Documentation
 Core repository docs:
 
-- [docs/01-examples.md](docs/01-examples.md): Example lab layout and execution flow
-- [docs/02-role-workflow.md](docs/02-role-workflow.md): Shared role phase structure and aggregate base-role plus Docker-role plus user-role ordering
+- [docs/01-examples.md](docs/01-examples.md): Example lab layout rules and secret-loading pattern
+- [docs/02-role-workflow.md](docs/02-role-workflow.md): Shared role phase structure and aggregate toggle conventions
 - [docs/03-file-consistency.md](docs/03-file-consistency.md): File header and wording consistency rules
 - [docs/04-firewall-role-integration.md](docs/04-firewall-role-integration.md): How future roles should register firewall rules for `base_firewall`
-- [docs/05-vault.md](docs/05-vault.md): Short Vault guidance for secret-bearing inventory values such as `user_password`
+- [docs/05-vault.md](docs/05-vault.md): Vault guidance for the example lab and secret-bearing role inputs
 - [docs/06-user-groups-role-integration.md](docs/06-user-groups-role-integration.md): How future roles should register human admin supplementary-group needs for `user_groups`
 - [docs/07-docker-role-conventions.md](docs/07-docker-role-conventions.md): Shared Docker daemon, access-group, and backup-path conventions
 - [docs/08-docker-traefik-downstream-services.md](docs/08-docker-traefik-downstream-services.md): How future Docker service roles should join Traefik, publish direct host ports, and split host-versus-container listeners safely

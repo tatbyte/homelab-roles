@@ -47,4 +47,4 @@
   roles:
     - role: docker
     - role: base_firewall
-      when: base_include_firewall | default(false)
+      when: base_firewall_enabled | default(base_include_firewall | default(false))

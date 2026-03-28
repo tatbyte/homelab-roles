@@ -10,8 +10,9 @@ base_auditd_packages:
 # Audit daemon service name managed and validated during the base phase.
 base_auditd_service_name: auditd
 
-# Keep the audit daemon enabled and running in the example lab.
-base_auditd_enabled: true
+# Keep the audit daemon disabled in shared example vars, then enable it per
+# host when the base layer should manage audit state there.
+base_auditd_enabled: false
 
 # Flush audit records asynchronously for a safer balance between durability
 # and runtime overhead in the example lab.
