@@ -1,4 +1,41 @@
 ---
 # roles/monitoring/tasks/main.yml
 # Task entrypoint for the `monitoring` role.
-# Intentionally empty because this aggregate role currently delegates work through meta dependencies.
+# Defines the aggregate monitoring-role execution order through explicit role
+# includes.
+
+- name: "Monitoring | Include optional monitoring_authorized_key role"
+  ansible.builtin.include_role:
+    name: monitoring_authorized_key
+    apply:
+      tags: [monitoring, monitoring_authorized_key]
+  when: monitoring_include_authorized_key | default(false)
+  tags:
+    [
+      monitoring,
+      monitoring_authorized_key,
+      assert,
+      install,
+      config,
+      validate,
+    ]
+
+- name: "Monitoring | Include optional monitoring_status role"
+  ansible.builtin.include_role:
+    name: monitoring_status
+    apply:
+      tags: [monitoring, monitoring_status]
+  when: monitoring_include_status | default(false)
+  tags:
+    [
+      monitoring,
+      monitoring_status,
+      assert,
+      install,
+      config,
+      validate,
+      monitoring_status_assert,
+      monitoring_status_install,
+      monitoring_status_config,
+      monitoring_status_validate,
+    ]

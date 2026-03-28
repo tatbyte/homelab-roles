@@ -3,6 +3,19 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v2.10.0]
+### Added
+- Added the aggregate `monitoring` role toggles plus the standalone `monitoring_status` role, including copied shell checks, a host-local runner, and a dedicated systemd service/timer that writes `/var/lib/monitor/status.json`.
+- Added matching example-lab `monitoring` inventory vars, host opt-in, inventory group, and `examples/playbooks/monitoring.yml` so the shared repository now exercises the new monitoring layer end-to-end.
+- Added standalone `monitoring_status_now` plus `examples/playbooks/monitoring_status_now.yml` so consumer repos and the shared example can trigger the managed monitoring oneshot service on demand for testing.
+
+### Changed
+- Updated the aggregate `monitoring` role to use explicit `include_role` ordering instead of meta dependencies, matching the repository's current aggregate-role conventions.
+- Updated the example `site.yml` flow so recurring monitoring now runs after the backup layer, keeping the status role on the intended read-only consumer side of the backup JSON contract.
+
+### Documentation
+- Updated repository, workflow, role, and example documentation to cover the new monitoring aggregate layer and the `monitoring_status` role.
+
 ## [v2.9.0]
 ### Added
 - Added the aggregate `backup` role so consumer repos can converge the recurring Restic layer through one steady-state entrypoint.

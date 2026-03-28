@@ -1,0 +1,178 @@
+{# roles/monitoring_status/templates/monitoring-status.sh.j2 #}
+{# Template for the managed host-status runner script in `monitoring_status`. #}
+#!/usr/bin/env bash
+# Managed by Ansible: monitoring_status
+# Source: roles/monitoring_status/templates/monitoring-status.sh.j2
+
+set -u -o pipefail
+umask 077
+shopt -s nullglob
+
+status_path={{ monitoring_status_status_path | to_json }}
+checks_path={{ monitoring_status_checks_path | to_json }}
+host_name={{ monitoring_status_host | to_json }}
+job_name={{ monitoring_status_job_name | to_json }}
+json_schema={{ monitoring_status_json_schema | to_json }}
+
+export MONITORING_STATUS_BACKUP_STATUS_PATH={{ monitoring_status_backup_status_path | to_json }}
+export MONITORING_STATUS_BACKUP_REQUIRED={{ monitoring_status_backup_required | bool | ternary('true', 'false') | to_json }}
+export MONITORING_STATUS_BACKUP_WARN_AFTER_HOURS={{ monitoring_status_backup_warn_after_hours | string | to_json }}
+export MONITORING_STATUS_BACKUP_FAIL_AFTER_HOURS={{ monitoring_status_backup_fail_after_hours | string | to_json }}
+
+export MONITORING_STATUS_SYSTEM_MEMORY_WARN_PCT={{ monitoring_status_system_memory_warn_pct | string | to_json }}
+export MONITORING_STATUS_SYSTEM_MEMORY_FAIL_PCT={{ monitoring_status_system_memory_fail_pct | string | to_json }}
+export MONITORING_STATUS_SYSTEM_LOAD_WARN_PER_CPU={{ monitoring_status_system_load_warn_per_cpu | string | to_json }}
+export MONITORING_STATUS_SYSTEM_LOAD_FAIL_PER_CPU={{ monitoring_status_system_load_fail_per_cpu | string | to_json }}
+
+export MONITORING_STATUS_STORAGE_ROOT_MOUNT={{ monitoring_status_storage_root_mount | to_json }}
+export MONITORING_STATUS_STORAGE_ADDITIONAL_MOUNTS_JSON={{ monitoring_status_storage_additional_mounts | to_json }}
+export MONITORING_STATUS_STORAGE_MISSING_ADDITIONAL_MOUNT_STATUS={{ monitoring_status_storage_missing_additional_mount_status | to_json }}
+export MONITORING_STATUS_STORAGE_WARN_PCT={{ monitoring_status_storage_warn_pct | string | to_json }}
+export MONITORING_STATUS_STORAGE_FAIL_PCT={{ monitoring_status_storage_fail_pct | string | to_json }}
+export MONITORING_STATUS_STORAGE_SD_ERROR_LOOKBACK={{ monitoring_status_storage_sd_error_lookback | to_json }}
+export MONITORING_STATUS_STORAGE_DEVICE={{ monitoring_status_storage_device | to_json }}
+export MONITORING_STATUS_STORAGE_TYPE={{ monitoring_status_storage_type | to_json }}
+
+export MONITORING_STATUS_DOCKER_MODE={{ monitoring_status_docker_mode | to_json }}
+export MONITORING_STATUS_DOCKER_SERVICE_NAME={{ monitoring_status_docker_service_name | to_json }}
+
+export MONITORING_STATUS_NETWORK_TARGETS_JSON={{ monitoring_status_network_targets | to_json }}
+export MONITORING_STATUS_NETWORK_PING_COUNT={{ monitoring_status_network_ping_count | string | to_json }}
+export MONITORING_STATUS_NETWORK_PING_TIMEOUT_SECONDS={{ monitoring_status_network_ping_timeout_seconds | string | to_json }}
+
+cleanup_files=()
+register_cleanup_file() {
+  cleanup_files+=("$1")
+}
+
+cleanup() {
+  local path
+
+  for path in "${cleanup_files[@]}"; do
+    rm -f "$path"
+  done
+}
+
+trap cleanup EXIT
+
+status_dir="$(dirname "$status_path")"
+mkdir -p "$status_dir"
+
+status_timestamp="$(date --iso-8601=ns)"
+now_epoch="$(date +%s)"
+
+export MONITORING_STATUS_TIMESTAMP="$status_timestamp"
+export MONITORING_STATUS_NOW_EPOCH="$now_epoch"
+export MONITORING_STATUS_HOST="$host_name"
+
+severity_rank() {
+  case "$1" in
+    ok)
+      printf '0\n'
+      ;;
+    warn)
+      printf '1\n'
+      ;;
+    fail)
+      printf '2\n'
+      ;;
+    *)
+      printf '2\n'
+      ;;
+  esac
+}
+
+set_overall_status() {
+  local candidate="$1"
+  local current_rank
+  local candidate_rank
+
+  current_rank="$(severity_rank "$overall_status")"
+  candidate_rank="$(severity_rank "$candidate")"
+  if [ "$candidate_rank" -gt "$current_rank" ]; then
+    overall_status="$candidate"
+  fi
+}
+
+invalid_check_json() {
+  local error_text="$1"
+
+  jq -n \
+    --arg status fail \
+    --arg error "$error_text" \
+    '{
+      status: $status,
+      details: {
+        check_error: $error
+      }
+    }'
+}
+
+overall_status=ok
+checks_json='{}'
+details_json='{}'
+
+for check_script in "$checks_path"/*.sh; do
+  check_file="$(basename "$check_script")"
+  check_name="${check_file#*_}"
+  check_name="${check_name%.sh}"
+  check_output_file="$(mktemp)"
+  register_cleanup_file "$check_output_file"
+  check_error_file="$(mktemp)"
+  register_cleanup_file "$check_error_file"
+
+  if "$check_script" >"$check_output_file" 2>"$check_error_file"; then
+    if ! jq -e 'type == "object" and (.status | type == "string") and (.details | type == "object")' "$check_output_file" >/dev/null 2>&1; then
+      invalid_check_json "check ${check_name} returned invalid JSON" >"$check_output_file"
+    fi
+  else
+    check_rc=$?
+    check_error_text="$(tr '\n' ' ' <"$check_error_file" | sed 's/  */ /g; s/^ //; s/ $//')"
+    if [ -z "$check_error_text" ]; then
+      check_error_text="check ${check_name} failed with exit code ${check_rc}"
+    else
+      check_error_text="check ${check_name} failed with exit code ${check_rc}: ${check_error_text}"
+    fi
+    invalid_check_json "$check_error_text" >"$check_output_file"
+  fi
+
+  check_status="$(jq -r '.status' "$check_output_file")"
+  check_details="$(jq -c '.details' "$check_output_file")"
+  checks_json="$(
+    jq -n \
+      --argjson current "$checks_json" \
+      --arg key "$check_name" \
+      --arg value "$check_status" \
+      '$current + {($key): $value}'
+  )"
+  details_json="$(
+    jq -n \
+      --argjson current "$details_json" \
+      --argjson added "$check_details" \
+      '$current + $added'
+  )"
+  set_overall_status "$check_status"
+done
+
+tmp_status="$(mktemp)"
+register_cleanup_file "$tmp_status"
+
+jq -n \
+  --arg schema "$json_schema" \
+  --arg host "$host_name" \
+  --arg job "$job_name" \
+  --arg timestamp "$status_timestamp" \
+  --arg status "$overall_status" \
+  --argjson checks "$checks_json" \
+  --argjson details "$details_json" \
+  '{
+    schema: $schema,
+    host: $host,
+    job: $job,
+    timestamp: $timestamp,
+    status: $status,
+    checks: $checks,
+    details: $details
+  }' >"$tmp_status"
+
+mv "$tmp_status" "$status_path"

@@ -1,0 +1,12 @@
+---
+# examples/inventory/group_vars/monitoring/monitoring.yml
+# Monitoring-layer toggle variables for hosts in the dedicated example
+# `monitoring` inventory group.
+# Keeps the aggregate monitoring layer disabled by default in `group_vars/all`,
+# then enables the host-status monitor for the example monitoring hosts while
+# leaving host_vars free to override the toggle later.
+
+# The example monitoring group should exercise the recurring host-status
+# monitor by default. A specific example host can still opt out with
+# `monitoring_include_status: false` in host vars.
+monitoring_include_status: true

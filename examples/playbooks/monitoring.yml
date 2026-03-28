@@ -1,0 +1,12 @@
+---
+# examples/playbooks/monitoring.yml
+# Monitoring phase playbook for the example lab.
+# Applies the shared aggregate `monitoring` role to hosts in the `monitoring`
+# inventory group after backup has already produced the JSON inputs that the
+# status role consumes.
+
+- name: Apply monitoring role after backup
+  hosts: monitoring
+  become: true
+  roles:
+    - role: monitoring

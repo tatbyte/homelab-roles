@@ -22,20 +22,23 @@ The example assumes Debian-family hosts.
 - Keep base-role enablement and base-role inputs in
   `examples/inventory/group_vars/base/` with the `base_<role>_enabled` pattern.
 - Keep other role inputs under the matching layer directory such as
-  `examples/inventory/group_vars/user/`, `docker/`, `backup/`, and
-  `bootstrap/`.
-- Keep optional `user_*` and `docker_*` child-role opt-in in
+  `examples/inventory/group_vars/user/`, `docker/`, `backup/`, `monitoring/`,
+  and `bootstrap/`.
+- Keep optional `user_*`, `docker_*`, and `monitoring_*` child-role opt-in in
   `examples/inventory/host_vars/<host>/vars.yml`.
 - Put hosts in the matching inventory groups (`bootstrap`, `base`, `user`,
-  `docker`, `backup`) so grouped vars and playbooks line up cleanly.
+  `docker`, `backup`, `monitoring`) so grouped vars and playbooks line up
+  cleanly.
 - Keep `examples/playbooks/backup.yml` on the aggregate `backup` role so the
   recurring backup, repository init, prune, and check timers stay in the same
   steady-state path.
+- Keep `examples/playbooks/monitoring.yml` on the aggregate `monitoring` role
+  so host-local status generation stays on one stable entrypoint.
 - Keep `examples/playbooks/base.yml` for the non-maintenance baseline and
   `examples/playbooks/base_maintenance.yml` for one-host-at-a-time package
   maintenance.
 - Keep `examples/playbooks/site.yml` as the post-bootstrap stack:
-  `base`, `user`, `docker`, then `backup`.
+  `base`, `user`, `docker`, `backup`, then `monitoring`.
 
 ## Secret Loading
 
@@ -51,7 +54,7 @@ The example assumes Debian-family hosts.
 
 1. Add or update the aggregate toggle in the correct source-of-truth location.
 2. Add or update one role-scoped vars file under the matching layer directory.
-3. Enable optional `user_*` and `docker_*` child roles per host.
+3. Enable optional `user_*`, `docker_*`, and `monitoring_*` child roles per host.
 4. Keep role-specific behavior in the relevant role README instead of growing
    this document.
 

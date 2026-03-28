@@ -1,0 +1,10 @@
+---
+# roles/monitoring_status/tasks/install.yml
+# Install phase tasks for the `monitoring_status` role.
+# Installs the packages needed by the recurring monitoring scripts.
+
+- name: "Install | Ensure monitoring_status packages are installed"
+  ansible.builtin.package:
+    name: "{{ monitoring_status_packages }}"
+    state: present
+  when: monitoring_status_enabled

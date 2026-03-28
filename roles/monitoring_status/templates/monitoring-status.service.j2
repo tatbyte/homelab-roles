@@ -1,0 +1,16 @@
+{# roles/monitoring_status/templates/monitoring-status.service.j2 #}
+{# Template for the managed systemd service unit in `monitoring_status`. #}
+[Unit]
+Description=Build managed host monitoring status JSON
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User={{ monitoring_status_service_user }}
+Group={{ monitoring_status_service_group }}
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart={{ monitoring_status_script_path }}
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

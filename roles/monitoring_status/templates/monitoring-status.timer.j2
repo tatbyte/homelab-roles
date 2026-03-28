@@ -1,0 +1,14 @@
+{# roles/monitoring_status/templates/monitoring-status.timer.j2 #}
+{# Template for the managed systemd timer unit in `monitoring_status`. #}
+[Unit]
+Description=Schedule managed host monitoring status refresh
+
+[Timer]
+OnCalendar={{ monitoring_status_timer_on_calendar }}
+RandomizedDelaySec={{ monitoring_status_timer_randomized_delay_sec }}
+AccuracySec={{ monitoring_status_timer_accuracy_sec }}
+Persistent={{ monitoring_status_timer_persistent | ternary('true', 'false') }}
+Unit={{ monitoring_status_service_unit }}
+
+[Install]
+WantedBy=timers.target

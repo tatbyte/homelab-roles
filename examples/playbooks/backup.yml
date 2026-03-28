@@ -45,4 +45,3 @@
       when: secret_sources_use_local_vault_file | default(true)
   roles:
     - role: backup
-      when: backup_include_restic | default(false)

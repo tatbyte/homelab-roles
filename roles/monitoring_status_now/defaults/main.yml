@@ -1,0 +1,13 @@
+---
+# roles/monitoring_status_now/defaults/main.yml
+# Default variables for the `monitoring_status_now` role.
+# Defines the on-demand validation inputs that trigger the managed
+# `monitoring_status` oneshot service immediately and inspect the resulting JSON.
+
+monitoring_status_now_enabled: true
+monitoring_status_now_service_unit: "{{ monitoring_status_service_unit | default('monitoring-status.service') }}"
+monitoring_status_now_status_path: "{{ monitoring_status_status_path | default('/var/lib/monitor/status.json') }}"
+monitoring_status_now_script_path: "{{ monitoring_status_script_path | default('/usr/local/bin/monitoring-status.sh') }}"
+monitoring_status_now_allowed_statuses:
+  - ok
+  - warn

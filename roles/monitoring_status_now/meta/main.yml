@@ -1,0 +1,7 @@
+---
+# roles/monitoring_status_now/meta/main.yml
+# Role metadata for `monitoring_status_now`.
+# Leaves dependencies empty because the caller decides when the recurring
+# `monitoring_status` role should already have been applied.
+
+dependencies: []

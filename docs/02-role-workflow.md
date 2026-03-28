@@ -43,7 +43,8 @@ Use only the phases that make sense, but keep `tasks/main.yml` as the stable pha
 
 ## Aggregate Role Conventions
 
-For aggregate roles such as `base`, `docker`, `user`, and `backup`:
+For aggregate roles such as `base`, `docker`, `user`, `backup`, and
+`monitoring`:
 
 - Keep execution order explicit with `ansible.builtin.include_role` in `tasks/main.yml`.
 - Keep required baseline roles first, then optional follow-up roles.
@@ -51,8 +52,8 @@ For aggregate roles such as `base`, `docker`, `user`, and `backup`:
 - For `base`, prefer role-scoped `base_<role>_enabled` inputs in the matching
   `group_vars/base/<role>.yml` file, with legacy `base_include_*` values kept
   only as compatibility fallbacks inside the aggregate role.
-- For `user`, `docker`, and `backup`, keep aggregate toggles such as
-  `user_include_*`.
+- For `user`, `docker`, `backup`, and `monitoring`, keep aggregate toggles
+  such as `user_include_*`.
 - Keep include-task tags aligned with child role phase tags and role-specific tags.
 - Treat aggregate `tasks/main.yml` as the source of truth for current order.
 
@@ -86,5 +87,7 @@ If child-role tags change, update aggregate include-task tags in the same change
 - Use `user_include_<role>` when a child role is optional in `user`.
 - Use `docker_include_<role>` when a child role is optional in `docker`.
 - Use `backup_include_<role>` when a child role is optional in `backup`.
+- Use `monitoring_include_<role>` when a child role is optional in
+  `monitoring`.
 - Keep legacy `base_include_*` values only as aggregate compatibility fallbacks
   while existing inventories migrate.

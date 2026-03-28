@@ -1,0 +1,7 @@
+---
+# roles/monitoring_status/meta/main.yml
+# Role metadata for `monitoring_status`.
+# Leaves dependencies empty because execution order is defined in the consumer
+# playbook or aggregate `monitoring` role.
+
+dependencies: []

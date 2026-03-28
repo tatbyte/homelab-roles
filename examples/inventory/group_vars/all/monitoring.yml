@@ -1,0 +1,13 @@
+---
+# examples/inventory/group_vars/all/monitoring.yml
+# Shared monitoring-layer toggle variables for the example lab.
+# Defines the default-off switches for the recurring monitoring layer. Keep
+# these disabled in `group_vars/all`, enable them per inventory group where a
+# whole class of hosts should participate, and let host_vars make the final
+# override when needed.
+
+# Keep the monitoring layer disabled by default in the broadest shared scope so
+# example inventories can opt groups in intentionally without surprising
+# unrelated hosts.
+monitoring_include_authorized_key: false
+monitoring_include_status: false

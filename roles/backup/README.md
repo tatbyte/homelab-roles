@@ -26,10 +26,22 @@ Use `backup` on hosts that should receive the recurring backup layer:
     - role: backup
 ```
 
-Enable the recurring backup layer with the aggregate toggle:
+Use inventory precedence to keep the layer disabled by default, enable it for a
+whole backup group, and still allow a host to opt out or narrow the workflow:
 
 ```yaml
+# group_vars/all/backup.yml
+backup_include_restic: false
+backup_include_restic_prune: false
+backup_include_restic_check: false
+
+# group_vars/backup/backup.yml
 backup_include_restic: true
+backup_include_restic_prune: true
+backup_include_restic_check: true
+
+# host_vars/lab/vars.yml
+backup_include_restic_check: false
 ```
 
 Keep `backup_restic_*` inputs in matching role-scoped vars under

@@ -1,0 +1,13 @@
+---
+# examples/inventory/group_vars/backup/backup.yml
+# Backup-layer toggle variables for hosts in the dedicated example `backup`
+# inventory group.
+# Keeps the aggregate backup layer disabled by default in `group_vars/all`, then
+# enables the recurring Restic workflow for the example backup hosts while
+# leaving host_vars free to override any toggle later.
+
+# The example backup group should exercise the recurring Restic workflow by
+# default. A specific example host can still opt out in host vars when needed.
+backup_include_restic: true
+backup_include_restic_prune: true
+backup_include_restic_check: true

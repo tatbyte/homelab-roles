@@ -1,0 +1,130 @@
+---
+# roles/monitoring_status_now/tasks/validate.yml
+# Validate phase tasks for the `monitoring_status_now` role.
+# Starts the managed oneshot monitoring service immediately, reads the resulting
+# JSON status file, prints a short summary, and fails when the run result is
+# not acceptable.
+
+- name: "Validate | Stat monitoring_status service unit"
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/{{ monitoring_status_now_service_unit }}"
+  register: monitoring_status_now_service_unit_stat
+  when: monitoring_status_now_enabled
+
+- name: "Validate | Stat monitoring_status script path"
+  ansible.builtin.stat:
+    path: "{{ monitoring_status_now_script_path }}"
+  register: monitoring_status_now_script_stat
+  when: monitoring_status_now_enabled
+
+- name: "Validate | Assert monitoring_status artifacts exist"
+  ansible.builtin.assert:
+    that:
+      - monitoring_status_now_service_unit_stat.stat.exists
+      - monitoring_status_now_script_stat.stat.exists
+    fail_msg: >-
+      monitoring_status_now expects the recurring monitoring_status role to be
+      applied first so the managed service unit and script already exist
+    quiet: true
+  when: monitoring_status_now_enabled
+
+- name: "Validate | Stat monitoring_status file before run"
+  ansible.builtin.stat:
+    path: "{{ monitoring_status_now_status_path }}"
+    checksum_algorithm: sha1
+  register: monitoring_status_now_status_file_before
+  when: monitoring_status_now_enabled
+
+- name: "Validate | Start monitoring_status oneshot service now"
+  ansible.builtin.systemd_service:
+    name: "{{ monitoring_status_now_service_unit }}"
+    state: started
+  register: monitoring_status_now_service_start
+  failed_when: false
+  when: monitoring_status_now_enabled
+
+- name: "Validate | Wait for monitoring_status file"
+  ansible.builtin.stat:
+    path: "{{ monitoring_status_now_status_path }}"
+    checksum_algorithm: sha1
+  register: monitoring_status_now_status_file
+  retries: 10
+  delay: 1
+  until: >-
+    monitoring_status_now_status_file.stat.exists
+    and (
+      not (monitoring_status_now_status_file_before.stat.exists | default(false))
+      or (monitoring_status_now_status_file.stat.checksum | default(''))
+         != (monitoring_status_now_status_file_before.stat.checksum | default(''))
+      or (monitoring_status_now_status_file.stat.mtime | default(0))
+         > (monitoring_status_now_status_file_before.stat.mtime | default(0))
+    )
+  failed_when: false
+  when: monitoring_status_now_enabled
+
+- name: "Validate | Derive monitoring_status freshness"
+  ansible.builtin.set_fact:
+    monitoring_status_now_status_is_fresh: >-
+      {{
+        (monitoring_status_now_status_file.stat.exists | default(false))
+        and (
+          not (monitoring_status_now_status_file_before.stat.exists | default(false))
+          or (monitoring_status_now_status_file.stat.checksum | default(''))
+             != (monitoring_status_now_status_file_before.stat.checksum | default(''))
+          or (monitoring_status_now_status_file.stat.mtime | default(0))
+             > (monitoring_status_now_status_file_before.stat.mtime | default(0))
+        )
+      }}
+  changed_when: false
+  when: monitoring_status_now_enabled
+
+- name: "Validate | Assert monitoring_status file was refreshed"
+  ansible.builtin.assert:
+    that:
+      - monitoring_status_now_status_is_fresh
+    fail_msg: >-
+      monitoring_status_now did not observe a freshly updated status file for
+      the current run.
+      systemd_msg={{ monitoring_status_now_service_start.msg | default('') }}
+      previous_exists={{ monitoring_status_now_status_file_before.stat.exists | default(false) }}
+      current_exists={{ monitoring_status_now_status_file.stat.exists | default(false) }}
+      previous_mtime={{ monitoring_status_now_status_file_before.stat.mtime | default('n/a') }}
+      current_mtime={{ monitoring_status_now_status_file.stat.mtime | default('n/a') }}
+      previous_checksum={{ monitoring_status_now_status_file_before.stat.checksum | default('n/a') }}
+      current_checksum={{ monitoring_status_now_status_file.stat.checksum | default('n/a') }}
+    quiet: true
+  when: monitoring_status_now_enabled
+
+- name: "Validate | Read monitoring_status JSON"
+  ansible.builtin.slurp:
+    src: "{{ monitoring_status_now_status_path }}"
+  register: monitoring_status_now_status_slurp
+  when: monitoring_status_now_enabled
+
+- name: "Validate | Parse monitoring_status JSON"
+  ansible.builtin.set_fact:
+    monitoring_status_now_status: "{{ monitoring_status_now_status_slurp.content | b64decode | from_json }}"
+  changed_when: false
+  when: monitoring_status_now_enabled
+
+- name: "Validate | Print monitoring_status summary"
+  ansible.builtin.debug:
+    msg: >-
+      [monitoring_status_now] host={{ inventory_hostname }}
+      | status={{ monitoring_status_now_status.status | default('unknown') }}
+      | timestamp={{ monitoring_status_now_status.timestamp | default('n/a') }}
+      | checks={{ monitoring_status_now_status.checks | default({}) | to_json }}
+  when: monitoring_status_now_enabled
+
+- name: "Validate | Assert monitoring_status run result is acceptable"
+  ansible.builtin.assert:
+    that:
+      - not (monitoring_status_now_service_start.failed | default(false))
+      - (monitoring_status_now_status.status | default('')) in monitoring_status_now_allowed_statuses
+    fail_msg: >-
+      monitoring_status_now run failed.
+      systemd_msg={{ monitoring_status_now_service_start.msg | default('') }}
+      status={{ monitoring_status_now_status.status | default('unknown') }}
+      checks={{ monitoring_status_now_status.checks | default({}) | to_json }}
+    quiet: true
+  when: monitoring_status_now_enabled
