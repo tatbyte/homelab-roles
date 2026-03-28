@@ -1,0 +1,157 @@
+{# roles/backup_restic_check/templates/backup-restic-check.sh.j2 #}
+{# Template for the managed Restic repository check script in this role. #}
+#!/usr/bin/env bash
+# Managed by Ansible: backup_restic_check
+# Source: roles/backup_restic_check/templates/backup-restic-check.sh.j2
+
+set -u -o pipefail
+umask 077
+
+status_path={{ backup_restic_check_status_path | to_json }}
+repository_label={{ backup_restic_check_repository_label | to_json }}
+host_name={{ backup_restic_check_status_host | to_json }}
+job_name={{ backup_restic_check_job_name | to_json }}
+json_schema={{ backup_restic_check_json_schema | to_json }}
+read_data_subset={{ backup_restic_check_read_data_subset | to_json }}
+
+configured_extra_args=(
+{% for item in backup_restic_check_extra_args %}
+  {{ item | to_json }}
+{% endfor %}
+)
+
+cleanup_files=()
+
+register_cleanup_file() {
+  cleanup_files+=("$1")
+}
+
+cleanup() {
+  local path
+  for path in "${cleanup_files[@]}"; do
+    rm -f "$path"
+  done
+}
+
+trap cleanup EXIT
+
+status_dir="$(dirname "$status_path")"
+mkdir -p "$status_dir"
+
+tmp_stdout="$(mktemp)"
+register_cleanup_file "$tmp_stdout"
+tmp_stderr="$(mktemp)"
+register_cleanup_file "$tmp_stderr"
+tmp_json="$(mktemp)"
+register_cleanup_file "$tmp_json"
+
+write_status_json() {
+  local timestamp="$1"
+  local status="$2"
+  local duration_seconds="$3"
+  local warnings_json="$4"
+  local error_text="$5"
+  local exit_code="$6"
+  local check_mode="$7"
+
+  jq -n \
+    --arg schema "$json_schema" \
+    --arg host "$host_name" \
+    --arg job "$job_name" \
+    --arg timestamp "$timestamp" \
+    --arg status "$status" \
+    --arg repository "$repository_label" \
+    --arg error "$error_text" \
+    --arg check_mode_value "$check_mode" \
+    --arg read_data_subset_value "$read_data_subset" \
+    --argjson duration_seconds "$duration_seconds" \
+    --argjson warnings "$warnings_json" \
+    --argjson exit_code "$exit_code" \
+    '{
+      schema: $schema,
+      host: $host,
+      job: $job,
+      timestamp: $timestamp,
+      status: $status,
+      repository: $repository,
+      duration_seconds: $duration_seconds,
+      check_mode: $check_mode_value,
+      read_data_subset: $read_data_subset_value,
+      warnings: $warnings,
+      error: $error,
+      exit_code: $exit_code
+    }' >"$tmp_json"
+
+  install -m 0644 "$tmp_json" "$status_path"
+}
+
+start_epoch="$(date +%s)"
+check_mode="metadata"
+
+restic_global_args=()
+
+{% if backup_restic_check_lock_wait | trim | length > 0 %}
+restic_global_args+=(
+  --lock-wait {{ backup_restic_check_lock_wait | to_json }}
+)
+{% endif %}
+
+restic_check_args=(
+  check
+)
+
+if [ -n "$read_data_subset" ]; then
+  restic_check_args+=(--read-data-subset "$read_data_subset")
+  check_mode="read-data-subset"
+fi
+
+configured_extra_args_count="$(printf '%s\n' "${configured_extra_args[@]}" | sed '/^$/d' | wc -l)"
+if [ "$configured_extra_args_count" -gt 0 ]; then
+  restic_check_args+=("${configured_extra_args[@]}")
+fi
+
+if restic "${restic_global_args[@]}" "${restic_check_args[@]}" >"$tmp_stdout" 2>"$tmp_stderr"; then
+  restic_rc=0
+else
+  restic_rc=$?
+fi
+
+if [ -s "$tmp_stderr" ]; then
+  warnings_json="$(
+    jq -R -s 'split("\n") | map(select(length > 0))' "$tmp_stderr"
+  )"
+else
+  warnings_json='[]'
+fi
+
+warning_count="$(
+  jq -nr --argjson warnings "$warnings_json" '$warnings | length'
+)"
+
+end_epoch="$(date +%s)"
+duration_seconds="$(( end_epoch - start_epoch ))"
+
+json_status="ok"
+error_text=""
+if [ "$restic_rc" -ne 0 ]; then
+  json_status="error"
+  error_text="$(
+    jq -nr --argjson warnings "$warnings_json" '$warnings | join(" | ")'
+  )"
+  if [ -z "$error_text" ]; then
+    error_text="restic check failed with exit code $restic_rc"
+  fi
+elif [ "$warning_count" -gt 0 ]; then
+  json_status="warn"
+fi
+
+write_status_json \
+  "$(date --iso-8601=seconds)" \
+  "$json_status" \
+  "$duration_seconds" \
+  "$warnings_json" \
+  "$error_text" \
+  "$restic_rc" \
+  "$check_mode"
+
+exit "$restic_rc"

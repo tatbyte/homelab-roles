@@ -1,0 +1,81 @@
+---
+# roles/backup_restic_prune/tasks/validate.yml
+# Validate phase tasks for the `backup_restic_prune` role.
+# Verifies the Restic binary, rendered files, and timer state after
+# configuration.
+
+- name: "Validate | Check restic binary version for backup_restic_prune"
+  ansible.builtin.command:
+    cmd: restic version
+  register: backup_restic_prune_version
+  changed_when: false
+  when: backup_restic_prune_enabled
+
+- name: "Validate | Stat backup_restic_prune managed paths"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ backup_restic_prune_environment_file_path }}"
+    - "{{ backup_restic_prune_script_path }}"
+    - "/etc/systemd/system/{{ backup_restic_prune_service_unit }}"
+    - "/etc/systemd/system/{{ backup_restic_prune_timer_unit }}"
+    - "{{ backup_restic_prune_status_dir }}"
+  register: backup_restic_prune_managed_paths
+  when: backup_restic_prune_enabled
+
+- name: "Validate | Stat backup_restic_prune timer enablement symlink"
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/timers.target.wants/{{ backup_restic_prune_timer_unit }}"
+  register: backup_restic_prune_timer_enabled_symlink
+  when: backup_restic_prune_enabled
+
+- name: "Validate | Read backup_restic_prune timer systemd state" # noqa: command-instead-of-module
+  ansible.builtin.command:
+    argv:
+      - systemctl
+      - show
+      - "{{ backup_restic_prune_timer_unit }}"
+      - --property=LoadState
+      - --property=ActiveState
+      - --property=UnitFileState
+      - --property=SubState
+  register: backup_restic_prune_timer_state
+  changed_when: false
+  when: backup_restic_prune_enabled
+
+- name: "Validate | Assert backup_restic_prune final state when enabled"
+  ansible.builtin.assert:
+    that:
+      - backup_restic_prune_version.rc == 0
+      - backup_restic_prune_managed_paths.results | map(attribute='stat.exists') | min
+      - backup_restic_prune_timer_enabled_symlink.stat.exists
+      - backup_restic_prune_timer_state.rc == 0
+      - "'LoadState=loaded' in backup_restic_prune_timer_state.stdout_lines"
+      - "'ActiveState=active' in backup_restic_prune_timer_state.stdout_lines"
+      - "'UnitFileState=enabled' in backup_restic_prune_timer_state.stdout_lines"
+    fail_msg: >-
+      backup_restic_prune is enabled, but the expected binary, files, or timer
+      state were not validated successfully
+    quiet: true
+  when: backup_restic_prune_enabled
+
+- name: "Validate | Stat backup_restic_prune managed files when disabled"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ backup_restic_prune_environment_file_path }}"
+    - "{{ backup_restic_prune_script_path }}"
+    - "/etc/systemd/system/{{ backup_restic_prune_service_unit }}"
+    - "/etc/systemd/system/{{ backup_restic_prune_timer_unit }}"
+  register: backup_restic_prune_removed_paths
+  when: not backup_restic_prune_enabled
+
+- name: "Validate | Assert backup_restic_prune cleanup when disabled"
+  ansible.builtin.assert:
+    that:
+      - not (backup_restic_prune_removed_paths.results | map(attribute='stat.exists') | max)
+    fail_msg: >-
+      backup_restic_prune is disabled, but one or more managed files still
+      exist on the host
+    quiet: true
+  when: not backup_restic_prune_enabled

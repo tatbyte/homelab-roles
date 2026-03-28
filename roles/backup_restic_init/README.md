@@ -11,8 +11,12 @@ repository does not exist yet.
 - Give consumer repos and the example lab a clean first-run bootstrap path
 
 ## Notes
-- This role is reusable, but intentionally explicit. It is for first-run repository setup, not steady-state recurring configuration.
-- Callers typically run `backup_restic` first so the host has the expected Restic package and related configuration in place.
+- This role is reusable, but the aggregate `backup` role is now the normal
+  steady-state entrypoint. It applies `backup_restic` first and then runs this
+  role so missing repositories are initialized automatically during the normal
+  backup-layer path.
+- Direct callers should still run `backup_restic` first so the host has the
+  expected Restic package and related configuration in place.
 
 ## Usage
 

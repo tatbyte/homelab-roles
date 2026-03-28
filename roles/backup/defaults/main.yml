@@ -1,0 +1,9 @@
+---
+# roles/backup/defaults/main.yml
+# Default variables for the `backup` role.
+# Defines optional aggregate-role toggles that extend the backup layer without
+# changing existing consumers by default.
+
+backup_include_restic: false
+backup_include_restic_prune: false
+backup_include_restic_check: false

@@ -28,6 +28,9 @@ The example assumes Debian-family hosts.
   `examples/inventory/host_vars/<host>/vars.yml`.
 - Put hosts in the matching inventory groups (`bootstrap`, `base`, `user`,
   `docker`, `backup`) so grouped vars and playbooks line up cleanly.
+- Keep `examples/playbooks/backup.yml` on the aggregate `backup` role so the
+  recurring backup, repository init, prune, and check timers stay in the same
+  steady-state path.
 - Keep `examples/playbooks/base.yml` for the non-maintenance baseline and
   `examples/playbooks/base_maintenance.yml` for one-host-at-a-time package
   maintenance.

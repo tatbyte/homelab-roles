@@ -1,7 +1,9 @@
 # roles/backup_restic/README.md
 
 Reference for the `backup_restic` role.
-Explains how the role installs Restic, renders the managed backup script and systemd timer, and writes stable JSON status output for monitoring consumers.
+Explains how the role installs Restic, renders the managed backup script plus
+scope files and systemd timer, and writes stable JSON status output for
+monitoring consumers.
 
 ## Purpose
 - Run recurring Restic backups through a host-local systemd timer
@@ -11,6 +13,8 @@ Explains how the role installs Restic, renders the managed backup script and sys
 ## Managed Files
 - `{{ backup_restic_script_path }}`: rendered backup runner
 - `{{ backup_restic_environment_file_path }}`: root-only Restic environment file
+- `{{ backup_restic_paths_file_path }}`: rendered include-path list consumed by the backup script
+- `{{ backup_restic_excludes_file_path }}`: rendered exclude list consumed by the backup script
 - `/etc/systemd/system/{{ backup_restic_service_unit }}`: oneshot backup service
 - `/etc/systemd/system/{{ backup_restic_timer_unit }}`: recurring schedule
 - `{{ backup_restic_status_path }}`: latest backup result JSON, written by the script when the backup runs
@@ -28,6 +32,8 @@ Missing configured backup paths are skipped at runtime and recorded in the `warn
 | `backup_restic_repository` | `""` | yes | Restic repository location passed through `RESTIC_REPOSITORY` |
 | `backup_restic_password` | `""` | yes | Repository password passed through `RESTIC_PASSWORD` |
 | `backup_restic_extra_environment` | `{}` | no | Extra backend-specific environment variables such as IDrive e2 S3-compatible settings |
+| `backup_restic_paths_file_path` | `/etc/restic/backup.paths` | no | Rendered file path for the managed include-path list |
+| `backup_restic_excludes_file_path` | `/etc/restic/exclude.txt` | no | Rendered file path for the managed exclude list |
 | `backup_restic_paths` | issue #79 baseline | no | Paths the backup script will include when they exist |
 | `backup_restic_excludes` | issue #79 baseline | no | Paths and globs passed as `--exclude` values |
 | `backup_restic_tags` | `[]` | no | Optional Restic snapshot tags |
@@ -67,6 +73,12 @@ backup_restic_docker_stop_containers:
 
 ## Notes
 - The role does not force an immediate backup run on every Ansible apply; it installs and starts the timer, and the status JSON appears after the first service execution.
+- The aggregate `backup` role is the normal steady-state entrypoint. It applies
+  `backup_restic` first and then runs `backup_restic_init` so missing
+  repositories are initialized automatically during the same backup-layer run.
+- Companion roles `backup_restic_prune` and `backup_restic_check` keep
+  retention and repository verification on their own timers and status files
+  instead of folding them into the snapshot timer.
 - The JSON schema name is `restic_backup_status_v1`, matching the backup-state contract described in issue `#96`.
 - `bytes_added` is derived from Restic's `data_added` summary field.
 - The current inventory examples use IDrive e2 through its S3-compatible API, while the role itself stays backend-agnostic.

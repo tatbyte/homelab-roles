@@ -39,6 +39,13 @@ zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
 setopt PROMPT_SUBST
 autoload -Uz vcs_info
 
+# ----- Keybindings (emacs/vi) -----
+{% if user_zshell_keybindings is defined and user_zshell_keybindings == '-e' %}
+bindkey -e
+{% elif user_zshell_keybindings is defined and user_zshell_keybindings == '-v' %}
+bindkey -v
+{% endif %}
+
 zstyle ':vcs_info:*' enable git
 zstyle ':vcs_info:git:*' formats ' %F{yellow}⎇ [%b]%f'
 

@@ -9,3 +9,5 @@
 # must opt in explicitly through host vars, matching the pattern used by the
 # other recurring layers.
 backup_include_restic: false
+backup_include_restic_prune: false
+backup_include_restic_check: false

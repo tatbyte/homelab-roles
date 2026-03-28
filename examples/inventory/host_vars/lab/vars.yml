@@ -38,6 +38,8 @@ docker_include_adguard: true
 docker_include_adguard_sync: true
 docker_include_wireguard: true
 backup_include_restic: true
+backup_include_restic_prune: true
+backup_include_restic_check: true
 
 # Stop only the shared example containers with writable application state
 # before the Restic backup runs. Traefik stays up because its state is

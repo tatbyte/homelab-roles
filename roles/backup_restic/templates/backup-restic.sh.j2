@@ -13,18 +13,11 @@ host_name={{ backup_restic_status_host | to_json }}
 job_name={{ backup_restic_job_name | to_json }}
 json_schema={{ backup_restic_json_schema | to_json }}
 snapshot_host={{ backup_restic_snapshot_host | to_json }}
+paths_file={{ backup_restic_paths_file_path | to_json }}
+excludes_file={{ backup_restic_excludes_file_path | to_json }}
 
-configured_paths=(
-{% for item in backup_restic_paths %}
-  {{ item | to_json }}
-{% endfor %}
-)
-
-configured_excludes=(
-{% for item in backup_restic_excludes %}
-  {{ item | to_json }}
-{% endfor %}
-)
+configured_paths=()
+configured_excludes=()
 
 configured_tags=(
 {% for item in backup_restic_tags %}
@@ -58,6 +51,27 @@ register_cleanup_file() {
 
 append_warning() {
   script_warnings+=("$1")
+}
+
+load_entries_from_file() {
+  local file_path="$1"
+  local target_name="$2"
+  local line
+
+  if [ ! -f "$file_path" ]; then
+    return 1
+  fi
+
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in
+      ''|'#'*)
+        continue
+        ;;
+    esac
+    eval "$target_name+=(\"\$line\")"
+  done < "$file_path"
+
+  return 0
 }
 
 restart_stopped_docker_containers() {
@@ -109,14 +123,8 @@ tmp_json="$(mktemp)"
 register_cleanup_file "$tmp_json"
 
 script_warnings=()
+script_warnings_json='[]'
 existing_paths=()
-for path in "${configured_paths[@]}"; do
-  if [ -e "$path" ]; then
-    existing_paths+=("$path")
-  else
-    script_warnings+=("configured backup path missing: $path")
-  fi
-done
 
 stop_configured_docker_containers() {
   local container
@@ -157,11 +165,6 @@ stop_configured_docker_containers() {
 
   return 0
 }
-
-script_warnings_json="$(
-  printf '%s\n' "${script_warnings[@]}" \
-    | jq -R -s 'split("\n") | map(select(length > 0))'
-)"
 
 write_status_json() {
   local timestamp="$1"
@@ -277,6 +280,59 @@ write_status_json() {
 
   install -m 0644 "$tmp_json" "$status_path"
 }
+
+if ! load_entries_from_file "$paths_file" configured_paths; then
+  write_status_json \
+    "$(date --iso-8601=seconds)" \
+    "error" \
+    "" \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    "$script_warnings_json" \
+    "Configured backup paths file is missing: $paths_file" \
+    1
+  exit 1
+fi
+
+if ! load_entries_from_file "$excludes_file" configured_excludes; then
+  write_status_json \
+    "$(date --iso-8601=seconds)" \
+    "error" \
+    "" \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    0 \
+    "$script_warnings_json" \
+    "Configured backup exclude file is missing: $excludes_file" \
+    1
+  exit 1
+fi
+
+for path in "${configured_paths[@]}"; do
+  if [ -e "$path" ]; then
+    existing_paths+=("$path")
+  else
+    script_warnings+=("configured backup path missing: $path")
+  fi
+done
+
+script_warnings_json="$(
+  printf '%s\n' "${script_warnings[@]}" \
+    | jq -R -s 'split("\n") | map(select(length > 0))'
+)"
 
 existing_paths_count="$(printf '%s\n' "${existing_paths[@]}" | sed '/^$/d' | wc -l)"
 if [ "$existing_paths_count" -eq 0 ]; then

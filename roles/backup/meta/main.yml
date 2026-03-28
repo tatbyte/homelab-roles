@@ -1,0 +1,20 @@
+---
+# roles/backup/meta/main.yml
+# Role metadata for the `backup` role.
+# Declares the aggregate backup role metadata used by Ansible Galaxy and local
+# consumers.
+
+galaxy_info:
+  author: tatbyte
+  description: Aggregate recurring Restic backup layer
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - all
+    - name: Ubuntu
+      versions:
+        - all
+
+dependencies: []

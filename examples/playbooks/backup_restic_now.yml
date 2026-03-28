@@ -7,6 +7,7 @@
 
 - name: Run backup_restic service immediately for validation
   hosts: backup
+  serial: 1
   become: true
   roles:
     - role: backup_restic_now

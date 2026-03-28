@@ -32,3 +32,6 @@ user_zshell_prompt: >-
   $'%F{81}┌[%n@%m]%f %F{39}[%~]%f %F{220}[%*]%f
   %F{214}$(b=$(git rev-parse --abbrev-ref HEAD 2>/dev/null); [ -n "$b" ] &&
   print -n "["$b"]")%f\n%F{81}└─%f %F{226}»%f '
+
+# Ensure emacs keybindings (Ctrl+A, Ctrl+E, etc.)
+user_zshell_keybindings: '-e'

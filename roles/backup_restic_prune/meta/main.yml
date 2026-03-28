@@ -1,0 +1,18 @@
+---
+# roles/backup_restic_prune/meta/main.yml
+# Role metadata for `backup_restic_prune`.
+
+galaxy_info:
+  author: tatbyte
+  description: Recurring Restic retention and prune job
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - all
+    - name: Ubuntu
+      versions:
+        - all
+
+dependencies: []

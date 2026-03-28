@@ -3,7 +3,9 @@
 # Backup phase playbook for the example lab.
 # Loads the optional local Vault vars file from the control machine inside the
 # backup play so `--limit` runs still receive the overrides, then applies the
-# shared `backup_restic` role to hosts in the `backup` inventory group.
+# shared aggregate `backup` role to hosts in the `backup` inventory group.
+# That aggregate role owns recurring Restic setup plus init/prune/check
+# companions when their inventory toggles are enabled.
 
 - name: Apply backup role after docker
   hosts: backup
@@ -42,5 +44,5 @@
       tags: [always]
       when: secret_sources_use_local_vault_file | default(true)
   roles:
-    - role: backup_restic
+    - role: backup
       when: backup_include_restic | default(false)

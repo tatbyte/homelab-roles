@@ -18,7 +18,7 @@ Values are intentionally simple and should be replaced before production use.
 - `playbooks/base.yml`: non-maintenance base phase.
 - `playbooks/base_maintenance.yml`: package maintenance with `serial: 1`.
 - `playbooks/user.yml`, `docker.yml`, `backup.yml`: recurring layer playbooks.
-- `playbooks/backup_restic_init.yml`, `backup_restic_now.yml`: operational backup helpers.
+- `playbooks/backup_restic_now.yml`: validation-only backup helper.
 - `playbooks/site.yml`: post-bootstrap stack (`base`, `user`, `docker`, `backup`).
 
 For the stable layout rules behind this split, see
@@ -46,7 +46,6 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/base.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/base_maintenance.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/docker.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/backup.yml
-ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/backup_restic_init.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/backup_restic_now.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/user.yml
 ```
@@ -57,7 +56,6 @@ From the `examples/` directory:
 ansible-playbook playbooks/bootstrap.yml
 ansible-playbook playbooks/site.yml
 ansible-playbook playbooks/backup.yml
-ansible-playbook playbooks/backup_restic_init.yml
 ansible-playbook playbooks/backup_restic_now.yml
 ```
 
@@ -70,7 +68,12 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/<t
 ## Notes
 
 - `base.yml` is the normal baseline path. `base_maintenance.yml` is the explicit maintenance path for updates, upgrades, and reboot-capable follow-up.
-- Base-role enablement lives in `inventory/group_vars/base/*.yml`. Optional `user_*` and `docker_*` child roles are enabled per host from `inventory/host_vars/lab/vars.yml`.
+- Base-role enablement lives in `inventory/group_vars/base/*.yml`.
+  Optional `user_*` and `docker_*` child roles are enabled per host from
+  `inventory/host_vars/lab/vars.yml`.
+- `backup.yml` now runs the aggregate `backup` role, which applies the
+  recurring Restic setup, initializes a missing repository, and manages the
+  separate prune/check timers in the same steady-state path.
 - The example keeps live secrets out of the repo and derives public Docker hostnames from the inventory `alias` plus `vault_docker_public_domain_suffix`.
 - Keep role-specific behavior details in the relevant role README so this file stays operational and short.
 

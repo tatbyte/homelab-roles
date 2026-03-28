@@ -15,6 +15,8 @@ backup_restic_service_unit: "{{ backup_restic_unit_name }}.service"
 backup_restic_timer_unit: "{{ backup_restic_unit_name }}.timer"
 backup_restic_script_path: "/usr/local/bin/{{ backup_restic_unit_name }}.sh"
 backup_restic_environment_file_path: "/etc/restic/{{ backup_restic_unit_name }}.env"
+backup_restic_paths_file_path: "{{ backup_restic_state_dir }}/backup.paths"
+backup_restic_excludes_file_path: "{{ backup_restic_state_dir }}/exclude.txt"
 backup_restic_state_dir: /etc/restic
 backup_restic_status_dir: /var/lib/monitor
 backup_restic_status_path: "{{ backup_restic_status_dir }}/restic-backup.json"
@@ -27,6 +29,12 @@ backup_restic_script_mode: "0750"
 backup_restic_environment_owner: root
 backup_restic_environment_group: root
 backup_restic_environment_mode: "0600"
+backup_restic_paths_file_owner: root
+backup_restic_paths_file_group: root
+backup_restic_paths_file_mode: "0644"
+backup_restic_excludes_file_owner: root
+backup_restic_excludes_file_group: root
+backup_restic_excludes_file_mode: "0644"
 backup_restic_status_dir_mode: "0755"
 
 backup_restic_repository: ""

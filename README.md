@@ -14,7 +14,10 @@ The `examples/` directory is the local validation harness for the shared roles.
 - `base`: recurring host baseline, hardening, and maintenance building blocks.
 - `user`: recurring human-admin account and shell/tooling workflow.
 - `docker`: Docker engine plus optional service roles.
-- `backup_restic`, `backup_restic_init`, `backup_restic_now`: recurring backup plus init and validation helpers.
+- `backup`: aggregate backup layer for recurring Restic configuration plus repository init.
+- `backup_restic` and companions: focused recurring backup, repository-init,
+  prune, repository-check, and validation helpers used directly or through
+  `backup`.
 - `monitoring` and focused standalone roles: supporting capabilities consumed directly or through aggregates.
 
 ## Supported Platforms
@@ -28,7 +31,9 @@ Role implementations, package-management tasks, and example configuration assume
 - `docs/`: repository conventions that apply across roles.
 
 Role details live in `roles/<role>/README.md`.
-Aggregate execution order lives in `roles/base/tasks/main.yml`, `roles/user/tasks/main.yml`, and `roles/docker/tasks/main.yml`.
+Aggregate execution order lives in `roles/base/tasks/main.yml`,
+`roles/user/tasks/main.yml`, `roles/docker/tasks/main.yml`, and
+`roles/backup/tasks/main.yml`.
 
 ## Docker Role Conventions
 
@@ -86,7 +91,7 @@ Example infra playbook:
   hosts: backup
   become: true
   roles:
-    - role: backup_restic
+    - role: backup
 
 - name: Apply monitoring access
   hosts: monitoring_targets

@@ -1,0 +1,53 @@
+---
+# roles/backup_restic_prune/defaults/main.yml
+# Default variables for the `backup_restic_prune` role.
+# Defines the recurring Restic retention/prune job, status output, and systemd
+# timer defaults.
+
+backup_restic_prune_enabled: true
+
+backup_restic_prune_packages: "{{ backup_restic_packages | default(['restic', 'jq']) }}"
+
+backup_restic_prune_unit_name: backup-restic-prune
+backup_restic_prune_service_unit: "{{ backup_restic_prune_unit_name }}.service"
+backup_restic_prune_timer_unit: "{{ backup_restic_prune_unit_name }}.timer"
+backup_restic_prune_script_path: "/usr/local/bin/{{ backup_restic_prune_unit_name }}.sh"
+backup_restic_prune_environment_file_path: "/etc/restic/{{ backup_restic_prune_unit_name }}.env"
+backup_restic_prune_state_dir: /etc/restic
+backup_restic_prune_status_dir: /var/lib/monitor
+backup_restic_prune_status_path: "{{ backup_restic_prune_status_dir }}/restic-prune.json"
+
+backup_restic_prune_service_user: root
+backup_restic_prune_service_group: root
+backup_restic_prune_script_owner: root
+backup_restic_prune_script_group: root
+backup_restic_prune_script_mode: "0750"
+backup_restic_prune_environment_owner: root
+backup_restic_prune_environment_group: root
+backup_restic_prune_environment_mode: "0600"
+backup_restic_prune_status_dir_mode: "0755"
+
+backup_restic_prune_repository: "{{ backup_restic_repository | default('') }}"
+backup_restic_prune_repository_label: >-
+  {{ backup_restic_repository_label | default(backup_restic_prune_repository) }}
+backup_restic_prune_password: "{{ backup_restic_password | default('') }}"
+backup_restic_prune_extra_environment: "{{ backup_restic_extra_environment | default({}) }}"
+
+backup_restic_prune_status_host: "{{ ansible_hostname | default(inventory_hostname) }}"
+backup_restic_prune_job_name: restic_prune
+backup_restic_prune_json_schema: restic_prune_status_v1
+
+backup_restic_prune_host_filter: ""
+backup_restic_prune_keep_last: 0
+backup_restic_prune_keep_hourly: 0
+backup_restic_prune_keep_daily: 7
+backup_restic_prune_keep_weekly: 5
+backup_restic_prune_keep_monthly: 12
+backup_restic_prune_keep_yearly: 0
+backup_restic_prune_extra_args: []
+backup_restic_prune_lock_wait: "{{ backup_restic_lock_wait | default('') }}"
+
+backup_restic_prune_timer_on_calendar: "Sun *-*-* 05:30:00"
+backup_restic_prune_timer_randomized_delay_sec: 0
+backup_restic_prune_timer_accuracy_sec: 1m
+backup_restic_prune_timer_persistent: true

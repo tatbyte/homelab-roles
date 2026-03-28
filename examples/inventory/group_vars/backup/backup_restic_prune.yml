@@ -1,0 +1,28 @@
+---
+# examples/inventory/group_vars/backup/backup_restic_prune.yml
+# Shared Restic prune variables for the example lab.
+# Defines the retention policy, timer schedule, and status path used by the
+# `backup_restic_prune` role on hosts in the `backup` group.
+
+# Keep the example prune role enabled so the example lab also exercises the
+# recurring retention cleanup path and its separate JSON-status contract.
+backup_restic_prune_enabled: true
+
+# Keep the prune JSON status output explicit in inventory so monitoring and
+# validation consumers can see and override it without opening the shared role
+# defaults.
+backup_restic_prune_status_dir: /var/lib/monitor
+backup_restic_prune_status_path: "{{ backup_restic_prune_status_dir }}/restic-prune.json"
+
+# Keep the example retention policy visible in inventory so it is easy to
+# review while validating the role collection.
+backup_restic_prune_keep_last: 0
+backup_restic_prune_keep_hourly: 0
+backup_restic_prune_keep_daily: 7
+backup_restic_prune_keep_weekly: 5
+backup_restic_prune_keep_monthly: 12
+backup_restic_prune_keep_yearly: 0
+
+# Keep the example prune window deterministic enough for inspection.
+backup_restic_prune_timer_on_calendar: "Sun *-*-* 04:00:00"
+backup_restic_prune_timer_randomized_delay_sec: 0
