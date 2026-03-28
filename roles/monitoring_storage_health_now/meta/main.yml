@@ -1,0 +1,7 @@
+---
+# roles/monitoring_storage_health_now/meta/main.yml
+# Role metadata for `monitoring_storage_health_now`.
+# Leaves dependencies empty because the caller decides when the recurring
+# `monitoring_storage_health` role should already have been applied.
+
+dependencies: []

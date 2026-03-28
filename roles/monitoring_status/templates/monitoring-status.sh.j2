@@ -25,7 +25,7 @@ export MONITORING_STATUS_SYSTEM_LOAD_WARN_PER_CPU={{ monitoring_status_system_lo
 export MONITORING_STATUS_SYSTEM_LOAD_FAIL_PER_CPU={{ monitoring_status_system_load_fail_per_cpu | string | to_json }}
 
 export MONITORING_STATUS_STORAGE_ROOT_MOUNT={{ monitoring_status_storage_root_mount | to_json }}
-export MONITORING_STATUS_STORAGE_ADDITIONAL_MOUNTS_JSON={{ monitoring_status_storage_additional_mounts | to_json }}
+export MONITORING_STATUS_STORAGE_ADDITIONAL_MOUNTS_JSON={{ monitoring_status_storage_additional_mounts | to_json | quote }}
 export MONITORING_STATUS_STORAGE_MISSING_ADDITIONAL_MOUNT_STATUS={{ monitoring_status_storage_missing_additional_mount_status | to_json }}
 export MONITORING_STATUS_STORAGE_WARN_PCT={{ monitoring_status_storage_warn_pct | string | to_json }}
 export MONITORING_STATUS_STORAGE_FAIL_PCT={{ monitoring_status_storage_fail_pct | string | to_json }}
@@ -36,7 +36,7 @@ export MONITORING_STATUS_STORAGE_TYPE={{ monitoring_status_storage_type | to_jso
 export MONITORING_STATUS_DOCKER_MODE={{ monitoring_status_docker_mode | to_json }}
 export MONITORING_STATUS_DOCKER_SERVICE_NAME={{ monitoring_status_docker_service_name | to_json }}
 
-export MONITORING_STATUS_NETWORK_TARGETS_JSON={{ monitoring_status_network_targets | to_json }}
+export MONITORING_STATUS_NETWORK_TARGETS_JSON={{ monitoring_status_network_targets | to_json | quote }}
 export MONITORING_STATUS_NETWORK_PING_COUNT={{ monitoring_status_network_ping_count | string | to_json }}
 export MONITORING_STATUS_NETWORK_PING_TIMEOUT_SECONDS={{ monitoring_status_network_ping_timeout_seconds | string | to_json }}
 

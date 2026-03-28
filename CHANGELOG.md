@@ -8,13 +8,15 @@ Documents notable changes across repository structure, roles, examples, and docu
 - Added the aggregate `monitoring` role toggles plus the standalone `monitoring_status` role, including copied shell checks, a host-local runner, and a dedicated systemd service/timer that writes `/var/lib/monitor/status.json`.
 - Added matching example-lab `monitoring` inventory vars, host opt-in, inventory group, and `examples/playbooks/monitoring.yml` so the shared repository now exercises the new monitoring layer end-to-end.
 - Added standalone `monitoring_status_now` plus `examples/playbooks/monitoring_status_now.yml` so consumer repos and the shared example can trigger the managed monitoring oneshot service on demand for testing.
+- Added standalone `monitoring_storage_health` plus `monitoring_storage_health_now`, including a dedicated per-device JSON contract, systemd service/timer, example inventory vars, and an example on-demand validation playbook.
 
 ### Changed
 - Updated the aggregate `monitoring` role to use explicit `include_role` ordering instead of meta dependencies, matching the repository's current aggregate-role conventions.
+- Updated the example monitoring layer so `monitoring_status` can stay focused on host summary and filesystem usage while `monitoring_storage_health` owns declared device health checks.
 - Updated the example `site.yml` flow so recurring monitoring now runs after the backup layer, keeping the status role on the intended read-only consumer side of the backup JSON contract.
 
 ### Documentation
-- Updated repository, workflow, role, and example documentation to cover the new monitoring aggregate layer and the `monitoring_status` role.
+- Updated repository, workflow, role, and example documentation to cover the expanded monitoring aggregate layer, `monitoring_status`, and `monitoring_storage_health`.
 
 ## [v2.9.0]
 ### Added

@@ -66,4 +66,9 @@ backup_restic_timer_randomized_delay_sec: 0
 # Optional monitoring layer roles enabled for this host.
 monitoring_include_authorized_key: false
 monitoring_include_status: true
+monitoring_include_storage_health: true
 monitoring_status_storage_additional_mounts: []
+monitoring_storage_health_devices:
+  - label: root_disk
+    device: /dev/sda
+    type: smart

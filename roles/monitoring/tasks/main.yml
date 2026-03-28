@@ -39,3 +39,23 @@
       monitoring_status_config,
       monitoring_status_validate,
     ]
+
+- name: "Monitoring | Include optional monitoring_storage_health role"
+  ansible.builtin.include_role:
+    name: monitoring_storage_health
+    apply:
+      tags: [monitoring, monitoring_storage_health]
+  when: monitoring_include_storage_health | default(false)
+  tags:
+    [
+      monitoring,
+      monitoring_storage_health,
+      assert,
+      install,
+      config,
+      validate,
+      monitoring_storage_health_assert,
+      monitoring_storage_health_install,
+      monitoring_storage_health_config,
+      monitoring_storage_health_validate,
+    ]

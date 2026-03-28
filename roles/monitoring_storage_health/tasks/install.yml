@@ -1,0 +1,10 @@
+---
+# roles/monitoring_storage_health/tasks/install.yml
+# Install phase tasks for the `monitoring_storage_health` role.
+# Installs the packages required by the recurring per-device health checks.
+
+- name: "Install | Ensure monitoring_storage_health packages are installed"
+  ansible.builtin.package:
+    name: "{{ monitoring_storage_health_packages }}"
+    state: present
+  when: monitoring_storage_health_enabled

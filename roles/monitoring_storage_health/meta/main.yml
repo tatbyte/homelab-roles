@@ -1,0 +1,7 @@
+---
+# roles/monitoring_storage_health/meta/main.yml
+# Role metadata for `monitoring_storage_health`.
+# Leaves dependencies empty because execution order is defined by the caller
+# or aggregate `monitoring` role.
+
+dependencies: []

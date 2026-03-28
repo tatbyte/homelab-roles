@@ -10,3 +10,7 @@
 # monitor by default. A specific example host can still opt out with
 # `monitoring_include_status: false` in host vars.
 monitoring_include_status: true
+
+# The example monitoring group should also exercise the dedicated storage
+# health role by default. A specific host can still opt out in host vars.
+monitoring_include_storage_health: true

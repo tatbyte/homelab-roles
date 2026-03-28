@@ -1,0 +1,85 @@
+---
+# roles/monitoring_storage_health/tasks/config.yml
+# Config phase tasks for the `monitoring_storage_health` role.
+# Renders the managed storage-health runner and systemd units, or removes them
+# when the role is disabled.
+
+- name: "Config | Ensure monitoring_storage_health directories exist"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - path: "{{ monitoring_storage_health_state_dir }}"
+      mode: "0755"
+    - path: "{{ monitoring_storage_health_status_dir }}"
+      mode: "{{ monitoring_storage_health_status_dir_mode }}"
+  when: monitoring_storage_health_enabled
+
+- name: "Config | Render monitoring_storage_health script"
+  ansible.builtin.template:
+    src: monitoring-storage-health.sh.j2
+    dest: "{{ monitoring_storage_health_script_path }}"
+    owner: "{{ monitoring_storage_health_script_owner }}"
+    group: "{{ monitoring_storage_health_script_group }}"
+    mode: "{{ monitoring_storage_health_script_mode }}"
+  when: monitoring_storage_health_enabled
+
+- name: "Config | Render monitoring_storage_health systemd units"
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "/etc/systemd/system/{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - src: monitoring-storage-health.service.j2
+      dest: "{{ monitoring_storage_health_service_unit }}"
+    - src: monitoring-storage-health.timer.j2
+      dest: "{{ monitoring_storage_health_timer_unit }}"
+  when: monitoring_storage_health_enabled
+
+- name: "Config | Reload systemd after monitoring_storage_health unit updates"
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when: monitoring_storage_health_enabled
+
+- name: "Config | Ensure monitoring_storage_health timer is enabled and started"
+  ansible.builtin.systemd_service:
+    name: "{{ monitoring_storage_health_timer_unit }}"
+    enabled: true
+    state: started
+  when: monitoring_storage_health_enabled
+
+- name: "Config | Stop and disable monitoring_storage_health timer when disabled"
+  ansible.builtin.systemd_service:
+    name: "{{ monitoring_storage_health_timer_unit }}"
+    enabled: false
+    state: stopped
+  failed_when: false
+  when: not monitoring_storage_health_enabled
+
+- name: "Config | Stop monitoring_storage_health service when disabled"
+  ansible.builtin.systemd_service:
+    name: "{{ monitoring_storage_health_service_unit }}"
+    state: stopped
+  failed_when: false
+  when: not monitoring_storage_health_enabled
+
+- name: "Config | Remove monitoring_storage_health managed files when disabled"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ monitoring_storage_health_script_path }}"
+    - "{{ monitoring_storage_health_status_path }}"
+    - "/etc/systemd/system/{{ monitoring_storage_health_service_unit }}"
+    - "/etc/systemd/system/{{ monitoring_storage_health_timer_unit }}"
+  when: not monitoring_storage_health_enabled
+
+- name: "Config | Reload systemd after monitoring_storage_health cleanup"
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when: not monitoring_storage_health_enabled

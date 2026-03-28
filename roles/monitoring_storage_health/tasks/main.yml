@@ -1,0 +1,20 @@
+---
+# roles/monitoring_storage_health/tasks/main.yml
+# Task entrypoint for the `monitoring_storage_health` role.
+# Imports the assert, install, config, and validate phase files in order.
+
+- name: Assert
+  ansible.builtin.import_tasks: assert.yml
+  tags: [monitoring_storage_health, assert, monitoring_storage_health_assert]
+
+- name: Install
+  ansible.builtin.import_tasks: install.yml
+  tags: [monitoring_storage_health, install, monitoring_storage_health_install]
+
+- name: Config
+  ansible.builtin.import_tasks: config.yml
+  tags: [monitoring_storage_health, config, monitoring_storage_health_config]
+
+- name: Validate
+  ansible.builtin.import_tasks: validate.yml
+  tags: [monitoring_storage_health, validate, monitoring_storage_health_validate]

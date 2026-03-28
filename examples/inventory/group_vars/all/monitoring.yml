@@ -11,3 +11,4 @@
 # unrelated hosts.
 monitoring_include_authorized_key: false
 monitoring_include_status: false
+monitoring_include_storage_health: false

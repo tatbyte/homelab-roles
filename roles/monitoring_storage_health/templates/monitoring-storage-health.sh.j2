@@ -1,0 +1,219 @@
+{# roles/monitoring_storage_health/templates/monitoring-storage-health.sh.j2 #}
+{# Template for the managed storage-health runner script in `monitoring_storage_health`. #}
+#!/usr/bin/env bash
+# Managed by Ansible: monitoring_storage_health
+# Source: roles/monitoring_storage_health/templates/monitoring-storage-health.sh.j2
+
+set -euo pipefail
+umask 077
+
+status_path={{ monitoring_storage_health_status_path | to_json }}
+host_name={{ monitoring_storage_health_host | to_json }}
+job_name={{ monitoring_storage_health_job_name | to_json }}
+json_schema={{ monitoring_storage_health_json_schema | to_json }}
+
+export MONITORING_STORAGE_HEALTH_DEVICES_JSON={{ monitoring_storage_health_devices | to_json | quote }}
+export MONITORING_STORAGE_HEALTH_SD_ERROR_LOOKBACK={{ monitoring_storage_health_sd_error_lookback | quote }}
+
+severity_rank() {
+  case "$1" in
+    ok)
+      printf '0\n'
+      ;;
+    warn)
+      printf '1\n'
+      ;;
+    fail)
+      printf '2\n'
+      ;;
+    *)
+      printf '2\n'
+      ;;
+  esac
+}
+
+set_overall_status() {
+  local candidate="$1"
+  local current_rank
+  local candidate_rank
+
+  current_rank="$(severity_rank "$overall_status")"
+  candidate_rank="$(severity_rank "$candidate")"
+  if [ "$candidate_rank" -gt "$current_rank" ]; then
+    overall_status="$candidate"
+  fi
+}
+
+detect_type() {
+  local device="$1"
+  local requested_type="$2"
+  local base_name
+
+  if [ "$requested_type" != "auto" ]; then
+    printf '%s\n' "$requested_type"
+    return
+  fi
+
+  base_name="$(basename "$device")"
+  case "$base_name" in
+    nvme*)
+      printf 'nvme\n'
+      ;;
+    mmcblk*)
+      printf 'sd\n'
+      ;;
+    *)
+      printf 'smart\n'
+      ;;
+  esac
+}
+
+status_dir="$(dirname "$status_path")"
+mkdir -p "$status_dir"
+status_temp_file="$(mktemp "${status_path}.XXXXXX")"
+trap 'rm -f "$status_temp_file"' EXIT
+
+status_timestamp="$(date --iso-8601=seconds)"
+overall_status=ok
+devices_json='[]'
+
+while IFS= read -r device_item; do
+  label="$(printf '%s\n' "$device_item" | jq -r '.label // .device')"
+  device_path="$(printf '%s\n' "$device_item" | jq -r '.device')"
+  requested_type="$(printf '%s\n' "$device_item" | jq -r '.type // "auto"')"
+  smartctl_device_type="$(printf '%s\n' "$device_item" | jq -r '.smartctl_device_type // ""')"
+  resolved_type="$(detect_type "$device_path" "$requested_type")"
+  device_status=ok
+  device_details='{}'
+
+  if [ ! -e "$device_path" ]; then
+    device_status=fail
+    device_details="$(jq -n --arg error "device path not found" '{error: $error}')"
+  else
+    case "$resolved_type" in
+      none)
+        device_status=ok
+        device_details="$(jq -n '{mode: "skipped"}')"
+        ;;
+      smart)
+        smart_output_file="$(mktemp)"
+        smart_error_file="$(mktemp)"
+        smartctl_cmd=(smartctl)
+        if [ -n "$smartctl_device_type" ]; then
+          smartctl_cmd+=(-d "$smartctl_device_type")
+        fi
+        smartctl_cmd+=(-H "$device_path")
+        if "${smartctl_cmd[@]}" >"$smart_output_file" 2>"$smart_error_file"; then
+          smart_summary="$(tr '\n' ' ' <"$smart_output_file" | sed 's/  */ /g; s/^ //; s/ $//')"
+          if grep -qiE 'PASSED|OK' "$smart_output_file"; then
+            device_status=ok
+          elif grep -qiE 'FAILED|FAILING' "$smart_output_file"; then
+            device_status=fail
+          else
+            device_status=warn
+          fi
+          device_details="$(jq -n --arg summary "$smart_summary" '{smart_summary: $summary}')"
+        else
+          smart_summary="$(tr '\n' ' ' <"$smart_error_file" | sed 's/  */ /g; s/^ //; s/ $//')"
+          device_status=warn
+          device_details="$(jq -n --arg summary "$smart_summary" '{smart_summary: $summary}')"
+        fi
+        rm -f "$smart_output_file" "$smart_error_file"
+        ;;
+      nvme)
+        nvme_output_file="$(mktemp)"
+        nvme_error_file="$(mktemp)"
+        if nvme smart-log -o json "$device_path" >"$nvme_output_file" 2>"$nvme_error_file"; then
+          critical_warning="$(jq -r '.critical_warning // 0' "$nvme_output_file")"
+          media_errors="$(jq -r '.media_errors // 0' "$nvme_output_file")"
+          error_log_entries="$(jq -r '.num_err_log_entries // 0' "$nvme_output_file")"
+          if [ "${critical_warning:-0}" != "0" ]; then
+            device_status=fail
+          elif [ "${media_errors:-0}" != "0" ] || [ "${error_log_entries:-0}" != "0" ]; then
+            device_status=warn
+          fi
+          device_details="$(
+            jq -n \
+              --argjson critical_warning "${critical_warning:-0}" \
+              --argjson media_errors "${media_errors:-0}" \
+              --argjson error_log_entries "${error_log_entries:-0}" \
+              '{
+                critical_warning: $critical_warning,
+                media_errors: $media_errors,
+                error_log_entries: $error_log_entries
+              }'
+          )"
+        else
+          nvme_summary="$(tr '\n' ' ' <"$nvme_error_file" | sed 's/  */ /g; s/^ //; s/ $//')"
+          device_status=warn
+          device_details="$(jq -n --arg error "$nvme_summary" '{error: $error}')"
+        fi
+        rm -f "$nvme_output_file" "$nvme_error_file"
+        ;;
+      sd)
+        sd_error_count="$(
+          journalctl -k --since "$MONITORING_STORAGE_HEALTH_SD_ERROR_LOOKBACK" --no-pager 2>/dev/null \
+            | grep -Eci '(mmcblk|Buffer I/O error|I/O error|EXT4-fs error|blk_update_request)' || true
+        )"
+        if [ "${sd_error_count:-0}" -gt 0 ]; then
+          device_status=warn
+        fi
+        device_details="$(
+          jq -n \
+            --arg lookback "$MONITORING_STORAGE_HEALTH_SD_ERROR_LOOKBACK" \
+            --argjson error_count "${sd_error_count:-0}" \
+            '{sd_error_lookback: $lookback, sd_error_count: $error_count}'
+        )"
+        ;;
+      *)
+        device_status=fail
+        device_details="$(jq -n --arg error "unsupported storage type" '{error: $error}')"
+        ;;
+    esac
+  fi
+
+  devices_json="$(
+    jq -n \
+      --argjson current "$devices_json" \
+      --arg device_label "$label" \
+      --arg device "$device_path" \
+      --arg requested_type "$requested_type" \
+      --arg smartctl_device_type "$smartctl_device_type" \
+      --arg type "$resolved_type" \
+      --arg status "$device_status" \
+      --argjson details "$device_details" \
+      '$current + [{
+        "label": $device_label,
+        "device": $device,
+        "requested_type": $requested_type,
+        "smartctl_device_type": $smartctl_device_type,
+        "type": $type,
+        "status": $status,
+        "details": $details
+      }]'
+  )"
+  set_overall_status "$device_status"
+done < <(jq -c '.[]' <<<"$MONITORING_STORAGE_HEALTH_DEVICES_JSON")
+
+jq -n \
+  --arg schema "$json_schema" \
+  --arg host "$host_name" \
+  --arg job "$job_name" \
+  --arg timestamp "$status_timestamp" \
+  --arg status "$overall_status" \
+  --argjson devices "$devices_json" \
+  '{
+    "schema": $schema,
+    "host": $host,
+    "job": $job,
+    "timestamp": $timestamp,
+    "status": $status,
+    "details": {
+      "device_count": ($devices | length),
+      "warning_device_count": ($devices | map(select(.status == "warn")) | length),
+      "failing_device_count": ($devices | map(select(.status == "fail")) | length),
+      "devices": $devices
+    }
+  }' >"$status_temp_file"
+
+mv "$status_temp_file" "$status_path"

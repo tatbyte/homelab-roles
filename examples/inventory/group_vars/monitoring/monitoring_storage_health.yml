@@ -1,0 +1,21 @@
+---
+# examples/inventory/group_vars/monitoring/monitoring_storage_health.yml
+# Shared storage-health monitoring variables for the example lab.
+# Defines the rendered JSON path and timer schedule used by the
+# `monitoring_storage_health` role on hosts in the `monitoring` group after
+# that group opts into the aggregate monitoring layer.
+
+# Keep the storage-health timer enabled so the example lab exercises the
+# dedicated per-device JSON contract alongside the host-status role.
+monitoring_storage_health_enabled: true
+
+# Keep the JSON output path explicit in inventory so collection and validation
+# consumers can inspect or override it without opening the shared role
+# defaults.
+monitoring_storage_health_status_dir: /var/lib/monitor
+monitoring_storage_health_status_path: "{{ monitoring_storage_health_status_dir }}/storage-health.json"
+
+# Keep the example timer deterministic enough for inspection while still using
+# the same systemd timer path as production.
+monitoring_storage_health_timer_on_calendar: "*-*-* 05:40:00"
+monitoring_storage_health_timer_randomized_delay_sec: 0

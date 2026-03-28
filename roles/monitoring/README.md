@@ -2,12 +2,15 @@
 
 Reference for the `monitoring` role.
 Explains how the aggregate monitoring layer includes optional focused roles
-such as `monitoring_authorized_key` and `monitoring_status`.
+such as `monitoring_authorized_key`, `monitoring_status`, and
+`monitoring_storage_health`.
 
 ## Purpose
 - Keep monitoring-related execution order explicit in one aggregate role
 - Let consumer inventories opt into SSH transport setup and host status
   generation independently
+- Keep dedicated device-health checks separate from the lighter host-status
+  summary when inventories want both
 - Leave room for future monitoring companions without changing playbook names
 
 ## Variables
@@ -16,6 +19,7 @@ such as `monitoring_authorized_key` and `monitoring_status`.
 |----------|---------|----------|-------------|
 | `monitoring_include_authorized_key` | `false` | no | Include `monitoring_authorized_key` in the aggregate layer |
 | `monitoring_include_status` | `false` | no | Include `monitoring_status` in the aggregate layer |
+| `monitoring_include_storage_health` | `false` | no | Include `monitoring_storage_health` in the aggregate layer |
 
 ## Usage
 
@@ -34,12 +38,15 @@ whole monitoring group, and still allow a host to opt out or add more toggles:
 # group_vars/all/monitoring.yml
 monitoring_include_authorized_key: false
 monitoring_include_status: false
+monitoring_include_storage_health: false
 
 # group_vars/monitoring/monitoring.yml
 monitoring_include_status: true
+monitoring_include_storage_health: true
 
 # host_vars/lab/vars.yml
 monitoring_include_status: false
+monitoring_include_storage_health: false
 ```
 
 ## Dependencies

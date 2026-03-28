@@ -22,9 +22,13 @@ monitoring_status_backup_required: "{{ backup_include_restic | default(false) }}
 monitoring_status_backup_warn_after_hours: 26
 monitoring_status_backup_fail_after_hours: 50
 
+# Keep filesystem-usage checks active here while leaving dedicated physical
+# storage probing to the separate `monitoring_storage_health` role.
+monitoring_status_storage_additional_mounts: []
+monitoring_status_storage_type: none
+
 # All current example monitoring hosts also run Docker, so require the daemon
 # to exist and stay active here.
-monitoring_status_storage_additional_mounts: []
 monitoring_status_docker_mode: required
 
 # Keep network reachability optional by default. Add hostnames or IPs here
