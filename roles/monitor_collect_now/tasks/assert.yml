@@ -1,0 +1,28 @@
+---
+# roles/monitor_collect_now/tasks/assert.yml
+
+- name: "Assert | Validate monitor_collect_now variables when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitor_collect_now_enabled is boolean
+      - monitor_collect_now_service_unit is string
+      - monitor_collect_now_service_unit | length > 0
+      - monitor_collect_now_index_path is string
+      - monitor_collect_now_index_path | length > 0
+      - monitor_collect_now_script_path is string
+      - monitor_collect_now_script_path | length > 0
+      - monitor_collect_now_allowed_statuses is sequence
+      - monitor_collect_now_allowed_statuses | length > 0
+    fail_msg: >-
+      monitor_collect_now requires valid service, script, output, and allowed
+      status values
+    quiet: true
+  when: monitor_collect_now_enabled
+
+- name: "Assert | Validate monitor_collect_now variables when disabled"
+  ansible.builtin.assert:
+    that:
+      - monitor_collect_now_enabled is boolean
+    fail_msg: "monitor_collect_now_enabled must be a boolean"
+    quiet: true
+  when: not monitor_collect_now_enabled

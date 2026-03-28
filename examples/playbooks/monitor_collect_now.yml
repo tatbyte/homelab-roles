@@ -1,0 +1,11 @@
+---
+# examples/playbooks/monitor_collect_now.yml
+# Dedicated validation-only playbook for the shared `monitor_collect_now` role.
+
+- name: Run monitor_collect service immediately for validation
+  hosts: monitoring
+  serial: 1
+  become: true
+  roles:
+    - role: monitor_collect_now
+      when: monitoring_include_collect | default(false)

@@ -1,0 +1,9 @@
+---
+# roles/monitor_collect_now/tasks/main.yml
+# Task entrypoint for the `monitor_collect_now` role.
+
+- name: "Assert | Validate monitor_collect_now variables"
+  ansible.builtin.import_tasks: assert.yml
+
+- name: "Validate | Trigger monitor_collect now"
+  ansible.builtin.import_tasks: validate.yml

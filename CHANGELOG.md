@@ -9,14 +9,18 @@ Documents notable changes across repository structure, roles, examples, and docu
 - Added matching example-lab `monitoring` inventory vars, host opt-in, inventory group, and `examples/playbooks/monitoring.yml` so the shared repository now exercises the new monitoring layer end-to-end.
 - Added standalone `monitoring_status_now` plus `examples/playbooks/monitoring_status_now.yml` so consumer repos and the shared example can trigger the managed monitoring oneshot service on demand for testing.
 - Added standalone `monitoring_storage_health` plus `monitoring_storage_health_now`, including a dedicated per-device JSON contract, systemd service/timer, example inventory vars, and an example on-demand validation playbook.
+- Added standalone `monitor_collect` plus `monitor_collect_now`, including aggregated `index.json` output, a Traefik-ready static dashboard path, and example collector inventory wiring.
 
 ### Changed
 - Updated the aggregate `monitoring` role to use explicit `include_role` ordering instead of meta dependencies, matching the repository's current aggregate-role conventions.
 - Updated the example monitoring layer so `monitoring_status` can stay focused on host summary and filesystem usage while `monitoring_storage_health` owns declared device health checks.
+- Updated the example monitoring layer so a designated host can opt into `monitor_collect` without forcing the collector role onto every monitored host.
+- Updated `monitor_collect` so the optional dashboard now reads the aggregated `status.json`, `storage-health.json`, and `restic-backup.json` contracts through a lightweight Docker + Traefik publishing path instead of the earlier host-bound HTTP helper.
+- Updated `monitor_collect` again so the optional dashboard can attach Traefik basic auth, publish a permission-safe static site copy, and ship PWA assets including a generated SVG icon.
 - Updated the example `site.yml` flow so recurring monitoring now runs after the backup layer, keeping the status role on the intended read-only consumer side of the backup JSON contract.
 
 ### Documentation
-- Updated repository, workflow, role, and example documentation to cover the expanded monitoring aggregate layer, `monitoring_status`, and `monitoring_storage_health`.
+- Updated repository, workflow, role, and example documentation to cover the expanded monitoring aggregate layer, `monitoring_status`, `monitoring_storage_health`, and `monitor_collect`.
 
 ## [v2.9.0]
 ### Added

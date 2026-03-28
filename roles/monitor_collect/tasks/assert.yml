@@ -1,0 +1,193 @@
+---
+# roles/monitor_collect/tasks/assert.yml
+# Assert phase tasks for the `monitor_collect` role.
+
+- name: "Assert | Validate monitor_collect variables when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitor_collect_enabled is boolean
+      - monitor_collect_packages is sequence
+      - monitor_collect_packages | length > 0
+      - monitor_collect_sources is sequence
+      - monitor_collect_sources | length > 0
+      - monitor_collect_sources | select('mapping') | list | length == monitor_collect_sources | length
+      - monitor_collect_sources | map(attribute='name') | select('string') | list | length == monitor_collect_sources | length
+      - monitor_collect_sources | map(attribute='name') | map('length') | min > 0
+      - monitor_collect_output_dir is string
+      - monitor_collect_output_dir | length > 0
+      - monitor_collect_index_path is string
+      - monitor_collect_index_path | length > 0
+      - monitor_collect_ssh_manage_private_key is boolean
+      - monitor_collect_ssh_private_key is string
+      - monitor_collect_ssh_private_key_path is string
+      - monitor_collect_ssh_private_key_path | length > 0
+      - monitor_collect_ssh_identity_file is string
+      - monitor_collect_ssh_known_hosts_path is string
+      - monitor_collect_ssh_known_hosts_path | length > 0
+      - monitor_collect_service_user is string
+      - monitor_collect_service_user | length > 0
+      - monitor_collect_service_group is string
+      - monitor_collect_service_group | length > 0
+      - monitor_collect_timer_on_calendar is string
+      - monitor_collect_timer_on_calendar | length > 0
+      - monitor_collect_timer_randomized_delay_sec is string or monitor_collect_timer_randomized_delay_sec is number
+      - monitor_collect_timer_accuracy_sec is string
+      - monitor_collect_timer_accuracy_sec | length > 0
+      - monitor_collect_timer_persistent is boolean
+      - monitor_collect_web_enabled is boolean
+      - monitor_collect_web_title is string
+      - monitor_collect_web_title | length > 0
+      - monitor_collect_web_basic_auth_enabled is boolean
+      - monitor_collect_web_basic_auth_users is sequence
+      - monitor_collect_web_basic_auth_users is not string
+      - >-
+        (
+          groups['monitoring'] | default([])
+          | map('extract', hostvars, 'monitor_collect_web_enabled')
+          | map('default', false)
+          | select('equalto', true)
+          | list
+          | length
+        ) <= 1
+    fail_msg: >-
+      monitor_collect requires valid source definitions, paths, timer values,
+      and at most one web-enabled collector host in the current inventory
+    quiet: true
+  when: monitor_collect_enabled
+
+- name: "Assert | Validate managed monitor_collect SSH private key when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitor_collect_ssh_private_key | trim | length > 0
+    fail_msg: >-
+      monitor_collect_ssh_private_key must contain the OpenSSH private key
+      material when monitor_collect_ssh_manage_private_key is enabled
+    quiet: true
+  when:
+    - monitor_collect_enabled
+    - monitor_collect_ssh_manage_private_key
+
+- name: "Assert | Validate monitor_collect webpage variables when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitor_collect_web_compose_command is sequence
+      - monitor_collect_web_compose_command | length > 0
+      - monitor_collect_web_project_dir is string
+      - monitor_collect_web_project_dir.startswith('/')
+      - monitor_collect_web_compose_file_path is string
+      - monitor_collect_web_compose_file_path.startswith('/')
+      - monitor_collect_web_nginx_conf_path is string
+      - monitor_collect_web_nginx_conf_path.startswith('/')
+      - monitor_collect_web_publish_dir is string
+      - monitor_collect_web_publish_dir.startswith('/')
+      - monitor_collect_web_publish_hosts_dir is string
+      - monitor_collect_web_publish_hosts_dir.startswith('/')
+      - monitor_collect_web_publish_html_path is string
+      - monitor_collect_web_publish_html_path.startswith('/')
+      - monitor_collect_web_publish_index_path is string
+      - monitor_collect_web_publish_index_path.startswith('/')
+      - monitor_collect_web_manifest_path is string
+      - monitor_collect_web_manifest_path.startswith('/')
+      - monitor_collect_web_service_worker_path is string
+      - monitor_collect_web_service_worker_path.startswith('/')
+      - monitor_collect_web_icon_path is string
+      - monitor_collect_web_icon_path.startswith('/')
+      - monitor_collect_web_compose_project_name is string
+      - monitor_collect_web_compose_project_name | trim | length > 0
+      - monitor_collect_web_compose_service_name is string
+      - monitor_collect_web_compose_service_name | trim | length > 0
+      - monitor_collect_web_container_name is string
+      - monitor_collect_web_container_name | trim | length > 0
+      - monitor_collect_web_image is string
+      - monitor_collect_web_image | trim | length > 0
+      - monitor_collect_web_proxy_network_name is string
+      - monitor_collect_web_proxy_network_name | trim | length > 0
+      - monitor_collect_web_host is string
+      - monitor_collect_web_host | trim | length > 0
+      - monitor_collect_web_router_name is string
+      - monitor_collect_web_router_name | trim | length > 0
+      - monitor_collect_web_basic_auth_middleware is string
+      - monitor_collect_web_basic_auth_middleware | trim | length > 0
+      - monitor_collect_web_router_entrypoints is sequence
+      - monitor_collect_web_router_entrypoints | length > 0
+      - monitor_collect_web_tls_certresolver is string
+      - monitor_collect_web_tls_certresolver | trim | length > 0
+      - monitor_collect_web_container_port is number
+      - monitor_collect_web_container_port > 0
+      - monitor_collect_web_container_port < 65536
+      - monitor_collect_web_publish_dir_mode is string
+      - monitor_collect_web_publish_dir_mode | trim | length > 0
+      - monitor_collect_web_publish_file_mode is string
+      - monitor_collect_web_publish_file_mode | trim | length > 0
+      - monitor_collect_web_short_title is string
+      - monitor_collect_web_short_title | trim | length > 0
+      - monitor_collect_web_theme_color is string
+      - monitor_collect_web_theme_color | trim | length > 0
+      - monitor_collect_web_background_color is string
+      - monitor_collect_web_background_color | trim | length > 0
+    fail_msg: >-
+      monitor_collect web publishing requires valid Docker Compose, Traefik,
+      and hostname values when monitor_collect_web_enabled is true
+    quiet: true
+  when:
+    - monitor_collect_enabled
+    - monitor_collect_web_enabled
+
+- name: "Assert | Validate monitor_collect webpage basic-auth users when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitor_collect_web_basic_auth_users | length > 0
+      - >-
+        (
+          monitor_collect_web_basic_auth_users
+          | select('string')
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (monitor_collect_web_basic_auth_users | length)
+      - >-
+        (
+          monitor_collect_web_basic_auth_users
+          | map('trim')
+          | select('search', '^[^:]+:.+$')
+          | list
+          | length
+        ) == (monitor_collect_web_basic_auth_users | length)
+    fail_msg: >-
+      monitor_collect web basic auth requires one or more non-empty user:hash
+      entries when monitor_collect_web_basic_auth_enabled is true
+    quiet: true
+  when:
+    - monitor_collect_enabled
+    - monitor_collect_web_enabled
+    - monitor_collect_web_basic_auth_enabled
+
+- name: "Assert | Validate each monitor_collect source entry when enabled"
+  ansible.builtin.assert:
+    that:
+      - item.name is string
+      - item.name | length > 0
+      - item.display_name is not defined or (item.display_name is string and item.display_name | length > 0)
+      - item.local is not defined or item.local is boolean
+      - (item.local | default(false)) or (item.ssh_host is defined and item.ssh_host is string and item.ssh_host | length > 0)
+      - item.ssh_user is not defined or item.ssh_user is string
+      - item.status_path is not defined or (item.status_path is string and item.status_path | length > 0)
+      - item.storage_health_path is not defined or (item.storage_health_path is string and item.storage_health_path | length > 0)
+      - item.backup_path is not defined or (item.backup_path is string and item.backup_path | length > 0)
+    fail_msg: >-
+      monitor_collect source entries must define a non-empty name, optional
+      display text, and a reachable ssh_host for remote entries
+    quiet: true
+  loop: "{{ monitor_collect_sources }}"
+  loop_control:
+    label: "{{ item.name | default('unnamed-source') }}"
+  when: monitor_collect_enabled
+
+- name: "Assert | Validate monitor_collect variables when disabled"
+  ansible.builtin.assert:
+    that:
+      - monitor_collect_enabled is boolean
+    fail_msg: "monitor_collect_enabled must be a boolean"
+    quiet: true
+  when: not monitor_collect_enabled

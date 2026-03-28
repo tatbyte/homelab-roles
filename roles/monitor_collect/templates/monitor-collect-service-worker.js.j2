@@ -1,0 +1,82 @@
+const APP_CACHE = 'monitor-collect-app-v1';
+const DATA_CACHE = 'monitor-collect-data-v1';
+const APP_ASSETS = [
+  './',
+  './index.html',
+  './manifest.webmanifest',
+  './icon-180.png',
+  './icon-192.png',
+  './icon-512.png',
+  './icon.svg',
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(APP_CACHE).then((cache) => cache.addAll(APP_ASSETS))
+  );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((key) => ![APP_CACHE, DATA_CACHE].includes(key))
+          .map((key) => caches.delete(key))
+      )
+    )
+  );
+  self.clients.claim();
+});
+
+async function networkFirst(request) {
+  const cache = await caches.open(DATA_CACHE);
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch (_error) {
+    const cached = await cache.match(request);
+    if (cached) {
+      return cached;
+    }
+    throw _error;
+  }
+}
+
+async function cacheFirst(request) {
+  const cached = await caches.match(request);
+  if (cached) {
+    return cached;
+  }
+  const response = await fetch(request);
+  const cache = await caches.open(APP_CACHE);
+  cache.put(request, response.clone());
+  return response;
+}
+
+self.addEventListener('fetch', (event) => {
+  const request = event.request;
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  if (
+    url.pathname.endsWith('/index.json')
+    || url.pathname.includes('/hosts/')
+    || url.pathname.endsWith('.json')
+  ) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  event.respondWith(cacheFirst(request));
+});

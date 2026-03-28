@@ -6,6 +6,8 @@ Explains how the role installs an SSH authorized key for monitoring-style inter-
 ## Purpose
 - Allows a specific host (e.g. control) to SSH into other hosts to retrieve information
 - Keeps monitoring/backup key management separate from bootstrap
+- Acts as the remote public-key companion for `monitor_collect` when the
+  collector host needs recurring SSH access to pull monitoring contracts
 
 ## Variables
 

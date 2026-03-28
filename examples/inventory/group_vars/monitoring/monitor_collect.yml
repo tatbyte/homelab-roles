@@ -1,0 +1,15 @@
+---
+# examples/inventory/group_vars/monitoring/monitor_collect.yml
+# Shared collector variables for the example lab.
+
+monitor_collect_enabled: true
+monitor_collect_output_dir: /var/lib/monitor/collect
+monitor_collect_hosts_dir: "{{ monitor_collect_output_dir }}/hosts"
+monitor_collect_index_path: "{{ monitor_collect_output_dir }}/index.json"
+monitor_collect_timer_on_calendar: "*-*-* *:35:00"
+monitor_collect_timer_randomized_delay_sec: 0
+monitor_collect_web_enabled: false
+monitor_collect_web_title: "{{ vault_monitor_collect_web_title | default('Lab Monitor') }}"
+monitor_collect_web_short_title: "{{ vault_monitor_collect_web_short_title | default('Monitor') }}"
+monitor_collect_web_basic_auth_users: "{{ vault_monitor_collect_web_basic_auth_users | default([]) | to_json | from_json }}"
+monitor_collect_web_basic_auth_enabled: "{{ (monitor_collect_web_basic_auth_users | length) > 0 }}"

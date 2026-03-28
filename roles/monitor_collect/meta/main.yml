@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: tatbyte
+  description: Collect monitoring JSON contracts from one or more hosts and optionally serve a static summary page
+  license: MIT
+  min_ansible_version: "2.16"
+dependencies: []

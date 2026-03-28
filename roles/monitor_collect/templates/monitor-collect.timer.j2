@@ -1,0 +1,13 @@
+{# roles/monitor_collect/templates/monitor-collect.timer.j2 #}
+[Unit]
+Description=Schedule monitoring contract collection
+
+[Timer]
+OnCalendar={{ monitor_collect_timer_on_calendar }}
+RandomizedDelaySec={{ monitor_collect_timer_randomized_delay_sec }}
+AccuracySec={{ monitor_collect_timer_accuracy_sec }}
+Persistent={{ monitor_collect_timer_persistent | ternary('true', 'false') }}
+Unit={{ monitor_collect_service_unit }}
+
+[Install]
+WantedBy=timers.target

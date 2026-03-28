@@ -1,0 +1,100 @@
+---
+# roles/monitor_collect/defaults/main.yml
+# Default variables for the `monitor_collect` role.
+# Defines the recurring collector script, aggregated JSON output, and optional
+# Docker-published dashboard used to summarize monitoring contracts from one or
+# more source hosts.
+
+monitor_collect_enabled: true
+
+monitor_collect_packages:
+  - jq
+  - openssh-client
+
+monitor_collect_unit_name: monitor-collect
+monitor_collect_service_unit: "{{ monitor_collect_unit_name }}.service"
+monitor_collect_timer_unit: "{{ monitor_collect_unit_name }}.timer"
+monitor_collect_script_path: "/usr/local/bin/{{ monitor_collect_unit_name }}.sh"
+monitor_collect_state_dir: "/usr/local/lib/{{ monitor_collect_unit_name }}"
+
+monitor_collect_web_unit_name: "{{ monitor_collect_unit_name }}-web"
+# Legacy cleanup target kept so the role can remove the older host-based
+# `python -m http.server` unit cleanly when upgrading to the Docker+Traefik
+# webpage path.
+monitor_collect_web_service_unit: "{{ monitor_collect_web_unit_name }}.service"
+monitor_collect_web_project_dir: "/srv/{{ monitor_collect_web_unit_name }}"
+monitor_collect_web_compose_file_path: "{{ monitor_collect_web_project_dir }}/compose.yml"
+monitor_collect_web_nginx_conf_path: "{{ monitor_collect_web_project_dir }}/default.conf"
+monitor_collect_web_publish_dir: "{{ monitor_collect_web_project_dir }}/site"
+monitor_collect_web_publish_hosts_dir: "{{ monitor_collect_web_publish_dir }}/hosts"
+monitor_collect_web_publish_html_path: "{{ monitor_collect_web_publish_dir }}/index.html"
+monitor_collect_web_publish_index_path: "{{ monitor_collect_web_publish_dir }}/index.json"
+monitor_collect_web_manifest_path: "{{ monitor_collect_web_publish_dir }}/manifest.webmanifest"
+monitor_collect_web_service_worker_path: "{{ monitor_collect_web_publish_dir }}/service-worker.js"
+monitor_collect_web_icon_path: "{{ monitor_collect_web_publish_dir }}/icon.svg"
+monitor_collect_web_icon_png_180_path: "{{ monitor_collect_web_publish_dir }}/icon-180.png"
+monitor_collect_web_icon_png_192_path: "{{ monitor_collect_web_publish_dir }}/icon-192.png"
+monitor_collect_web_icon_png_512_path: "{{ monitor_collect_web_publish_dir }}/icon-512.png"
+monitor_collect_web_compose_project_name: "{{ monitor_collect_web_unit_name }}"
+monitor_collect_web_compose_service_name: web
+monitor_collect_web_container_name: "{{ monitor_collect_web_unit_name }}"
+monitor_collect_web_image: nginx:1.27-alpine
+monitor_collect_web_compose_command: "{{ docker_engine_effective_compose_command | default(['docker', 'compose']) }}"
+monitor_collect_web_proxy_network_name: "{{ docker_traefik_network_name | default('traefik_proxy') }}"
+monitor_collect_web_host: ""
+monitor_collect_web_router_name: "{{ monitor_collect_web_unit_name }}"
+monitor_collect_web_basic_auth_enabled: false
+monitor_collect_web_basic_auth_users: []
+monitor_collect_web_basic_auth_middleware: "{{ monitor_collect_web_router_name }}-auth"
+monitor_collect_web_router_entrypoints:
+  - websecure
+monitor_collect_web_tls_certresolver: "{{ docker_traefik_certresolver_name | default('letsencrypt') }}"
+monitor_collect_web_container_port: 80
+
+monitor_collect_output_dir: /var/lib/monitor/collect
+monitor_collect_hosts_dir: "{{ monitor_collect_output_dir }}/hosts"
+monitor_collect_index_path: "{{ monitor_collect_output_dir }}/index.json"
+monitor_collect_web_html_path: "{{ monitor_collect_output_dir }}/index.html"
+monitor_collect_web_private_manifest_path: "{{ monitor_collect_output_dir }}/manifest.webmanifest"
+monitor_collect_web_private_service_worker_path: "{{ monitor_collect_output_dir }}/service-worker.js"
+monitor_collect_web_private_icon_svg_path: "{{ monitor_collect_output_dir }}/icon.svg"
+monitor_collect_web_private_icon_png_180_path: "{{ monitor_collect_output_dir }}/icon-180.png"
+monitor_collect_web_private_icon_png_192_path: "{{ monitor_collect_output_dir }}/icon-192.png"
+monitor_collect_web_private_icon_png_512_path: "{{ monitor_collect_output_dir }}/icon-512.png"
+
+monitor_collect_service_user: "{{ ansible_user | default('root') }}"
+monitor_collect_service_group: "{{ ansible_user | default('root') }}"
+monitor_collect_script_owner: root
+monitor_collect_script_group: root
+monitor_collect_script_mode: "0755"
+monitor_collect_output_dir_mode: "0750"
+monitor_collect_web_publish_dir_mode: "0755"
+monitor_collect_web_publish_file_mode: "0644"
+
+monitor_collect_host: "{{ ansible_hostname | default(inventory_hostname) }}"
+monitor_collect_job_name: monitor_collect
+monitor_collect_json_schema: monitor_collect_index_v1
+
+monitor_collect_sources: []
+monitor_collect_status_path_default: /var/lib/monitor/status.json
+monitor_collect_storage_health_path_default: /var/lib/monitor/storage-health.json
+monitor_collect_backup_path_default: /var/lib/monitor/restic-backup.json
+monitor_collect_ssh_connect_timeout_seconds: 10
+monitor_collect_ssh_strict_host_key_checking: accept-new
+monitor_collect_ssh_dir: "{{ monitor_collect_state_dir }}/ssh"
+monitor_collect_ssh_manage_private_key: false
+monitor_collect_ssh_private_key: ""
+monitor_collect_ssh_private_key_path: "{{ monitor_collect_ssh_dir }}/id_ed25519"
+monitor_collect_ssh_identity_file: ""
+monitor_collect_ssh_known_hosts_path: "{{ monitor_collect_ssh_dir }}/known_hosts"
+
+monitor_collect_timer_on_calendar: "*-*-* *:35:00"
+monitor_collect_timer_randomized_delay_sec: 0
+monitor_collect_timer_accuracy_sec: 1m
+monitor_collect_timer_persistent: true
+
+monitor_collect_web_enabled: false
+monitor_collect_web_title: Homelab Monitor
+monitor_collect_web_short_title: Monitor
+monitor_collect_web_theme_color: "#071019"
+monitor_collect_web_background_color: "#071019"

@@ -1,0 +1,15 @@
+---
+# roles/monitor_collect/tasks/main.yml
+# Task entrypoint for the `monitor_collect` role.
+
+- name: "Assert | Validate monitor_collect variables"
+  ansible.builtin.import_tasks: assert.yml
+
+- name: "Install | Ensure monitor_collect packages are installed"
+  ansible.builtin.import_tasks: install.yml
+
+- name: "Config | Render and manage monitor_collect artifacts"
+  ansible.builtin.import_tasks: config.yml
+
+- name: "Validate | Assert monitor_collect final state"
+  ansible.builtin.import_tasks: validate.yml

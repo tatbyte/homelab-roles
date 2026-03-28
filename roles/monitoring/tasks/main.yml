@@ -59,3 +59,23 @@
       monitoring_storage_health_config,
       monitoring_storage_health_validate,
     ]
+
+- name: "Monitoring | Include optional monitor_collect role"
+  ansible.builtin.include_role:
+    name: monitor_collect
+    apply:
+      tags: [monitoring, monitor_collect]
+  when: monitoring_include_collect | default(false)
+  tags:
+    [
+      monitoring,
+      monitor_collect,
+      assert,
+      install,
+      config,
+      validate,
+      monitor_collect_assert,
+      monitor_collect_install,
+      monitor_collect_config,
+      monitor_collect_validate,
+    ]
