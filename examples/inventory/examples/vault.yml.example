@@ -141,6 +141,10 @@ vault_monitor_collect_ssh_private_key: |
 # `monitoring_authorized_key`.
 vault_monitor_collect_ssh_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleMonitorCollectPublicKey collector@example.invalid"
 
+# ---------------------------------------------------------------------------
+# monitor_web
+# ---------------------------------------------------------------------------
+
 # Optional public hostname published by Traefik for the collected monitoring
 # dashboard.
 vault_monitor_collect_web_host: "monitor.example.com"
@@ -157,3 +161,12 @@ vault_monitor_collect_web_short_title: "Monitor"
 # auth for the dashboard route.
 vault_monitor_collect_web_basic_auth_users:
   - "monitor:replace-me-with-htpasswd-hash"
+
+# ---------------------------------------------------------------------------
+# monitor_notify
+# ---------------------------------------------------------------------------
+
+# Optional ntfy topic URL used by the collector host to send monitoring
+# notifications. Leave this unset to keep `monitor_notify` disabled in the
+# example inventory.
+vault_monitor_notify_ntfy_url: "https://ntfy.sh/example-lab-monitor"

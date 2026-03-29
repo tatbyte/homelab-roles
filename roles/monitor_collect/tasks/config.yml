@@ -28,6 +28,20 @@
       mode: "{{ monitor_collect_output_dir_mode }}"
   when: monitor_collect_enabled
 
+- name: "Config | Ensure monitor_collect public JSON mirror directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ monitor_collect_service_user }}"
+    group: "{{ monitor_collect_service_group }}"
+    mode: "{{ monitor_collect_public_dir_mode }}"
+  loop:
+    - "{{ monitor_collect_public_json_dir }}"
+    - "{{ monitor_collect_public_hosts_dir }}"
+  when:
+    - monitor_collect_enabled
+    - monitor_collect_public_json_enabled
+
 - name: "Config | Ensure monitor_collect known_hosts file exists"
   ansible.builtin.file:
     path: "{{ monitor_collect_ssh_known_hosts_path }}"
@@ -67,13 +81,18 @@
     mode: "{{ monitor_collect_script_mode }}"
   when: monitor_collect_enabled
 
-- name: "Config | Render monitor_collect dashboard page"
-  ansible.builtin.template:
-    src: monitor-collect-index.html.j2
-    dest: "{{ monitor_collect_web_html_path }}"
-    owner: "{{ monitor_collect_service_user }}"
-    group: "{{ monitor_collect_service_group }}"
-    mode: "0644"
+- name: "Config | Remove legacy monitor_collect private dashboard assets"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ monitor_collect_output_dir }}/index.html"
+    - "{{ monitor_collect_output_dir }}/manifest.webmanifest"
+    - "{{ monitor_collect_output_dir }}/service-worker.js"
+    - "{{ monitor_collect_output_dir }}/icon.svg"
+    - "{{ monitor_collect_output_dir }}/icon-180.png"
+    - "{{ monitor_collect_output_dir }}/icon-192.png"
+    - "{{ monitor_collect_output_dir }}/icon-512.png"
   when: monitor_collect_enabled
 
 - name: "Config | Render monitor_collect systemd units"
@@ -102,225 +121,6 @@
     state: started
   when: monitor_collect_enabled
 
-- name: "Config | Inspect required Traefik proxy network for monitor_collect webpage"
-  ansible.builtin.command:
-    argv:
-      - docker
-      - network
-      - inspect
-      - "{{ monitor_collect_web_proxy_network_name }}"
-  register: monitor_collect_web_proxy_network
-  changed_when: false
-  failed_when: false
-  when:
-    - monitor_collect_enabled
-    - monitor_collect_web_enabled
-
-- name: "Config | Require Traefik proxy network before publishing monitor_collect webpage"
-  ansible.builtin.assert:
-    that:
-      - monitor_collect_web_proxy_network.rc == 0
-    fail_msg: >-
-      monitor_collect webpage publishing requires the external proxy network
-      {{ monitor_collect_web_proxy_network_name }}. Run docker_traefik first or
-      point monitor_collect_web_proxy_network_name at an existing Traefik
-      network.
-    quiet: true
-  when:
-    - monitor_collect_enabled
-    - monitor_collect_web_enabled
-
-- name: "Config | Check whether a managed monitor_collect webpage Compose file already exists"
-  ansible.builtin.stat:
-    path: "{{ monitor_collect_web_compose_file_path }}"
-  register: monitor_collect_web_compose_file_stat
-  changed_when: false
-
-- name: "Config | Stop managed monitor_collect webpage project when disabled"
-  ansible.builtin.command:
-    argv: >-
-      {{
-        monitor_collect_web_compose_command
-        + [
-            '--project-name',
-            monitor_collect_web_compose_project_name,
-            '--file',
-            monitor_collect_web_compose_file_path,
-            'down',
-          ]
-      }}
-  register: monitor_collect_web_compose_down
-  changed_when: monitor_collect_web_compose_file_stat.stat.exists
-  when:
-    - not monitor_collect_enabled or not monitor_collect_web_enabled
-    - monitor_collect_web_compose_file_stat.stat.exists
-
-- name: "Config | Ensure monitor_collect webpage project directory exists"
-  ansible.builtin.file:
-    path: "{{ item.path }}"
-    state: directory
-    owner: "{{ item.owner }}"
-    group: "{{ item.group }}"
-    mode: "{{ item.mode }}"
-  loop:
-    - path: "{{ monitor_collect_web_project_dir }}"
-      owner: root
-      group: root
-      mode: "0755"
-    - path: "{{ monitor_collect_web_publish_dir }}"
-      owner: "{{ monitor_collect_service_user }}"
-      group: "{{ monitor_collect_service_group }}"
-      mode: "{{ monitor_collect_web_publish_dir_mode }}"
-  when:
-    - monitor_collect_enabled
-    - monitor_collect_web_enabled
-
-- name: "Config | Render published monitor_collect dashboard page"
-  ansible.builtin.template:
-    src: monitor-collect-index.html.j2
-    dest: "{{ monitor_collect_web_publish_html_path }}"
-    owner: "{{ monitor_collect_service_user }}"
-    group: "{{ monitor_collect_service_group }}"
-    mode: "{{ monitor_collect_web_publish_file_mode }}"
-  when:
-    - monitor_collect_enabled
-    - monitor_collect_web_enabled
-
-- name: "Config | Render monitor_collect private PWA assets"
-  ansible.builtin.template:
-    src: "{{ item.src }}"
-    dest: "{{ item.dest }}"
-    owner: "{{ monitor_collect_service_user }}"
-    group: "{{ monitor_collect_service_group }}"
-    mode: "{{ monitor_collect_web_publish_file_mode }}"
-  loop:
-    - src: monitor-collect-manifest.webmanifest.j2
-      dest: "{{ monitor_collect_web_private_manifest_path }}"
-    - src: monitor-collect-service-worker.js.j2
-      dest: "{{ monitor_collect_web_private_service_worker_path }}"
-    - src: monitor-collect-icon.svg.j2
-      dest: "{{ monitor_collect_web_private_icon_svg_path }}"
-  when: monitor_collect_enabled
-
-- name: "Config | Copy monitor_collect private PNG app icons"
-  ansible.builtin.copy:
-    src: "{{ item.src }}"
-    dest: "{{ item.dest }}"
-    owner: "{{ monitor_collect_service_user }}"
-    group: "{{ monitor_collect_service_group }}"
-    mode: "{{ monitor_collect_web_publish_file_mode }}"
-  loop:
-    - src: monitor-collect-icon-180.png
-      dest: "{{ monitor_collect_web_private_icon_png_180_path }}"
-    - src: monitor-collect-icon-192.png
-      dest: "{{ monitor_collect_web_private_icon_png_192_path }}"
-    - src: monitor-collect-icon-512.png
-      dest: "{{ monitor_collect_web_private_icon_png_512_path }}"
-  when: monitor_collect_enabled
-
-- name: "Config | Render published monitor_collect PWA assets"
-  ansible.builtin.template:
-    src: "{{ item.src }}"
-    dest: "{{ item.dest }}"
-    owner: "{{ monitor_collect_service_user }}"
-    group: "{{ monitor_collect_service_group }}"
-    mode: "{{ monitor_collect_web_publish_file_mode }}"
-  loop:
-    - src: monitor-collect-manifest.webmanifest.j2
-      dest: "{{ monitor_collect_web_manifest_path }}"
-    - src: monitor-collect-service-worker.js.j2
-      dest: "{{ monitor_collect_web_service_worker_path }}"
-    - src: monitor-collect-icon.svg.j2
-      dest: "{{ monitor_collect_web_icon_path }}"
-  when:
-    - monitor_collect_enabled
-    - monitor_collect_web_enabled
-
-- name: "Config | Copy published monitor_collect PNG app icons"
-  ansible.builtin.copy:
-    src: "{{ item.src }}"
-    dest: "{{ item.dest }}"
-    owner: "{{ monitor_collect_service_user }}"
-    group: "{{ monitor_collect_service_group }}"
-    mode: "{{ monitor_collect_web_publish_file_mode }}"
-  loop:
-    - src: monitor-collect-icon-180.png
-      dest: "{{ monitor_collect_web_icon_png_180_path }}"
-    - src: monitor-collect-icon-192.png
-      dest: "{{ monitor_collect_web_icon_png_192_path }}"
-    - src: monitor-collect-icon-512.png
-      dest: "{{ monitor_collect_web_icon_png_512_path }}"
-  when:
-    - monitor_collect_enabled
-    - monitor_collect_web_enabled
-
-- name: "Config | Render monitor_collect webpage nginx config"
-  ansible.builtin.template:
-    src: monitor-collect-web-nginx.conf.j2
-    dest: "{{ monitor_collect_web_nginx_conf_path }}"
-    owner: root
-    group: root
-    mode: "0644"
-  when:
-    - monitor_collect_enabled
-    - monitor_collect_web_enabled
-
-- name: "Config | Render monitor_collect webpage Compose file"
-  ansible.builtin.template:
-    src: monitor-collect-web-compose.yml.j2
-    dest: "{{ monitor_collect_web_compose_file_path }}"
-    owner: root
-    group: root
-    mode: "0644"
-  when:
-    - monitor_collect_enabled
-    - monitor_collect_web_enabled
-
-- name: "Config | Reconcile monitor_collect webpage Docker Compose project"
-  ansible.builtin.command:
-    argv: >-
-      {{
-        monitor_collect_web_compose_command
-        + [
-            '--project-name',
-            monitor_collect_web_compose_project_name,
-            '--file',
-            monitor_collect_web_compose_file_path,
-            'up',
-            '--detach',
-          ]
-      }}
-  register: monitor_collect_web_compose_up
-  changed_when: >-
-    'Creating' in (monitor_collect_web_compose_up.stdout ~ monitor_collect_web_compose_up.stderr)
-    or 'Recreating' in (monitor_collect_web_compose_up.stdout ~ monitor_collect_web_compose_up.stderr)
-    or 'Starting' in (monitor_collect_web_compose_up.stdout ~ monitor_collect_web_compose_up.stderr)
-    or 'Pulling' in (monitor_collect_web_compose_up.stdout ~ monitor_collect_web_compose_up.stderr)
-    or 'Created' in (monitor_collect_web_compose_up.stdout ~ monitor_collect_web_compose_up.stderr)
-    or 'Recreated' in (monitor_collect_web_compose_up.stdout ~ monitor_collect_web_compose_up.stderr)
-    or 'Started' in (monitor_collect_web_compose_up.stdout ~ monitor_collect_web_compose_up.stderr)
-  when:
-    - monitor_collect_enabled
-    - monitor_collect_web_enabled
-
-- name: "Config | Remove legacy monitor_collect host-web service unit"
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: absent
-  loop:
-    - "/etc/systemd/system/{{ monitor_collect_web_service_unit }}"
-
-- name: "Config | Remove monitor_collect webpage project artifacts when disabled"
-  ansible.builtin.file:
-    path: "{{ monitor_collect_web_project_dir }}"
-    state: absent
-  when:
-    - not monitor_collect_enabled or not monitor_collect_web_enabled
-
-- name: "Config | Reload systemd after monitor_collect webpage cleanup"
-  ansible.builtin.systemd_service:
-    daemon_reload: true
-
 - name: "Config | Stop and disable monitor_collect timer when disabled"
   ansible.builtin.systemd_service:
     name: "{{ monitor_collect_timer_unit }}"
@@ -346,7 +146,6 @@
     - "{{ monitor_collect_state_dir }}"
     - "/etc/systemd/system/{{ monitor_collect_service_unit }}"
     - "/etc/systemd/system/{{ monitor_collect_timer_unit }}"
-    - "/etc/systemd/system/{{ monitor_collect_web_service_unit }}"
   when: not monitor_collect_enabled
 
 - name: "Config | Reload systemd after monitor_collect cleanup"

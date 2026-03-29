@@ -12,7 +12,6 @@
     - "/etc/systemd/system/{{ monitor_collect_service_unit }}"
     - "/etc/systemd/system/{{ monitor_collect_timer_unit }}"
     - "{{ monitor_collect_output_dir }}"
-    - "{{ monitor_collect_web_html_path }}"
   register: monitor_collect_managed_paths
   when: monitor_collect_enabled
 
@@ -23,6 +22,17 @@
   when:
     - monitor_collect_enabled
     - monitor_collect_ssh_manage_private_key
+
+- name: "Validate | Stat monitor_collect public JSON mirror paths"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ monitor_collect_public_json_dir }}"
+    - "{{ monitor_collect_public_hosts_dir }}"
+  register: monitor_collect_public_paths
+  when:
+    - monitor_collect_enabled
+    - monitor_collect_public_json_enabled
 
 - name: "Validate | Stat monitor_collect timer enablement symlink"
   ansible.builtin.stat:
@@ -44,79 +54,22 @@
   changed_when: false
   when: monitor_collect_enabled
 
-- name: "Validate | Stat monitor_collect webpage artifacts"
-  ansible.builtin.stat:
-    path: "{{ item }}"
-  loop:
-    - "{{ monitor_collect_web_project_dir }}"
-    - "{{ monitor_collect_web_publish_dir }}"
-    - "{{ monitor_collect_web_publish_html_path }}"
-    - "{{ monitor_collect_web_manifest_path }}"
-    - "{{ monitor_collect_web_service_worker_path }}"
-    - "{{ monitor_collect_web_icon_path }}"
-    - "{{ monitor_collect_web_icon_png_180_path }}"
-    - "{{ monitor_collect_web_icon_png_192_path }}"
-    - "{{ monitor_collect_web_icon_png_512_path }}"
-    - "{{ monitor_collect_web_nginx_conf_path }}"
-    - "{{ monitor_collect_web_compose_file_path }}"
-  register: monitor_collect_web_artifacts
-  when:
-    - monitor_collect_enabled
-    - monitor_collect_web_enabled
-
-- name: "Validate | Read monitor_collect webpage Docker Compose running services" # noqa: command-instead-of-module
-  ansible.builtin.command:
-    argv: >-
-      {{
-        monitor_collect_web_compose_command
-        + [
-            '--project-name',
-            monitor_collect_web_compose_project_name,
-            '--file',
-            monitor_collect_web_compose_file_path,
-            'ps',
-            '--services',
-            '--status',
-            'running',
-          ]
-      }}
-  register: monitor_collect_web_running_services
-  changed_when: false
-  when:
-    - monitor_collect_enabled
-    - monitor_collect_web_enabled
-
 - name: "Validate | Assert monitor_collect final state when enabled"
   ansible.builtin.assert:
     that:
       - monitor_collect_managed_paths.results | map(attribute='stat.exists') | min
       - not monitor_collect_ssh_manage_private_key or monitor_collect_private_key_stat.stat.exists
+      - not monitor_collect_public_json_enabled or (monitor_collect_public_paths.results | map(attribute='stat.exists') | min)
       - monitor_collect_timer_enabled_symlink.stat.exists
       - monitor_collect_timer_state.rc == 0
       - "'LoadState=loaded' in monitor_collect_timer_state.stdout_lines"
       - "'ActiveState=active' in monitor_collect_timer_state.stdout_lines"
       - "'UnitFileState=enabled' in monitor_collect_timer_state.stdout_lines"
     fail_msg: >-
-      monitor_collect is enabled, but the expected files or timer state were
-      not validated successfully
+      monitor_collect is enabled, but the expected files, mirror directories,
+      or timer state were not validated successfully
     quiet: true
   when: monitor_collect_enabled
-
-- name: "Validate | Assert monitor_collect webpage final state when enabled"
-  ansible.builtin.assert:
-    that:
-      - monitor_collect_web_artifacts.results | map(attribute='stat.exists') | min
-      - monitor_collect_web_running_services.rc == 0
-      - >-
-        monitor_collect_web_compose_service_name
-        in (monitor_collect_web_running_services.stdout_lines | default([]))
-    fail_msg: >-
-      monitor_collect webpage is enabled, but the expected Docker Compose
-      artifacts or running container state were not validated successfully
-    quiet: true
-  when:
-    - monitor_collect_enabled
-    - monitor_collect_web_enabled
 
 - name: "Validate | Stat monitor_collect managed files when disabled"
   ansible.builtin.stat:
@@ -124,10 +77,9 @@
   loop:
     - "{{ monitor_collect_script_path }}"
     - "{{ monitor_collect_output_dir }}"
+    - "{{ monitor_collect_state_dir }}"
     - "/etc/systemd/system/{{ monitor_collect_service_unit }}"
     - "/etc/systemd/system/{{ monitor_collect_timer_unit }}"
-    - "{{ monitor_collect_web_project_dir }}"
-    - "/etc/systemd/system/{{ monitor_collect_web_service_unit }}"
   register: monitor_collect_removed_paths
   when: not monitor_collect_enabled
 

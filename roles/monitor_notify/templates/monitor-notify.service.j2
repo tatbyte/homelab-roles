@@ -1,0 +1,13 @@
+{# roles/monitor_notify/templates/monitor-notify.service.j2 #}
+# Managed by Ansible: monitor_notify
+# Source: roles/monitor_notify/templates/monitor-notify.service.j2
+[Unit]
+Description=Send deduplicated monitoring notifications
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart={{ monitor_notify_script_path }}
+User=root
+Group=root

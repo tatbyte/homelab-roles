@@ -1,10 +1,10 @@
 ---
-# examples/playbooks/monitor_collect_now.yml
-# Dedicated validation-only playbook for the shared `monitor_collect_now` role.
+# examples/playbooks/monitor_notify_now.yml
+# Dedicated validation-only playbook for the shared `monitor_notify_now` role.
 # Targets the existing example `monitoring` inventory group, but only runs on
-# hosts where the recurring `monitor_collect` role is enabled.
+# hosts where the recurring `monitor_notify` role is enabled.
 
-- name: Run monitor_collect service immediately for validation
+- name: Run monitor_notify service immediately for validation
   hosts: monitoring
   serial: 1
   become: true
@@ -16,7 +16,7 @@
       become: false
       vars:
         ansible_become: false
-      register: monitor_collect_now_local_vault_file
+      register: monitor_notify_now_local_vault_file
       run_once: true
       tags: [always]
       when: secret_sources_use_local_vault_file | default(true)
@@ -30,7 +30,7 @@
       tags: [always]
       when:
         - secret_sources_use_local_vault_file | default(true)
-        - not monitor_collect_now_local_vault_file.stat.exists
+        - not monitor_notify_now_local_vault_file.stat.exists
 
     - name: Load local Vault vars file on localhost
       ansible.builtin.include_vars:
@@ -42,5 +42,5 @@
       tags: [always]
       when: secret_sources_use_local_vault_file | default(true)
   roles:
-    - role: monitor_collect_now
-      when: monitoring_include_collect | default(false)
+    - role: monitor_notify_now
+      when: monitoring_include_notify | default(false)

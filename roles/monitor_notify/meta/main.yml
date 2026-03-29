@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: tatbyte
+  description: Send deduplicated ntfy notifications from the collected monitoring index
+  license: MIT
+  min_ansible_version: "2.16"
+dependencies: []

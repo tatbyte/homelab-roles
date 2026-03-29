@@ -20,7 +20,7 @@ monitoring consumers.
 - `{{ backup_restic_status_path }}`: latest backup result JSON, written by the script when the backup runs
 
 ## Default Backup Scope
-- Included paths: `/srv`, `/home`, `/root`, `/etc/ssh`, `/etc/letsencrypt`, `/etc/wireguard`, `/etc/systemd/system`, `/var/lib`
+- Included paths: `/srv`, `/home`, `/root`, `/etc/ssh`, `/etc/letsencrypt`, `/etc/wireguard`, `/etc/systemd/system`, `/var/lib/monitor`
 - Excluded paths: runtime, cache, temporary, and Docker-rebuildable paths such as `/tmp`, `/run`, `/proc`, `/sys`, `/dev`, `/var/cache`, and `overlay2`
 
 Missing configured backup paths are skipped at runtime and recorded in the `warnings` array instead of failing the whole role.

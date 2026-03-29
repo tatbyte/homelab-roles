@@ -1,4 +1,0 @@
----
-# roles/monitoring_authorized_key/tasks/install.yml
-# Install phase tasks for the `monitoring_authorized_key` role.
-# Intentionally empty because this role does not install packages or dependencies.

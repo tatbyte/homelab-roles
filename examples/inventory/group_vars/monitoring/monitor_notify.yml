@@ -1,0 +1,7 @@
+---
+# examples/inventory/group_vars/monitoring/monitor_notify.yml
+# Shared ntfy notification variables for the example monitoring hosts.
+
+monitor_notify_enabled: true
+monitor_notify_ntfy_url: "{{ vault_monitor_notify_ntfy_url | default('') }}"
+monitor_notify_ntfy_title_prefix: "{{ monitor_web_title | default('Lab Monitor') }}"

@@ -23,3 +23,11 @@ monitoring_include_storage_health: true
 # Keep the collector disabled by default at the group level so only explicit
 # collector hosts opt into it through host vars.
 monitoring_include_collect: false
+
+# Keep the web publisher disabled by default at the group level so only
+# explicit collector hosts opt into it through host vars.
+monitoring_include_web: false
+
+# Keep notifications disabled by default at the group level so only explicit
+# collector hosts opt into them through host vars.
+monitoring_include_notify: false

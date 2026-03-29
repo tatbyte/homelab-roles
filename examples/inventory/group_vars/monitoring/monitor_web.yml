@@ -1,0 +1,9 @@
+---
+# examples/inventory/group_vars/monitoring/monitor_web.yml
+# Shared dashboard web variables for the example monitoring hosts.
+
+monitor_web_enabled: true
+monitor_web_title: "{{ vault_monitor_collect_web_title | default('Lab Monitor') }}"
+monitor_web_short_title: "{{ vault_monitor_collect_web_short_title | default('Monitor') }}"
+monitor_web_basic_auth_users: "{{ vault_monitor_collect_web_basic_auth_users | default([]) | to_json | from_json }}"
+monitor_web_basic_auth_enabled: "{{ (monitor_web_basic_auth_users | length) > 0 }}"

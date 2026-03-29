@@ -9,10 +9,10 @@ umask 077
 output_dir={{ monitor_collect_output_dir | to_json }}
 hosts_dir={{ monitor_collect_hosts_dir | to_json }}
 index_path={{ monitor_collect_index_path | to_json }}
-web_enabled={{ monitor_collect_web_enabled | ternary('true', 'false') | to_json }}
-web_publish_dir={{ monitor_collect_web_publish_dir | to_json }}
-web_publish_hosts_dir={{ monitor_collect_web_publish_hosts_dir | to_json }}
-web_publish_index_path={{ monitor_collect_web_publish_index_path | to_json }}
+public_json_enabled={{ monitor_collect_public_json_enabled | ternary('true', 'false') | to_json }}
+public_json_dir={{ monitor_collect_public_json_dir | to_json }}
+public_hosts_dir={{ monitor_collect_public_hosts_dir | to_json }}
+public_index_path={{ monitor_collect_public_index_path | to_json }}
 collector_host={{ monitor_collect_host | to_json }}
 job_name={{ monitor_collect_job_name | to_json }}
 json_schema={{ monitor_collect_json_schema | to_json }}
@@ -71,6 +71,7 @@ fetch_contract() {
 
   ssh_cmd=(
     ssh
+    -n
     -o BatchMode=yes
     -o ConnectTimeout="$ssh_timeout"
     -o StrictHostKeyChecking="$ssh_strict_host_key_checking"
@@ -147,10 +148,10 @@ publish_web_copy() {
 }
 
 mkdir -p "$output_dir" "$hosts_dir"
-if [ "$web_enabled" = "true" ]; then
-  install -d -m 0755 "$web_publish_dir"
-  rm -rf "$web_publish_hosts_dir"
-  install -d -m 0755 "$web_publish_hosts_dir"
+if [ "$public_json_enabled" = "true" ]; then
+  install -d -m {{ monitor_collect_public_dir_mode }} "$public_json_dir"
+  rm -rf "$public_hosts_dir"
+  install -d -m {{ monitor_collect_public_dir_mode }} "$public_hosts_dir"
 fi
 index_temp_file="$(mktemp "${index_path}.XXXXXX")"
 trap 'rm -f "$index_temp_file"' EXIT
@@ -261,16 +262,16 @@ while IFS= read -r source_item; do
 
   overall_status="$(worse_status "$overall_status" "$host_summary_status")"
 
-  if [ "$web_enabled" = "true" ]; then
+  if [ "$public_json_enabled" = "true" ]; then
     publish_web_copy \
       "${source_cache_dir}/status.json" \
-      "${web_publish_hosts_dir}/${source_name}/status.json"
+      "${public_hosts_dir}/${source_name}/status.json"
     publish_web_copy \
       "${source_cache_dir}/storage-health.json" \
-      "${web_publish_hosts_dir}/${source_name}/storage-health.json"
+      "${public_hosts_dir}/${source_name}/storage-health.json"
     publish_web_copy \
       "${source_cache_dir}/restic-backup.json" \
-      "${web_publish_hosts_dir}/${source_name}/restic-backup.json"
+      "${public_hosts_dir}/${source_name}/restic-backup.json"
   fi
 done < <(jq -c '.[]' <<<"$MONITOR_COLLECT_SOURCES_JSON")
 
@@ -298,6 +299,6 @@ jq -n \
 
 mv "$index_temp_file" "$index_path"
 
-if [ "$web_enabled" = "true" ]; then
-  publish_web_copy "$index_path" "$web_publish_index_path"
+if [ "$public_json_enabled" = "true" ]; then
+  publish_web_copy "$index_path" "$public_index_path"
 fi

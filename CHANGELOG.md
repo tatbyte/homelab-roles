@@ -10,17 +10,29 @@ Documents notable changes across repository structure, roles, examples, and docu
 - Added standalone `monitoring_status_now` plus `examples/playbooks/monitoring_status_now.yml` so consumer repos and the shared example can trigger the managed monitoring oneshot service on demand for testing.
 - Added standalone `monitoring_storage_health` plus `monitoring_storage_health_now`, including a dedicated per-device JSON contract, systemd service/timer, example inventory vars, and an example on-demand validation playbook.
 - Added standalone `monitor_collect` plus `monitor_collect_now`, including aggregated `index.json` output, a Traefik-ready static dashboard path, and example collector inventory wiring.
+- Added standalone `monitor_web` with Docker + Traefik publishing, optional basic auth, a static dashboard shell, and installable PWA assets for the aggregated monitoring view.
+- Added standalone `monitor_notify` plus `monitor_notify_now`, including ntfy delivery, deduplicated alert state, a managed systemd service/timer, and a validation helper that can emit a one-off test notification when no real alerts exist.
+- Added dedicated example inventory vars and example playbooks for `monitor_web` and `monitor_notify`, keeping the example lab aligned with the new collector/web/notify split.
 
 ### Changed
 - Updated the aggregate `monitoring` role to use explicit `include_role` ordering instead of meta dependencies, matching the repository's current aggregate-role conventions.
 - Updated the example monitoring layer so `monitoring_status` can stay focused on host summary and filesystem usage while `monitoring_storage_health` owns declared device health checks.
 - Updated the example monitoring layer so a designated host can opt into `monitor_collect` without forcing the collector role onto every monitored host.
-- Updated `monitor_collect` so the optional dashboard now reads the aggregated `status.json`, `storage-health.json`, and `restic-backup.json` contracts through a lightweight Docker + Traefik publishing path instead of the earlier host-bound HTTP helper.
-- Updated `monitor_collect` again so the optional dashboard can attach Traefik basic auth, publish a permission-safe static site copy, and ship PWA assets including a generated SVG icon.
+- Refactored `monitor_collect` so it now focuses on aggregation, cached per-host contracts, SSH transport, and an optional public JSON mirror instead of also owning the published dashboard container.
+- Updated the aggregate `monitoring` role again to include `monitor_web` and `monitor_notify` explicitly after `monitor_collect`, matching the repository’s current aggregate-role ordering style.
+- Updated the collector/web flow so the dashboard is served from a permission-safe published tree, can attach Traefik basic auth, ships PWA assets including raster icons, shows cleaner human-readable device-health summaries, and refreshes the web shell cleanly instead of pinning stale HTML in the service worker cache.
+- Updated the example and downstream monitoring helpers so `monitor_collect_now` and `monitor_notify_now` load local Vault data consistently before evaluating enabled-host logic.
+- Narrowed the default Restic backup scope from `/var/lib` to `/var/lib/monitor`, preserving monitoring contracts while avoiding backup of unrelated system state.
 - Updated the example `site.yml` flow so recurring monitoring now runs after the backup layer, keeping the status role on the intended read-only consumer side of the backup JSON contract.
 
+### Fixed
+- Fixed `monitor_collect` remote iteration so SSH collection no longer consumes the remaining source list when looping over multiple remote hosts.
+- Fixed `monitor_web` idempotence by removing recursive file-mode drift from the published site ownership task.
+- Fixed the empty-task warning in `monitoring_authorized_key` by removing the unused empty install phase include.
+- Fixed Traefik basic-auth label handling for the dashboard so bcrypt-style `user:hash` entries survive the Compose/Trafik label path intact.
+
 ### Documentation
-- Updated repository, workflow, role, and example documentation to cover the expanded monitoring aggregate layer, `monitoring_status`, `monitoring_storage_health`, and `monitor_collect`.
+- Updated repository, workflow, role, example, and Vault documentation to cover the expanded monitoring aggregate layer, `monitoring_status`, `monitoring_storage_health`, `monitor_collect`, `monitor_web`, `monitor_notify`, the dashboard auth/PWA path, and the revised backup scope.
 
 ## [v2.9.0]
 ### Added

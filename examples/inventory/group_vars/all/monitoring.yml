@@ -13,3 +13,5 @@ monitoring_include_authorized_key: false
 monitoring_include_status: false
 monitoring_include_storage_health: false
 monitoring_include_collect: false
+monitoring_include_web: false
+monitoring_include_notify: false

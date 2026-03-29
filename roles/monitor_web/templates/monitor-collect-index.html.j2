@@ -1,14 +1,14 @@
-{# roles/monitor_collect/templates/monitor-collect-index.html.j2 #}
+{# roles/monitor_web/templates/monitor-collect-index.html.j2 #}
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ monitor_collect_web_title }}</title>
-  <meta name="theme-color" content="{{ monitor_collect_web_theme_color }}">
-  <meta name="application-name" content="{{ monitor_collect_web_title }}">
+  <title>{{ monitor_web_title }}</title>
+  <meta name="theme-color" content="{{ monitor_web_theme_color }}">
+  <meta name="application-name" content="{{ monitor_web_title }}">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="{{ monitor_collect_web_short_title }}">
+  <meta name="apple-mobile-web-app-title" content="{{ monitor_web_short_title }}">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon-192.png" sizes="192x192" type="image/png">
@@ -333,7 +333,7 @@
     <aside class="sidebar">
       <div class="brand">
         <div class="eyebrow mono">monitor_collect</div>
-        <h1>{{ monitor_collect_web_title }}</h1>
+        <h1>{{ monitor_web_title }}</h1>
         <p>Dark dashboard over the aggregated monitoring contracts. The page reads <span class="mono">index.json</span> and the cached per-host JSON files published by the collector.</p>
       </div>
       <div class="nav-title">Overview</div>
@@ -350,7 +350,7 @@
         <div class="hero-top">
           <div>
             <div class="eyebrow mono" id="hero-status">Loading</div>
-            <h1>{{ monitor_collect_web_title }}</h1>
+            <h1>{{ monitor_web_title }}</h1>
             <div class="hero-meta" id="hero-meta">Waiting for <span class="mono">index.json</span>.</div>
           </div>
           <div class="links">
@@ -383,6 +383,35 @@
 
     function detail(path, fallback = 'n/a') {
       return path ?? fallback;
+    }
+
+    function titleCaseWords(value) {
+      return String(value || '')
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    }
+
+    function humanizeDeviceLabel(value) {
+      const cleaned = String(value || 'device')
+        .replace(/[_-]+/g, ' ')
+        .replace(/([a-z])([0-9])/gi, '$1 $2')
+        .trim();
+      return titleCaseWords(cleaned || 'device');
+    }
+
+    function healthLabel(value) {
+      if (value === 'ok') {
+        return 'Healthy';
+      }
+      if (value === 'fail') {
+        return 'Failing';
+      }
+      if (value === 'warn') {
+        return 'Warning';
+      }
+      return titleCaseWords(value || 'Unknown');
     }
 
     function summaryItem(label, value, hint = '') {
@@ -422,15 +451,82 @@
       `;
     }
 
-    function deviceItem(device) {
+    function extractSmartAssessment(summary) {
+      const text = String(summary || '');
+      if (!text) {
+        return '';
+      }
+      const passedMatch = text.match(/SMART overall-health self-assessment test result:\s*PASSED/i);
+      if (passedMatch) {
+        return 'SMART self-assessment: PASSED';
+      }
+      const failedMatch = text.match(/SMART overall-health self-assessment test result:\s*FAILED!?/i);
+      if (failedMatch) {
+        return 'SMART self-assessment: FAILED';
+      }
+      return '';
+    }
+
+    function extractSmartNotes(summary) {
+      const text = String(summary || '');
+      const notes = [];
+      if (/SMART Status not supported/i.test(text)) {
+        notes.push('USB bridge note: full SMART status is limited on this device');
+      }
+      if (/Attribute check/i.test(text)) {
+        notes.push('Result is based on an attribute-level health check');
+      }
+      return notes;
+    }
+
+    function describeDevice(device) {
       const details = device.details || {};
-      const detailSummary = Object.entries(details)
-        .map(([key, value]) => `${key}=${Array.isArray(value) ? value.join(',') : value}`)
-        .join(' | ');
+      if (device.type === 'nvme') {
+        const criticalWarning = safeNumber(details.critical_warning, 0);
+        const mediaErrors = safeNumber(details.media_errors, 0);
+        const errorLogEntries = safeNumber(details.error_log_entries, 0);
+        if (criticalWarning === 0 && mediaErrors === 0 && errorLogEntries === 0) {
+          return ['No critical warnings, no media errors, no error log entries'];
+        }
+        return [
+          `Critical warnings: ${criticalWarning}`,
+          `Media errors: ${mediaErrors}`,
+          `Error log entries: ${errorLogEntries}`,
+        ];
+      }
+
+      if (device.type === 'sd') {
+        const lookback = details.sd_error_lookback || 'recent checks';
+        const errorCount = safeNumber(details.sd_error_count, 0);
+        if (errorCount === 0) {
+          return [`No SD I/O errors seen in the last ${lookback}`];
+        }
+        return [`${errorCount} SD I/O error${errorCount === 1 ? '' : 's'} seen in the last ${lookback}`];
+      }
+
+      if (device.type === 'smart') {
+        const summary = String(details.smart_summary || '');
+        const assessment = extractSmartAssessment(summary);
+        const notes = extractSmartNotes(summary);
+        if (assessment || notes.length) {
+          return [assessment || 'SMART data collected', ...notes];
+        }
+      }
+
+      return Object.entries(details)
+        .map(([key, value]) => `${key.replace(/_/g, ' ')}: ${Array.isArray(value) ? value.join(', ') : value}`);
+    }
+
+    function deviceItem(device) {
+      const lines = describeDevice(device)
+        .filter(Boolean)
+        .map((line) => `<span>${line}</span>`)
+        .join('');
       return `
         <div class="list-item">
-          <strong>${device.label || device.device || 'device'} <span class="${statusClass(device.status)} mono">${statusText(device.status)}</span></strong>
-          <span>${device.device || 'n/a'}${device.type ? ` | type=${device.type}` : ''}${detailSummary ? ` | ${detailSummary}` : ''}</span>
+          <strong>${humanizeDeviceLabel(device.label || device.device || 'device')} <span class="${statusClass(device.status)}">${healthLabel(device.status)}</span></strong>
+          <span class="mono">${device.device || 'n/a'}</span>
+          ${lines}
         </div>
       `;
     }

@@ -55,7 +55,7 @@ backup_restic_paths:
   - /etc/letsencrypt
   - /etc/wireguard
   - /etc/systemd/system
-  - /var/lib
+  - /var/lib/monitor
 
 backup_restic_excludes:
   - /tmp
