@@ -1,0 +1,57 @@
+---
+# roles/monitor_collect/defaults/main.yml
+# Default variables for the `monitor_collect` role.
+# Defines the recurring collector script, aggregated JSON output, and optional
+# public JSON mirror consumed by other roles such as `monitor_web`.
+
+monitor_collect_enabled: true
+
+monitor_collect_packages:
+  - jq
+  - openssh-client
+
+monitor_collect_unit_name: monitor-collect
+monitor_collect_service_unit: "{{ monitor_collect_unit_name }}.service"
+monitor_collect_timer_unit: "{{ monitor_collect_unit_name }}.timer"
+monitor_collect_script_path: "/usr/local/bin/{{ monitor_collect_unit_name }}.sh"
+monitor_collect_state_dir: "/usr/local/lib/{{ monitor_collect_unit_name }}"
+
+monitor_collect_output_dir: /var/lib/monitor/collect
+monitor_collect_hosts_dir: "{{ monitor_collect_output_dir }}/hosts"
+monitor_collect_index_path: "{{ monitor_collect_output_dir }}/index.json"
+
+monitor_collect_public_json_enabled: "{{ monitor_web_enabled | default(false) | bool }}"
+monitor_collect_public_json_dir: "{{ monitor_web_publish_dir | default('/srv/monitor-collect-web/site') }}"
+monitor_collect_public_hosts_dir: "{{ monitor_collect_public_json_dir }}/hosts"
+monitor_collect_public_index_path: "{{ monitor_collect_public_json_dir }}/index.json"
+
+monitor_collect_service_user: "{{ ansible_user | default('root') }}"
+monitor_collect_service_group: "{{ ansible_user | default('root') }}"
+monitor_collect_script_owner: root
+monitor_collect_script_group: root
+monitor_collect_script_mode: "0755"
+monitor_collect_output_dir_mode: "0750"
+monitor_collect_public_dir_mode: "0755"
+monitor_collect_public_file_mode: "0644"
+
+monitor_collect_host: "{{ ansible_hostname | default(inventory_hostname) }}"
+monitor_collect_job_name: monitor_collect
+monitor_collect_json_schema: monitor_collect_index_v1
+
+monitor_collect_sources: []
+monitor_collect_status_path_default: /var/lib/monitor/status.json
+monitor_collect_storage_health_path_default: /var/lib/monitor/storage-health.json
+monitor_collect_backup_path_default: /var/lib/monitor/restic-backup.json
+monitor_collect_ssh_connect_timeout_seconds: 10
+monitor_collect_ssh_strict_host_key_checking: accept-new
+monitor_collect_ssh_dir: "{{ monitor_collect_state_dir }}/ssh"
+monitor_collect_ssh_manage_private_key: false
+monitor_collect_ssh_private_key: ""
+monitor_collect_ssh_private_key_path: "{{ monitor_collect_ssh_dir }}/id_ed25519"
+monitor_collect_ssh_identity_file: ""
+monitor_collect_ssh_known_hosts_path: "{{ monitor_collect_ssh_dir }}/known_hosts"
+
+monitor_collect_timer_on_calendar: "*-*-* *:35:00"
+monitor_collect_timer_randomized_delay_sec: 0
+monitor_collect_timer_accuracy_sec: 1m
+monitor_collect_timer_persistent: true

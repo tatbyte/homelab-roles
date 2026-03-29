@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: tatbyte
+  description: Publish the collected monitoring dashboard through Docker and Traefik
+  license: MIT
+  min_ansible_version: "2.16"
+dependencies: []

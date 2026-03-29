@@ -1,0 +1,14 @@
+---
+# roles/monitoring_storage_health_now/defaults/main.yml
+# Default variables for the `monitoring_storage_health_now` role.
+# Defines the on-demand validation inputs that trigger the managed
+# `monitoring_storage_health` oneshot service immediately and inspect the
+# resulting JSON.
+
+monitoring_storage_health_now_enabled: true
+monitoring_storage_health_now_service_unit: "{{ monitoring_storage_health_service_unit | default('monitoring-storage-health.service') }}"
+monitoring_storage_health_now_status_path: "{{ monitoring_storage_health_status_path | default('/var/lib/monitor/storage-health.json') }}"
+monitoring_storage_health_now_script_path: "{{ monitoring_storage_health_script_path | default('/usr/local/bin/monitoring-storage-health.sh') }}"
+monitoring_storage_health_now_allowed_statuses:
+  - ok
+  - warn

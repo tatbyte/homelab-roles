@@ -1,0 +1,304 @@
+{# roles/monitor_collect/templates/monitor-collect.sh.j2 #}
+#!/usr/bin/env bash
+# Managed by Ansible: monitor_collect
+# Source: roles/monitor_collect/templates/monitor-collect.sh.j2
+
+set -euo pipefail
+umask 077
+
+output_dir={{ monitor_collect_output_dir | to_json }}
+hosts_dir={{ monitor_collect_hosts_dir | to_json }}
+index_path={{ monitor_collect_index_path | to_json }}
+public_json_enabled={{ monitor_collect_public_json_enabled | ternary('true', 'false') | to_json }}
+public_json_dir={{ monitor_collect_public_json_dir | to_json }}
+public_hosts_dir={{ monitor_collect_public_hosts_dir | to_json }}
+public_index_path={{ monitor_collect_public_index_path | to_json }}
+collector_host={{ monitor_collect_host | to_json }}
+job_name={{ monitor_collect_job_name | to_json }}
+json_schema={{ monitor_collect_json_schema | to_json }}
+default_status_path={{ monitor_collect_status_path_default | to_json }}
+default_storage_health_path={{ monitor_collect_storage_health_path_default | to_json }}
+default_backup_path={{ monitor_collect_backup_path_default | to_json }}
+ssh_timeout={{ monitor_collect_ssh_connect_timeout_seconds | string | to_json }}
+ssh_strict_host_key_checking={{ monitor_collect_ssh_strict_host_key_checking | to_json }}
+ssh_identity_file={{ ((monitor_collect_ssh_private_key_path if monitor_collect_ssh_manage_private_key else monitor_collect_ssh_identity_file) | default('')) | to_json }}
+ssh_known_hosts_path={{ monitor_collect_ssh_known_hosts_path | to_json }}
+
+export MONITOR_COLLECT_SOURCES_JSON={{ monitor_collect_sources | to_json | quote }}
+
+normalize_text() {
+  tr '\n' ' ' | sed 's/  */ /g; s/^ //; s/ $//'
+}
+
+severity_rank() {
+  case "$1" in
+    ok) printf '0\n' ;;
+    warn) printf '1\n' ;;
+    fail) printf '2\n' ;;
+    *) printf '2\n' ;;
+  esac
+}
+
+worse_status() {
+  local current="$1"
+  local candidate="$2"
+  if [ "$(severity_rank "$candidate")" -gt "$(severity_rank "$current")" ]; then
+    printf '%s\n' "$candidate"
+  else
+    printf '%s\n' "$current"
+  fi
+}
+
+fetch_contract() {
+  local local_mode="$1"
+  local ssh_host="$2"
+  local ssh_user="$3"
+  local remote_path="$4"
+  local output_file="$5"
+  local error_file="$6"
+  local ssh_target
+  local ssh_cmd
+
+  if [ "$local_mode" = "true" ]; then
+    sudo -n cat "$remote_path" >"$output_file" 2>"$error_file"
+    return
+  fi
+
+  ssh_target="$ssh_host"
+  if [ -n "$ssh_user" ]; then
+    ssh_target="${ssh_user}@${ssh_host}"
+  fi
+
+  ssh_cmd=(
+    ssh
+    -n
+    -o BatchMode=yes
+    -o ConnectTimeout="$ssh_timeout"
+    -o StrictHostKeyChecking="$ssh_strict_host_key_checking"
+    -o UserKnownHostsFile="$ssh_known_hosts_path"
+  )
+
+  if [ -n "$ssh_identity_file" ]; then
+    ssh_cmd+=(-i "$ssh_identity_file" -o IdentitiesOnly=yes)
+  fi
+
+  "${ssh_cmd[@]}" \
+    "$ssh_target" \
+    "sudo -n cat '$remote_path'" \
+    >"$output_file" 2>"$error_file"
+}
+
+collect_contract() {
+  local contract_name="$1"
+  local local_mode="$2"
+  local ssh_host="$3"
+  local ssh_user="$4"
+  local remote_path="$5"
+  local cache_path="$6"
+  local optional="$7"
+  local output_file
+  local error_file
+  local fetch_rc
+  local error_text
+
+  collected_json='null'
+  collected_error=''
+  collected_stale='false'
+
+  mkdir -p "$(dirname "$cache_path")"
+  output_file="$(mktemp)"
+  error_file="$(mktemp)"
+
+  if fetch_contract "$local_mode" "$ssh_host" "$ssh_user" "$remote_path" "$output_file" "$error_file"; then
+    if jq -e 'type == "object"' "$output_file" >/dev/null 2>&1; then
+      mv "$output_file" "$cache_path"
+      collected_json="$(jq -c . "$cache_path")"
+    else
+      collected_error="${contract_name} returned invalid JSON"
+    fi
+  else
+    fetch_rc=$?
+    error_text="$(normalize_text <"$error_file")"
+    if [ -z "$error_text" ]; then
+      error_text="${contract_name} fetch failed with exit code ${fetch_rc}"
+    fi
+    if [ "$optional" = "true" ] && printf '%s\n' "$error_text" | grep -Eqi 'No such file|cannot open'; then
+      collected_error='missing'
+    else
+      collected_error="$error_text"
+    fi
+  fi
+
+  if [ "$collected_json" = 'null' ] && [ -f "$cache_path" ] && jq -e 'type == "object"' "$cache_path" >/dev/null 2>&1; then
+    collected_json="$(jq -c . "$cache_path")"
+    collected_stale='true'
+  fi
+
+  rm -f "$output_file" "$error_file"
+}
+
+publish_web_copy() {
+  local source_file="$1"
+  local destination_file="$2"
+
+  if [ -f "$source_file" ]; then
+    install -d -m 0755 "$(dirname "$destination_file")"
+    install -D -m 0644 "$source_file" "$destination_file"
+  fi
+}
+
+mkdir -p "$output_dir" "$hosts_dir"
+if [ "$public_json_enabled" = "true" ]; then
+  install -d -m {{ monitor_collect_public_dir_mode }} "$public_json_dir"
+  rm -rf "$public_hosts_dir"
+  install -d -m {{ monitor_collect_public_dir_mode }} "$public_hosts_dir"
+fi
+index_temp_file="$(mktemp "${index_path}.XXXXXX")"
+trap 'rm -f "$index_temp_file"' EXIT
+
+timestamp="$(date --iso-8601=ns)"
+overall_status=ok
+hosts_json='[]'
+
+while IFS= read -r source_item; do
+  source_name="$(printf '%s\n' "$source_item" | jq -r '.name')"
+  source_display_name="$(printf '%s\n' "$source_item" | jq -r '.display_name // .name')"
+  source_local="$(printf '%s\n' "$source_item" | jq -r '.local // false')"
+  source_ssh_host="$(printf '%s\n' "$source_item" | jq -r '.ssh_host // ""')"
+  source_ssh_user="$(printf '%s\n' "$source_item" | jq -r '.ssh_user // ""')"
+  source_status_path="$(printf '%s\n' "$source_item" | jq -r '.status_path // ""')"
+  source_storage_health_path="$(printf '%s\n' "$source_item" | jq -r '.storage_health_path // ""')"
+  source_backup_path="$(printf '%s\n' "$source_item" | jq -r '.backup_path // ""')"
+  source_cache_dir="${hosts_dir}/${source_name}"
+  host_summary_status=ok
+  host_stale=false
+
+  if [ -z "$source_status_path" ]; then
+    source_status_path="$default_status_path"
+  fi
+  if [ -z "$source_storage_health_path" ]; then
+    source_storage_health_path="$default_storage_health_path"
+  fi
+  if [ -z "$source_backup_path" ]; then
+    source_backup_path="$default_backup_path"
+  fi
+
+  collect_contract "status" "$source_local" "$source_ssh_host" "$source_ssh_user" "$source_status_path" "${source_cache_dir}/status.json" false
+  status_json="$collected_json"
+  status_error="$collected_error"
+  status_stale="$collected_stale"
+
+  collect_contract "storage_health" "$source_local" "$source_ssh_host" "$source_ssh_user" "$source_storage_health_path" "${source_cache_dir}/storage-health.json" true
+  storage_health_json="$collected_json"
+  storage_health_error="$collected_error"
+  storage_health_stale="$collected_stale"
+
+  collect_contract "backup" "$source_local" "$source_ssh_host" "$source_ssh_user" "$source_backup_path" "${source_cache_dir}/restic-backup.json" true
+  backup_json="$collected_json"
+  backup_error="$collected_error"
+  backup_stale="$collected_stale"
+
+  if [ "$status_json" = 'null' ]; then
+    host_summary_status=fail
+  else
+    host_summary_status="$(worse_status "$host_summary_status" "$(jq -r '.status // "fail"' <<<"$status_json")")"
+  fi
+
+  if [ "$storage_health_json" = 'null' ]; then
+    if [ "$storage_health_error" = 'missing' ]; then
+      host_summary_status="$(worse_status "$host_summary_status" warn)"
+    else
+      host_summary_status="$(worse_status "$host_summary_status" fail)"
+    fi
+  else
+    host_summary_status="$(worse_status "$host_summary_status" "$(jq -r '.status // "fail"' <<<"$storage_health_json")")"
+  fi
+
+  if [ "$status_stale" = 'true' ] || [ "$storage_health_stale" = 'true' ] || [ "$backup_stale" = 'true' ]; then
+    host_stale=true
+    host_summary_status="$(worse_status "$host_summary_status" warn)"
+  fi
+
+  host_errors_json="$(
+    jq -n \
+      --arg status_error "$status_error" \
+      --arg storage_error "$storage_health_error" \
+      --arg backup_error "$backup_error" \
+      '{
+        status: (if $status_error == "" then null else $status_error end),
+        storage_health: (if $storage_error == "" then null else $storage_error end),
+        backup: (if ($backup_error == "" or $backup_error == "missing") then null else $backup_error end)
+      }'
+  )"
+
+  hosts_json="$(
+    jq -n \
+      --argjson current "$hosts_json" \
+      --arg name "$source_name" \
+      --arg display_name "$source_display_name" \
+      --arg ssh_host "$source_ssh_host" \
+      --arg ssh_user "$source_ssh_user" \
+      --argjson local "$source_local" \
+      --arg summary_status "$host_summary_status" \
+      --argjson stale "$host_stale" \
+      --argjson errors "$host_errors_json" \
+      --argjson status_data "$status_json" \
+      --argjson storage_health_data "$storage_health_json" \
+      --argjson backup_data "$backup_json" \
+      '$current + [{
+        name: $name,
+        display_name: $display_name,
+        ssh_host: $ssh_host,
+        ssh_user: $ssh_user,
+        local: $local,
+        summary_status: $summary_status,
+        stale: $stale,
+        errors: $errors,
+        status: $status_data,
+        storage_health: $storage_health_data,
+        backup: $backup_data
+      }]'
+  )"
+
+  overall_status="$(worse_status "$overall_status" "$host_summary_status")"
+
+  if [ "$public_json_enabled" = "true" ]; then
+    publish_web_copy \
+      "${source_cache_dir}/status.json" \
+      "${public_hosts_dir}/${source_name}/status.json"
+    publish_web_copy \
+      "${source_cache_dir}/storage-health.json" \
+      "${public_hosts_dir}/${source_name}/storage-health.json"
+    publish_web_copy \
+      "${source_cache_dir}/restic-backup.json" \
+      "${public_hosts_dir}/${source_name}/restic-backup.json"
+  fi
+done < <(jq -c '.[]' <<<"$MONITOR_COLLECT_SOURCES_JSON")
+
+jq -n \
+  --arg schema "$json_schema" \
+  --arg collector "$collector_host" \
+  --arg job "$job_name" \
+  --arg timestamp "$timestamp" \
+  --arg status "$overall_status" \
+  --argjson hosts "$hosts_json" \
+  '{
+    schema: $schema,
+    collector: $collector,
+    job: $job,
+    timestamp: $timestamp,
+    status: $status,
+    host_count: ($hosts | length),
+    summary: {
+      ok: ($hosts | map(select(.summary_status == "ok")) | length),
+      warn: ($hosts | map(select(.summary_status == "warn")) | length),
+      fail: ($hosts | map(select(.summary_status == "fail")) | length)
+    },
+    hosts: $hosts
+  }' >"$index_temp_file"
+
+mv "$index_temp_file" "$index_path"
+
+if [ "$public_json_enabled" = "true" ]; then
+  publish_web_copy "$index_path" "$public_index_path"
+fi

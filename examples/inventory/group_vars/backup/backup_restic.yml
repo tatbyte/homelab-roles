@@ -46,7 +46,7 @@ backup_restic_paths:
   - /root
   - /etc/ssh
   - /etc/systemd/system
-  - /var/lib
+  - /var/lib/monitor
 
 # Remove optional paths here when the example host should not warn about them
 # being absent.

@@ -1,0 +1,93 @@
+---
+# roles/monitoring_status/tasks/assert.yml
+# Assert phase tasks for the `monitoring_status` role.
+# Validates the check, threshold, schedule, and JSON-contract inputs before the
+# managed monitoring timer and scripts are rendered.
+
+- name: "Assert | Validate monitoring_status variables when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_status_enabled is boolean
+      - monitoring_status_packages is sequence
+      - monitoring_status_packages | length > 0
+      - monitoring_status_packages | select('string') | list | length == monitoring_status_packages | length
+      - monitoring_status_check_script_filenames is sequence
+      - monitoring_status_check_script_filenames | length > 0
+      - monitoring_status_check_script_filenames | select('string') | list | length == monitoring_status_check_script_filenames | length
+      - monitoring_status_unit_name is string
+      - monitoring_status_unit_name | length > 0
+      - monitoring_status_script_path is string
+      - monitoring_status_script_path | length > 0
+      - monitoring_status_state_dir is string
+      - monitoring_status_state_dir | length > 0
+      - monitoring_status_checks_path is string
+      - monitoring_status_checks_path | length > 0
+      - monitoring_status_status_dir is string
+      - monitoring_status_status_dir | length > 0
+      - monitoring_status_status_path is string
+      - monitoring_status_status_path | length > 0
+      - monitoring_status_host is string
+      - monitoring_status_host | length > 0
+      - monitoring_status_job_name is string
+      - monitoring_status_job_name | length > 0
+      - monitoring_status_json_schema is string
+      - monitoring_status_json_schema | length > 0
+      - monitoring_status_backup_status_path is string
+      - monitoring_status_backup_status_path | length > 0
+      - monitoring_status_backup_required is boolean or monitoring_status_backup_required is string
+      - monitoring_status_backup_required | string in ['True', 'False', 'true', 'false']
+      - monitoring_status_backup_warn_after_hours is number
+      - monitoring_status_backup_fail_after_hours is number
+      - monitoring_status_backup_warn_after_hours <= monitoring_status_backup_fail_after_hours
+      - monitoring_status_system_memory_warn_pct is number
+      - monitoring_status_system_memory_fail_pct is number
+      - monitoring_status_system_memory_warn_pct <= monitoring_status_system_memory_fail_pct
+      - monitoring_status_system_load_warn_per_cpu is number
+      - monitoring_status_system_load_fail_per_cpu is number
+      - monitoring_status_system_load_warn_per_cpu <= monitoring_status_system_load_fail_per_cpu
+      - monitoring_status_storage_root_mount is string
+      - monitoring_status_storage_root_mount | length > 0
+      - monitoring_status_storage_additional_mounts is sequence
+      - monitoring_status_storage_additional_mounts | select('string') | list | length == monitoring_status_storage_additional_mounts | length
+      - monitoring_status_storage_missing_additional_mount_status in ['warn', 'ignore', 'fail']
+      - monitoring_status_storage_warn_pct is number
+      - monitoring_status_storage_fail_pct is number
+      - monitoring_status_storage_warn_pct <= monitoring_status_storage_fail_pct
+      - monitoring_status_storage_sd_error_lookback is string
+      - monitoring_status_storage_sd_error_lookback | length > 0
+      - monitoring_status_storage_device is string
+      - monitoring_status_storage_type in ['auto', 'smart', 'nvme', 'sd', 'none']
+      - monitoring_status_docker_mode in ['auto', 'required', 'ignore']
+      - monitoring_status_docker_service_name is string
+      - monitoring_status_docker_service_name | length > 0
+      - monitoring_status_network_targets is sequence
+      - monitoring_status_network_targets | select('string') | list | length == monitoring_status_network_targets | length
+      - monitoring_status_network_ping_count is number
+      - monitoring_status_network_ping_count >= 1
+      - monitoring_status_network_ping_timeout_seconds is number
+      - monitoring_status_network_ping_timeout_seconds >= 1
+      - monitoring_status_timer_on_calendar is string
+      - monitoring_status_timer_on_calendar | length > 0
+      - monitoring_status_timer_randomized_delay_sec is string or monitoring_status_timer_randomized_delay_sec is number
+      - >-
+        (
+          monitoring_status_timer_randomized_delay_sec is string
+          and monitoring_status_timer_randomized_delay_sec | length > 0
+        )
+        or (monitoring_status_timer_randomized_delay_sec is number)
+      - monitoring_status_timer_accuracy_sec is string
+      - monitoring_status_timer_accuracy_sec | length > 0
+      - monitoring_status_timer_persistent is boolean
+    fail_msg: >-
+      monitoring_status requires valid package, check-script, path, threshold,
+      Docker mode, network-target, and timer inputs when the role is enabled
+    quiet: true
+  when: monitoring_status_enabled
+
+- name: "Assert | Validate monitoring_status variables when disabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_status_enabled is boolean
+    fail_msg: "monitoring_status_enabled must be a boolean"
+    quiet: true
+  when: not monitoring_status_enabled

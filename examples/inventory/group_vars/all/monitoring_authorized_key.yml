@@ -5,10 +5,14 @@
 # `monitoring_authorized_key` role is applied to a host or group.
 
 # User account that should receive the monitoring or backup SSH public key.
-# Keep `root` only if your monitoring flow truly requires direct root access.
-monitoring_authorized_key_user: root
+# Using the inventory SSH user keeps the collector transport aligned with the
+# same non-root automation account used by the playbooks.
+monitoring_authorized_key_user: "{{ ansible_user }}"
 
 # Public SSH key allowed to connect for monitoring-style access.
-# Replace this example value with the real public key from your control or
-# monitoring host before applying the role outside of local testing.
-monitoring_authorized_key_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleMonitoringKey control-monitoring"
+# Prefer a Vault-sourced collector public key when one is available.
+monitoring_authorized_key_key: >-
+  {{
+    vault_monitor_collect_ssh_public_key
+    | default('ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleMonitoringKey control-monitoring')
+  }}

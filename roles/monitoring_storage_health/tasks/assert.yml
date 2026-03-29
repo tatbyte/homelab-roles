@@ -1,0 +1,82 @@
+---
+# roles/monitoring_storage_health/tasks/assert.yml
+# Assert phase tasks for the `monitoring_storage_health` role.
+# Validates the per-device inputs, paths, and timer settings before rendering
+# the managed recurring storage-health service.
+
+- name: "Assert | Validate monitoring_storage_health variables when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_storage_health_enabled is boolean
+      - monitoring_storage_health_packages is sequence
+      - monitoring_storage_health_packages | length > 0
+      - monitoring_storage_health_packages | select('string') | list | length == monitoring_storage_health_packages | length
+      - monitoring_storage_health_unit_name is string
+      - monitoring_storage_health_unit_name | length > 0
+      - monitoring_storage_health_script_path is string
+      - monitoring_storage_health_script_path | length > 0
+      - monitoring_storage_health_state_dir is string
+      - monitoring_storage_health_state_dir | length > 0
+      - monitoring_storage_health_status_dir is string
+      - monitoring_storage_health_status_dir | length > 0
+      - monitoring_storage_health_status_path is string
+      - monitoring_storage_health_status_path | length > 0
+      - monitoring_storage_health_host is string
+      - monitoring_storage_health_host | length > 0
+      - monitoring_storage_health_job_name is string
+      - monitoring_storage_health_job_name | length > 0
+      - monitoring_storage_health_json_schema is string
+      - monitoring_storage_health_json_schema | length > 0
+      - monitoring_storage_health_devices is sequence
+      - monitoring_storage_health_devices | length > 0
+      - monitoring_storage_health_devices | select('mapping') | list | length == monitoring_storage_health_devices | length
+      - monitoring_storage_health_devices | map(attribute='device') | select('string') | list | length == monitoring_storage_health_devices | length
+      - monitoring_storage_health_devices | map(attribute='device') | map('length') | min > 0
+      - >-
+        (
+          monitoring_storage_health_devices
+          | rejectattr('smartctl_device_type', 'undefined')
+          | map(attribute='smartctl_device_type')
+          | select('string')
+          | list
+          | length
+        ) == (
+          monitoring_storage_health_devices
+          | rejectattr('smartctl_device_type', 'undefined')
+          | list
+          | length
+        )
+      - >-
+        (
+          monitoring_storage_health_devices
+          | map(attribute='type')
+          | map('default', 'auto')
+          | difference(['auto', 'smart', 'nvme', 'sd', 'none'])
+          | length
+        ) == 0
+      - monitoring_storage_health_sd_error_lookback is string
+      - monitoring_storage_health_sd_error_lookback | length > 0
+      - monitoring_storage_health_timer_on_calendar is string
+      - monitoring_storage_health_timer_on_calendar | length > 0
+      - monitoring_storage_health_timer_randomized_delay_sec is string or monitoring_storage_health_timer_randomized_delay_sec is number
+      - >-
+        (
+          monitoring_storage_health_timer_randomized_delay_sec is string
+          and monitoring_storage_health_timer_randomized_delay_sec | length > 0
+        ) or (monitoring_storage_health_timer_randomized_delay_sec is number)
+      - monitoring_storage_health_timer_accuracy_sec is string
+      - monitoring_storage_health_timer_accuracy_sec | length > 0
+      - monitoring_storage_health_timer_persistent is boolean
+    fail_msg: >-
+      monitoring_storage_health requires valid package, device-list, path, and
+      timer inputs when the role is enabled
+    quiet: true
+  when: monitoring_storage_health_enabled
+
+- name: "Assert | Validate monitoring_storage_health variables when disabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_storage_health_enabled is boolean
+    fail_msg: "monitoring_storage_health_enabled must be a boolean"
+    quiet: true
+  when: not monitoring_storage_health_enabled

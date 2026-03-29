@@ -1,0 +1,82 @@
+---
+# roles/monitoring_status/tasks/validate.yml
+# Validate phase tasks for the `monitoring_status` role.
+# Verifies the rendered files, copied checks, and timer state after
+# configuration.
+
+- name: "Validate | Stat monitoring_status managed paths"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ monitoring_status_script_path }}"
+    - "{{ monitoring_status_checks_path }}"
+    - "/etc/systemd/system/{{ monitoring_status_service_unit }}"
+    - "/etc/systemd/system/{{ monitoring_status_timer_unit }}"
+    - "{{ monitoring_status_status_dir }}"
+  register: monitoring_status_managed_paths
+  when: monitoring_status_enabled
+
+- name: "Validate | Stat monitoring_status check scripts"
+  ansible.builtin.stat:
+    path: "{{ monitoring_status_checks_path }}/{{ item }}"
+  loop: "{{ monitoring_status_check_script_filenames }}"
+  register: monitoring_status_check_paths
+  when: monitoring_status_enabled
+
+- name: "Validate | Stat monitoring_status timer enablement symlink"
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/timers.target.wants/{{ monitoring_status_timer_unit }}"
+  register: monitoring_status_timer_enabled_symlink
+  when: monitoring_status_enabled
+
+- name: "Validate | Read monitoring_status timer systemd state" # noqa: command-instead-of-module
+  ansible.builtin.command:
+    argv:
+      - systemctl
+      - show
+      - "{{ monitoring_status_timer_unit }}"
+      - --property=LoadState
+      - --property=ActiveState
+      - --property=UnitFileState
+      - --property=SubState
+  register: monitoring_status_timer_state
+  changed_when: false
+  when: monitoring_status_enabled
+
+- name: "Validate | Assert monitoring_status final state when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_status_managed_paths.results | map(attribute='stat.exists') | min
+      - monitoring_status_check_paths.results | map(attribute='stat.exists') | min
+      - monitoring_status_timer_enabled_symlink.stat.exists
+      - monitoring_status_timer_state.rc == 0
+      - "'LoadState=loaded' in monitoring_status_timer_state.stdout_lines"
+      - "'ActiveState=active' in monitoring_status_timer_state.stdout_lines"
+      - "'UnitFileState=enabled' in monitoring_status_timer_state.stdout_lines"
+    fail_msg: >-
+      monitoring_status is enabled, but the expected files, checks, or timer
+      state were not validated successfully
+    quiet: true
+  when: monitoring_status_enabled
+
+- name: "Validate | Stat monitoring_status managed files when disabled"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ monitoring_status_checks_path }}"
+    - "{{ monitoring_status_script_path }}"
+    - "{{ monitoring_status_status_path }}"
+    - "/etc/systemd/system/{{ monitoring_status_service_unit }}"
+    - "/etc/systemd/system/{{ monitoring_status_timer_unit }}"
+  register: monitoring_status_removed_paths
+  when: not monitoring_status_enabled
+
+- name: "Validate | Assert monitoring_status cleanup when disabled"
+  ansible.builtin.assert:
+    that:
+      - not (monitoring_status_removed_paths.results | map(attribute='stat.exists') | max)
+    fail_msg: >-
+      monitoring_status is disabled, but one or more managed files still
+      exist on the host
+    quiet: true
+  when: not monitoring_status_enabled

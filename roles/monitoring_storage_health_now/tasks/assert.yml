@@ -1,0 +1,24 @@
+---
+# roles/monitoring_storage_health_now/tasks/assert.yml
+# Assert phase tasks for the `monitoring_storage_health_now` role.
+# Validates the on-demand monitoring-run inputs before the managed service is
+# started manually.
+
+- name: "Assert | Validate monitoring_storage_health_now variables"
+  ansible.builtin.assert:
+    that:
+      - monitoring_storage_health_now_enabled is boolean
+      - monitoring_storage_health_now_service_unit is string
+      - monitoring_storage_health_now_service_unit | length > 0
+      - monitoring_storage_health_now_status_path is string
+      - monitoring_storage_health_now_status_path | length > 0
+      - monitoring_storage_health_now_script_path is string
+      - monitoring_storage_health_now_script_path | length > 0
+      - monitoring_storage_health_now_allowed_statuses is sequence
+      - monitoring_storage_health_now_allowed_statuses | length > 0
+      - monitoring_storage_health_now_allowed_statuses | select('string') | list | length == monitoring_storage_health_now_allowed_statuses | length
+    fail_msg: >-
+      monitoring_storage_health_now requires a service unit name, script path,
+      status path, allowed status list, and boolean control flag
+    quiet: true
+  when: monitoring_storage_health_now_enabled

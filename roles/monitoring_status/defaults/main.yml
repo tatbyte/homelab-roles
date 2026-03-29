@@ -1,0 +1,74 @@
+---
+# roles/monitoring_status/defaults/main.yml
+# Default variables for the `monitoring_status` role.
+# Defines the recurring host-status script, check-script, JSON-status, and
+# systemd-timer defaults used by the monitoring layer.
+
+monitoring_status_enabled: true
+
+monitoring_status_packages:
+  - jq
+  - smartmontools
+  - nvme-cli
+  - iputils-ping
+
+monitoring_status_check_script_filenames:
+  - 10_system.sh
+  - 20_storage.sh
+  - 30_docker.sh
+  - 40_backup.sh
+  - 50_network.sh
+
+monitoring_status_unit_name: monitoring-status
+monitoring_status_service_unit: "{{ monitoring_status_unit_name }}.service"
+monitoring_status_timer_unit: "{{ monitoring_status_unit_name }}.timer"
+monitoring_status_script_path: "/usr/local/bin/{{ monitoring_status_unit_name }}.sh"
+monitoring_status_state_dir: "/usr/local/lib/{{ monitoring_status_unit_name }}"
+monitoring_status_checks_path: "{{ monitoring_status_state_dir }}/checks"
+monitoring_status_status_dir: /var/lib/monitor
+monitoring_status_status_path: "{{ monitoring_status_status_dir }}/status.json"
+
+monitoring_status_service_user: root
+monitoring_status_service_group: root
+monitoring_status_script_owner: root
+monitoring_status_script_group: root
+monitoring_status_script_mode: "0750"
+monitoring_status_checks_owner: root
+monitoring_status_checks_group: root
+monitoring_status_checks_mode: "0750"
+monitoring_status_status_dir_mode: "0755"
+
+monitoring_status_host: "{{ ansible_hostname | default(inventory_hostname) }}"
+monitoring_status_job_name: monitor_status
+monitoring_status_json_schema: monitor_status_v1
+
+monitoring_status_backup_status_path: "{{ backup_restic_status_path | default('/var/lib/monitor/restic-backup.json') }}"
+monitoring_status_backup_required: "{{ backup_include_restic | default(false) }}"
+monitoring_status_backup_warn_after_hours: 26
+monitoring_status_backup_fail_after_hours: 50
+
+monitoring_status_system_memory_warn_pct: 85
+monitoring_status_system_memory_fail_pct: 95
+monitoring_status_system_load_warn_per_cpu: 1.50
+monitoring_status_system_load_fail_per_cpu: 2.50
+
+monitoring_status_storage_root_mount: /
+monitoring_status_storage_additional_mounts: []
+monitoring_status_storage_missing_additional_mount_status: warn
+monitoring_status_storage_warn_pct: 80
+monitoring_status_storage_fail_pct: 90
+monitoring_status_storage_sd_error_lookback: "24 hours"
+monitoring_status_storage_device: ""
+monitoring_status_storage_type: auto
+
+monitoring_status_docker_mode: auto
+monitoring_status_docker_service_name: docker
+
+monitoring_status_network_targets: []
+monitoring_status_network_ping_count: 1
+monitoring_status_network_ping_timeout_seconds: 2
+
+monitoring_status_timer_on_calendar: "*-*-* *:05:00"
+monitoring_status_timer_randomized_delay_sec: 0
+monitoring_status_timer_accuracy_sec: 1m
+monitoring_status_timer_persistent: true

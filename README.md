@@ -18,7 +18,9 @@ The `examples/` directory is the local validation harness for the shared roles.
 - `backup_restic` and companions: focused recurring backup, repository-init,
   prune, repository-check, and validation helpers used directly or through
   `backup`.
-- `monitoring` and focused standalone roles: supporting capabilities consumed directly or through aggregates.
+- `monitoring` and focused standalone roles: aggregate host monitoring plus
+  focused access and status-generation capabilities consumed directly or
+  through aggregates.
 
 ## Supported Platforms
 This repository currently targets Debian-family hosts such as Debian and Ubuntu.
@@ -93,11 +95,11 @@ Example infra playbook:
   roles:
     - role: backup
 
-- name: Apply monitoring access
-  hosts: monitoring_targets
+- name: Apply monitoring layer
+  hosts: monitoring
   become: true
   roles:
-    - role: monitoring_authorized_key
+    - role: monitoring
 ```
 
 ## Local Role Testing
@@ -113,6 +115,7 @@ Dedicated maintenance stays separate:
 
 ```sh
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/base_maintenance.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/monitoring.yml
 ```
 
 Optional `base_sshd` integration check:

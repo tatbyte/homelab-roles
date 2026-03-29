@@ -1,0 +1,9 @@
+---
+# roles/monitor_notify_now/tasks/main.yml
+# Task entrypoint for the `monitor_notify_now` role.
+
+- name: "Assert | Validate monitor_notify_now variables"
+  ansible.builtin.import_tasks: assert.yml
+
+- name: "Validate | Trigger monitor_notify now"
+  ansible.builtin.import_tasks: validate.yml

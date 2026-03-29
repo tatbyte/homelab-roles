@@ -1,0 +1,20 @@
+---
+# roles/monitoring_status/tasks/main.yml
+# Task entrypoint for the `monitoring_status` role.
+# Imports the assert, install, config, and validate phase files in order.
+
+- name: Assert
+  ansible.builtin.import_tasks: assert.yml
+  tags: [monitoring_status, assert, monitoring_status_assert]
+
+- name: Install
+  ansible.builtin.import_tasks: install.yml
+  tags: [monitoring_status, install, monitoring_status_install]
+
+- name: Config
+  ansible.builtin.import_tasks: config.yml
+  tags: [monitoring_status, config, monitoring_status_config]
+
+- name: Validate
+  ansible.builtin.import_tasks: validate.yml
+  tags: [monitoring_status, validate, monitoring_status_validate]

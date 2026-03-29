@@ -1,0 +1,16 @@
+{# roles/monitoring_storage_health/templates/monitoring-storage-health.service.j2 #}
+{# Template for the managed systemd service unit in `monitoring_storage_health`. #}
+[Unit]
+Description=Build managed storage health JSON
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User={{ monitoring_storage_health_service_user }}
+Group={{ monitoring_storage_health_service_group }}
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart={{ monitoring_storage_health_script_path }}
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

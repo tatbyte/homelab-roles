@@ -1,0 +1,14 @@
+---
+# examples/playbooks/monitoring_status_now.yml
+# Dedicated validation-only playbook for the shared `monitoring_status_now`
+# role. Targets the existing `monitoring` inventory group and forces the
+# managed `monitoring-status.service` oneshot unit to run immediately without
+# changing the recurring timer configuration.
+
+- name: Run monitoring_status service immediately for validation
+  hosts: monitoring
+  serial: 1
+  become: true
+  roles:
+    - role: monitoring_status_now
+      when: monitoring_include_status | default(false)

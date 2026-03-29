@@ -1,0 +1,71 @@
+---
+# roles/monitoring_storage_health/tasks/validate.yml
+# Validate phase tasks for the `monitoring_storage_health` role.
+# Verifies the rendered files and timer state after configuration.
+
+- name: "Validate | Stat monitoring_storage_health managed paths"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ monitoring_storage_health_script_path }}"
+    - "/etc/systemd/system/{{ monitoring_storage_health_service_unit }}"
+    - "/etc/systemd/system/{{ monitoring_storage_health_timer_unit }}"
+    - "{{ monitoring_storage_health_status_dir }}"
+  register: monitoring_storage_health_managed_paths
+  when: monitoring_storage_health_enabled
+
+- name: "Validate | Stat monitoring_storage_health timer enablement symlink"
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/timers.target.wants/{{ monitoring_storage_health_timer_unit }}"
+  register: monitoring_storage_health_timer_enabled_symlink
+  when: monitoring_storage_health_enabled
+
+- name: "Validate | Read monitoring_storage_health timer systemd state" # noqa: command-instead-of-module
+  ansible.builtin.command:
+    argv:
+      - systemctl
+      - show
+      - "{{ monitoring_storage_health_timer_unit }}"
+      - --property=LoadState
+      - --property=ActiveState
+      - --property=UnitFileState
+      - --property=SubState
+  register: monitoring_storage_health_timer_state
+  changed_when: false
+  when: monitoring_storage_health_enabled
+
+- name: "Validate | Assert monitoring_storage_health final state when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_storage_health_managed_paths.results | map(attribute='stat.exists') | min
+      - monitoring_storage_health_timer_enabled_symlink.stat.exists
+      - monitoring_storage_health_timer_state.rc == 0
+      - "'LoadState=loaded' in monitoring_storage_health_timer_state.stdout_lines"
+      - "'ActiveState=active' in monitoring_storage_health_timer_state.stdout_lines"
+      - "'UnitFileState=enabled' in monitoring_storage_health_timer_state.stdout_lines"
+    fail_msg: >-
+      monitoring_storage_health is enabled, but the expected files or timer
+      state were not validated successfully
+    quiet: true
+  when: monitoring_storage_health_enabled
+
+- name: "Validate | Stat monitoring_storage_health managed files when disabled"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ monitoring_storage_health_script_path }}"
+    - "{{ monitoring_storage_health_status_path }}"
+    - "/etc/systemd/system/{{ monitoring_storage_health_service_unit }}"
+    - "/etc/systemd/system/{{ monitoring_storage_health_timer_unit }}"
+  register: monitoring_storage_health_removed_paths
+  when: not monitoring_storage_health_enabled
+
+- name: "Validate | Assert monitoring_storage_health cleanup when disabled"
+  ansible.builtin.assert:
+    that:
+      - not (monitoring_storage_health_removed_paths.results | map(attribute='stat.exists') | max)
+    fail_msg: >-
+      monitoring_storage_health is disabled, but one or more managed files
+      still exist on the host
+    quiet: true
+  when: not monitoring_storage_health_enabled

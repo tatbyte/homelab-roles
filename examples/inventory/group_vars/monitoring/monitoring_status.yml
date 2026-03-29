@@ -1,0 +1,41 @@
+---
+# examples/inventory/group_vars/monitoring/monitoring_status.yml
+# Shared host-status monitoring variables for the example lab.
+# Defines the rendered status path, backup JSON input, Docker-check mode, and
+# timer schedule used by the `monitoring_status` role on hosts in the
+# `monitoring` group after that group opts into the aggregate monitoring layer.
+
+# Keep the monitoring status timer enabled so the example lab exercises the
+# recurring JSON contract alongside the backup layer.
+monitoring_status_enabled: true
+
+# Keep the unified status output path explicit in inventory so collection and
+# validation consumers can inspect or override it without opening the shared
+# role defaults.
+monitoring_status_status_dir: /var/lib/monitor
+monitoring_status_status_path: "{{ monitoring_status_status_dir }}/status.json"
+
+# Read the backup status JSON produced by `backup_restic` and treat it as a
+# required source on any host that has the backup layer enabled.
+monitoring_status_backup_status_path: "{{ backup_restic_status_path }}"
+monitoring_status_backup_required: "{{ backup_include_restic | default(false) }}"
+monitoring_status_backup_warn_after_hours: 26
+monitoring_status_backup_fail_after_hours: 50
+
+# Keep filesystem-usage checks active here while leaving dedicated physical
+# storage probing to the separate `monitoring_storage_health` role.
+monitoring_status_storage_additional_mounts: []
+monitoring_status_storage_type: none
+
+# All current example monitoring hosts also run Docker, so require the daemon
+# to exist and stay active here.
+monitoring_status_docker_mode: required
+
+# Keep network reachability optional by default. Add hostnames or IPs here
+# when the example should validate them explicitly.
+monitoring_status_network_targets: []
+
+# Keep the example timer deterministic enough for inspection while still using
+# the same systemd timer path as production.
+monitoring_status_timer_on_calendar: "*-*-* *:30:00"
+monitoring_status_timer_randomized_delay_sec: 0

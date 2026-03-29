@@ -1,0 +1,39 @@
+---
+# roles/monitoring_storage_health/defaults/main.yml
+# Default variables for the `monitoring_storage_health` role.
+# Defines the recurring per-device storage-health script, JSON output, and
+# systemd timer defaults used by the monitoring layer.
+
+monitoring_storage_health_enabled: true
+
+monitoring_storage_health_packages:
+  - jq
+  - smartmontools
+  - nvme-cli
+
+monitoring_storage_health_unit_name: monitoring-storage-health
+monitoring_storage_health_service_unit: "{{ monitoring_storage_health_unit_name }}.service"
+monitoring_storage_health_timer_unit: "{{ monitoring_storage_health_unit_name }}.timer"
+monitoring_storage_health_script_path: "/usr/local/bin/{{ monitoring_storage_health_unit_name }}.sh"
+monitoring_storage_health_state_dir: "/usr/local/lib/{{ monitoring_storage_health_unit_name }}"
+monitoring_storage_health_status_dir: /var/lib/monitor
+monitoring_storage_health_status_path: "{{ monitoring_storage_health_status_dir }}/storage-health.json"
+
+monitoring_storage_health_service_user: root
+monitoring_storage_health_service_group: root
+monitoring_storage_health_script_owner: root
+monitoring_storage_health_script_group: root
+monitoring_storage_health_script_mode: "0750"
+monitoring_storage_health_status_dir_mode: "0755"
+
+monitoring_storage_health_host: "{{ ansible_hostname | default(inventory_hostname) }}"
+monitoring_storage_health_job_name: monitor_storage_health
+monitoring_storage_health_json_schema: monitor_storage_health_v1
+
+monitoring_storage_health_devices: []
+monitoring_storage_health_sd_error_lookback: "24 hours"
+
+monitoring_storage_health_timer_on_calendar: "*-*-* 05:40:00"
+monitoring_storage_health_timer_randomized_delay_sec: 0
+monitoring_storage_health_timer_accuracy_sec: 1m
+monitoring_storage_health_timer_persistent: true

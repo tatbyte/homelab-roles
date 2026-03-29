@@ -12,14 +12,15 @@ Values are intentionally simple and should be replaced before production use.
 
 - `inventory/group_vars/all/`: shared switches, non-base aggregate toggles, backup opt-in, and secret-source settings.
 - `inventory/group_vars/base/`: `base_<role>_enabled` values plus base-role inputs.
-- `inventory/group_vars/bootstrap/`, `user/`, `docker/`, `backup/`: layer-specific role inputs.
-- `inventory/host_vars/lab/vars.yml`: host-level opt-in for optional `user_*` and `docker_*` child roles.
+- `inventory/group_vars/bootstrap/`, `user/`, `docker/`, `backup/`, `monitoring/`: layer-specific role inputs.
+- `inventory/host_vars/lab/vars.yml`: host-level opt-in for optional `user_*`, `docker_*`, and `monitoring_*` child roles.
 - `playbooks/bootstrap.yml`: bootstrap phase.
 - `playbooks/base.yml`: non-maintenance base phase.
 - `playbooks/base_maintenance.yml`: package maintenance with `serial: 1`.
-- `playbooks/user.yml`, `docker.yml`, `backup.yml`: recurring layer playbooks.
+- `playbooks/user.yml`, `docker.yml`, `backup.yml`, `monitoring.yml`: recurring layer playbooks.
 - `playbooks/backup_restic_now.yml`: validation-only backup helper.
-- `playbooks/site.yml`: post-bootstrap stack (`base`, `user`, `docker`, `backup`).
+- `playbooks/monitoring_status_now.yml`: validation-only monitoring helper.
+- `playbooks/site.yml`: post-bootstrap stack (`base`, `user`, `docker`, `backup`, `monitoring`).
 
 For the stable layout rules behind this split, see
 [docs/01-examples.md](../docs/01-examples.md).
@@ -46,7 +47,9 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/base.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/base_maintenance.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/docker.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/backup.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/monitoring.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/backup_restic_now.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/monitoring_status_now.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/user.yml
 ```
 
@@ -56,7 +59,9 @@ From the `examples/` directory:
 ansible-playbook playbooks/bootstrap.yml
 ansible-playbook playbooks/site.yml
 ansible-playbook playbooks/backup.yml
+ansible-playbook playbooks/monitoring.yml
 ansible-playbook playbooks/backup_restic_now.yml
+ansible-playbook playbooks/monitoring_status_now.yml
 ```
 
 Optional integration tests:
@@ -74,6 +79,8 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/<t
 - `backup.yml` now runs the aggregate `backup` role, which applies the
   recurring Restic setup, initializes a missing repository, and manages the
   separate prune/check timers in the same steady-state path.
+- `monitoring.yml` now runs the aggregate `monitoring` role, which currently
+  applies host-local status generation through `monitoring_status`.
 - The example keeps live secrets out of the repo and derives public Docker hostnames from the inventory `alias` plus `vault_docker_public_domain_suffix`.
 - Keep role-specific behavior details in the relevant role README so this file stays operational and short.
 

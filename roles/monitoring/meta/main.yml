@@ -1,8 +1,7 @@
 ---
 # roles/monitoring/meta/main.yml
 # Role metadata for `monitoring`.
-# Declares dependency roles that provide the monitoring-related configuration.
+# Leaves dependencies empty because aggregate monitoring-role ordering is
+# defined in `roles/monitoring/tasks/main.yml`.
 
-dependencies:
-  - role: monitoring_authorized_key
-    tags: [monitoring, monitoring_authorized_key]
+dependencies: []

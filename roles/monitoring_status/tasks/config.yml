@@ -1,0 +1,98 @@
+---
+# roles/monitoring_status/tasks/config.yml
+# Config phase tasks for the `monitoring_status` role.
+# Renders the managed monitoring runner, check scripts, and systemd timer and
+# service units, or removes them when the role is disabled.
+
+- name: "Config | Ensure monitoring_status directories exist"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - path: "{{ monitoring_status_state_dir }}"
+      mode: "0755"
+    - path: "{{ monitoring_status_checks_path }}"
+      mode: "0755"
+    - path: "{{ monitoring_status_status_dir }}"
+      mode: "{{ monitoring_status_status_dir_mode }}"
+  when: monitoring_status_enabled
+
+- name: "Config | Copy monitoring_status check scripts"
+  ansible.builtin.copy:
+    src: "checks/{{ item }}"
+    dest: "{{ monitoring_status_checks_path }}/{{ item }}"
+    owner: "{{ monitoring_status_checks_owner }}"
+    group: "{{ monitoring_status_checks_group }}"
+    mode: "{{ monitoring_status_checks_mode }}"
+  loop: "{{ monitoring_status_check_script_filenames }}"
+  when: monitoring_status_enabled
+
+- name: "Config | Render monitoring_status script"
+  ansible.builtin.template:
+    src: monitoring-status.sh.j2
+    dest: "{{ monitoring_status_script_path }}"
+    owner: "{{ monitoring_status_script_owner }}"
+    group: "{{ monitoring_status_script_group }}"
+    mode: "{{ monitoring_status_script_mode }}"
+  when: monitoring_status_enabled
+
+- name: "Config | Render monitoring_status systemd units"
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "/etc/systemd/system/{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - src: monitoring-status.service.j2
+      dest: "{{ monitoring_status_service_unit }}"
+    - src: monitoring-status.timer.j2
+      dest: "{{ monitoring_status_timer_unit }}"
+  when: monitoring_status_enabled
+
+- name: "Config | Reload systemd after monitoring_status unit updates"
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when: monitoring_status_enabled
+
+- name: "Config | Ensure monitoring_status timer is enabled and started"
+  ansible.builtin.systemd_service:
+    name: "{{ monitoring_status_timer_unit }}"
+    enabled: true
+    state: started
+  when: monitoring_status_enabled
+
+- name: "Config | Stop and disable monitoring_status timer when disabled"
+  ansible.builtin.systemd_service:
+    name: "{{ monitoring_status_timer_unit }}"
+    enabled: false
+    state: stopped
+  failed_when: false
+  when: not monitoring_status_enabled
+
+- name: "Config | Stop monitoring_status service when disabled"
+  ansible.builtin.systemd_service:
+    name: "{{ monitoring_status_service_unit }}"
+    state: stopped
+  failed_when: false
+  when: not monitoring_status_enabled
+
+- name: "Config | Remove monitoring_status managed files when disabled"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ monitoring_status_checks_path }}"
+    - "{{ monitoring_status_script_path }}"
+    - "{{ monitoring_status_status_path }}"
+    - "/etc/systemd/system/{{ monitoring_status_service_unit }}"
+    - "/etc/systemd/system/{{ monitoring_status_timer_unit }}"
+  when: not monitoring_status_enabled
+
+- name: "Config | Reload systemd after monitoring_status cleanup"
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when: not monitoring_status_enabled

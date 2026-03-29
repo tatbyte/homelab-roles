@@ -1,0 +1,14 @@
+{# roles/monitoring_storage_health/templates/monitoring-storage-health.timer.j2 #}
+{# Template for the managed systemd timer unit in `monitoring_storage_health`. #}
+[Unit]
+Description=Schedule managed storage health refresh
+
+[Timer]
+OnCalendar={{ monitoring_storage_health_timer_on_calendar }}
+RandomizedDelaySec={{ monitoring_storage_health_timer_randomized_delay_sec }}
+AccuracySec={{ monitoring_storage_health_timer_accuracy_sec }}
+Persistent={{ monitoring_storage_health_timer_persistent | ternary('true', 'false') }}
+Unit={{ monitoring_storage_health_service_unit }}
+
+[Install]
+WantedBy=timers.target

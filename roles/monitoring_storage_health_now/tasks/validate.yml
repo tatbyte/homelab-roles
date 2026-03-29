@@ -1,0 +1,132 @@
+---
+# roles/monitoring_storage_health_now/tasks/validate.yml
+# Validate phase tasks for the `monitoring_storage_health_now` role.
+# Starts the managed oneshot storage-health service immediately, reads the
+# resulting JSON status file, prints a short summary, and fails when the run
+# result is not acceptable.
+
+- name: "Validate | Stat monitoring_storage_health service unit"
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/{{ monitoring_storage_health_now_service_unit }}"
+  register: monitoring_storage_health_now_service_unit_stat
+  when: monitoring_storage_health_now_enabled
+
+- name: "Validate | Stat monitoring_storage_health script path"
+  ansible.builtin.stat:
+    path: "{{ monitoring_storage_health_now_script_path }}"
+  register: monitoring_storage_health_now_script_stat
+  when: monitoring_storage_health_now_enabled
+
+- name: "Validate | Assert monitoring_storage_health artifacts exist"
+  ansible.builtin.assert:
+    that:
+      - monitoring_storage_health_now_service_unit_stat.stat.exists
+      - monitoring_storage_health_now_script_stat.stat.exists
+    fail_msg: >-
+      monitoring_storage_health_now expects the recurring
+      monitoring_storage_health role to be applied first so the managed service
+      unit and script already exist
+    quiet: true
+  when: monitoring_storage_health_now_enabled
+
+- name: "Validate | Stat monitoring_storage_health file before run"
+  ansible.builtin.stat:
+    path: "{{ monitoring_storage_health_now_status_path }}"
+    checksum_algorithm: sha1
+  register: monitoring_storage_health_now_status_file_before
+  when: monitoring_storage_health_now_enabled
+
+- name: "Validate | Start monitoring_storage_health oneshot service now"
+  ansible.builtin.systemd_service:
+    name: "{{ monitoring_storage_health_now_service_unit }}"
+    state: started
+  register: monitoring_storage_health_now_service_start
+  failed_when: false
+  when: monitoring_storage_health_now_enabled
+
+- name: "Validate | Wait for monitoring_storage_health file"
+  ansible.builtin.stat:
+    path: "{{ monitoring_storage_health_now_status_path }}"
+    checksum_algorithm: sha1
+  register: monitoring_storage_health_now_status_file
+  retries: 10
+  delay: 1
+  until: >-
+    monitoring_storage_health_now_status_file.stat.exists
+    and (
+      not (monitoring_storage_health_now_status_file_before.stat.exists | default(false))
+      or (monitoring_storage_health_now_status_file.stat.checksum | default(''))
+         != (monitoring_storage_health_now_status_file_before.stat.checksum | default(''))
+      or (monitoring_storage_health_now_status_file.stat.mtime | default(0))
+         > (monitoring_storage_health_now_status_file_before.stat.mtime | default(0))
+    )
+  failed_when: false
+  when: monitoring_storage_health_now_enabled
+
+- name: "Validate | Derive monitoring_storage_health freshness"
+  ansible.builtin.set_fact:
+    monitoring_storage_health_now_status_is_fresh: >-
+      {{
+        (monitoring_storage_health_now_status_file.stat.exists | default(false))
+        and (
+          not (monitoring_storage_health_now_status_file_before.stat.exists | default(false))
+          or (monitoring_storage_health_now_status_file.stat.checksum | default(''))
+             != (monitoring_storage_health_now_status_file_before.stat.checksum | default(''))
+          or (monitoring_storage_health_now_status_file.stat.mtime | default(0))
+             > (monitoring_storage_health_now_status_file_before.stat.mtime | default(0))
+        )
+      }}
+  changed_when: false
+  when: monitoring_storage_health_now_enabled
+
+- name: "Validate | Assert monitoring_storage_health file was refreshed"
+  ansible.builtin.assert:
+    that:
+      - monitoring_storage_health_now_status_is_fresh
+    fail_msg: >-
+      monitoring_storage_health_now did not observe a freshly updated status
+      file for the current run.
+      systemd_msg={{ monitoring_storage_health_now_service_start.msg | default('') }}
+      previous_exists={{ monitoring_storage_health_now_status_file_before.stat.exists | default(false) }}
+      current_exists={{ monitoring_storage_health_now_status_file.stat.exists | default(false) }}
+      previous_mtime={{ monitoring_storage_health_now_status_file_before.stat.mtime | default('n/a') }}
+      current_mtime={{ monitoring_storage_health_now_status_file.stat.mtime | default('n/a') }}
+      previous_checksum={{ monitoring_storage_health_now_status_file_before.stat.checksum | default('n/a') }}
+      current_checksum={{ monitoring_storage_health_now_status_file.stat.checksum | default('n/a') }}
+    quiet: true
+  when: monitoring_storage_health_now_enabled
+
+- name: "Validate | Read monitoring_storage_health JSON"
+  ansible.builtin.slurp:
+    src: "{{ monitoring_storage_health_now_status_path }}"
+  register: monitoring_storage_health_now_status_slurp
+  when: monitoring_storage_health_now_enabled
+
+- name: "Validate | Parse monitoring_storage_health JSON"
+  ansible.builtin.set_fact:
+    monitoring_storage_health_now_status: "{{ monitoring_storage_health_now_status_slurp.content | b64decode | from_json }}"
+  changed_when: false
+  when: monitoring_storage_health_now_enabled
+
+- name: "Validate | Print monitoring_storage_health summary"
+  ansible.builtin.debug:
+    msg: >-
+      [monitoring_storage_health_now] host={{ inventory_hostname }}
+      | status={{ monitoring_storage_health_now_status.status | default('unknown') }}
+      | timestamp={{ monitoring_storage_health_now_status.timestamp | default('n/a') }}
+      | device_count={{ monitoring_storage_health_now_status.details.device_count | default('n/a') }}
+      | failing={{ monitoring_storage_health_now_status.details.failing_device_count | default('n/a') }}
+      | warnings={{ monitoring_storage_health_now_status.details.warning_device_count | default('n/a') }}
+  when: monitoring_storage_health_now_enabled
+
+- name: "Validate | Assert monitoring_storage_health run result is acceptable"
+  ansible.builtin.assert:
+    that:
+      - not (monitoring_storage_health_now_service_start.failed | default(false))
+      - (monitoring_storage_health_now_status.status | default('')) in monitoring_storage_health_now_allowed_statuses
+    fail_msg: >-
+      monitoring_storage_health_now run failed.
+      systemd_msg={{ monitoring_storage_health_now_service_start.msg | default('') }}
+      status={{ monitoring_storage_health_now_status.status | default('unknown') }}
+    quiet: true
+  when: monitoring_storage_health_now_enabled

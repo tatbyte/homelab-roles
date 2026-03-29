@@ -1,0 +1,10 @@
+---
+# roles/monitoring/defaults/main.yml
+# Default variables for the `monitoring` role.
+# Defines optional aggregate-role toggles that extend the monitoring layer
+# without changing existing consumers by default.
+
+monitoring_include_authorized_key: false
+monitoring_include_status: false
+monitoring_include_storage_health: false
+monitoring_include_collect: false

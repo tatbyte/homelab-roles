@@ -1,0 +1,33 @@
+---
+# examples/inventory/group_vars/monitoring/monitoring.yml
+# Monitoring-layer toggle variables for hosts in the dedicated example
+# `monitoring` inventory group.
+# Keeps the aggregate monitoring layer disabled by default in `group_vars/all`,
+# then enables the host-status monitor for the example monitoring hosts while
+# leaving host_vars free to override the toggle later.
+
+# The example monitoring group should exercise the recurring host-status
+# SSH authorized-key helper by default so remote collection stays inside the
+# monitoring layer. A local-only example host can still opt out in host vars.
+monitoring_include_authorized_key: true
+
+# The example monitoring group should exercise the recurring host-status
+# monitor by default. A specific example host can still opt out with
+# `monitoring_include_status: false` in host vars.
+monitoring_include_status: true
+
+# The example monitoring group should also exercise the dedicated storage
+# health role by default. A specific host can still opt out in host vars.
+monitoring_include_storage_health: true
+
+# Keep the collector disabled by default at the group level so only explicit
+# collector hosts opt into it through host vars.
+monitoring_include_collect: false
+
+# Keep the web publisher disabled by default at the group level so only
+# explicit collector hosts opt into it through host vars.
+monitoring_include_web: false
+
+# Keep notifications disabled by default at the group level so only explicit
+# collector hosts opt into them through host vars.
+monitoring_include_notify: false
