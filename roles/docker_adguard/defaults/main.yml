@@ -42,6 +42,7 @@ docker_adguard_service_user: srv_adguard
 docker_adguard_service_uid: 1160
 docker_adguard_access_group: access_adguard
 docker_adguard_access_gid: 1160
+docker_adguard_service_user_comment: "AdGuard service account managed by Ansible"
 docker_adguard_service_user_shell: /usr/sbin/nologin
 docker_adguard_manage_access_group_memberships: true
 docker_adguard_access_group_members: >-

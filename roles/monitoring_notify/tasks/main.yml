@@ -1,0 +1,18 @@
+---
+# roles/monitoring_notify/tasks/main.yml
+# Task entrypoint for the `monitoring_notify` role.
+
+- name: "Discover | Reuse existing monitoring_notify deployment settings when requested"
+  ansible.builtin.import_tasks: discover.yml
+
+- name: "Assert | Validate monitoring_notify variables"
+  ansible.builtin.import_tasks: assert.yml
+
+- name: "Install | Ensure monitoring_notify packages are installed"
+  ansible.builtin.import_tasks: install.yml
+
+- name: "Config | Render and manage monitoring_notify artifacts"
+  ansible.builtin.import_tasks: config.yml
+
+- name: "Validate | Assert monitoring_notify final state"
+  ansible.builtin.import_tasks: validate.yml

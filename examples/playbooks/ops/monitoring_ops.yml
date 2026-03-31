@@ -1,0 +1,21 @@
+---
+# examples/playbooks/ops/monitoring_ops.yml
+# Aggregate operator entrypoint for monitoring-only example manual-run
+# playbooks. Imports the available monitoring helper playbooks so managed
+# monitoring oneshot units can be triggered together outside the recurring
+# layer.
+
+- name: Include monitoring_status_now playbook
+  ansible.builtin.import_playbook: monitoring_status_now.yml
+
+- name: Include monitoring_storage_health_now playbook
+  ansible.builtin.import_playbook: monitoring_storage_health_now.yml
+
+- name: Include monitoring_docker_tag_now playbook
+  ansible.builtin.import_playbook: monitoring_docker_tag_now.yml
+
+- name: Include monitoring_collect_now playbook
+  ansible.builtin.import_playbook: monitoring_collect_now.yml
+
+- name: Include monitoring_notify_now playbook
+  ansible.builtin.import_playbook: monitoring_notify_now.yml

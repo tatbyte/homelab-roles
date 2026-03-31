@@ -1,0 +1,15 @@
+{# roles/monitoring_notify/templates/monitor-notify.timer.j2 #}
+# Managed by Ansible: monitoring_notify
+# Source: roles/monitoring_notify/templates/monitor-notify.timer.j2
+[Unit]
+Description=Schedule deduplicated monitoring notifications
+
+[Timer]
+OnCalendar={{ monitoring_notify_timer_on_calendar }}
+AccuracySec={{ monitoring_notify_timer_accuracy_sec }}
+RandomizedDelaySec={{ monitoring_notify_timer_randomized_delay_sec }}
+Persistent={{ 'true' if monitoring_notify_timer_persistent else 'false' }}
+Unit={{ monitoring_notify_service_unit }}
+
+[Install]
+WantedBy=timers.target

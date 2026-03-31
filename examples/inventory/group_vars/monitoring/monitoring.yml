@@ -20,6 +20,10 @@ monitoring_include_status: true
 # health role by default. A specific host can still opt out in host vars.
 monitoring_include_storage_health: true
 
+# The example monitoring group should also exercise the Docker image-tag
+# monitor by default so the dashboard shows container update guidance.
+monitoring_include_docker_tag: true
+
 # Keep the collector disabled by default at the group level so only explicit
 # collector hosts opt into it through host vars.
 monitoring_include_collect: false

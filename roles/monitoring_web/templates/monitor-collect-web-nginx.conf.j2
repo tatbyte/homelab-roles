@@ -1,0 +1,23 @@
+{# roles/monitoring_web/templates/monitor-collect-web-nginx.conf.j2 #}
+server {
+  listen {{ monitoring_web_container_port }};
+  server_name _;
+
+  root /usr/share/nginx/html;
+  index index.html;
+
+  location = /index.json {
+    add_header Cache-Control "no-store" always;
+    try_files $uri =404;
+  }
+
+  location ~* \.json$ {
+    add_header Cache-Control "no-store" always;
+    try_files $uri =404;
+  }
+
+  location / {
+    add_header Cache-Control "no-store" always;
+    try_files $uri $uri/ /index.html;
+  }
+}

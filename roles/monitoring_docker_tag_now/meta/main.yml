@@ -1,0 +1,6 @@
+---
+# roles/monitoring_docker_tag_now/meta/main.yml
+# Role metadata for `monitoring_docker_tag_now`.
+# `monitoring_docker_tag` should already have been applied.
+
+dependencies: []

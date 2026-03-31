@@ -1,0 +1,149 @@
+---
+# roles/monitoring_notify_now/tasks/validate.yml
+# Starts the managed notification service immediately, reads the latest status,
+# prints a short summary, and fails when the run result is not acceptable.
+
+- name: "Validate | Stat monitoring_notify service unit"
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/{{ monitoring_notify_now_service_unit }}"
+  register: monitoring_notify_now_service_unit_stat
+  when: monitoring_notify_now_enabled
+
+- name: "Validate | Stat monitoring_notify script path"
+  ansible.builtin.stat:
+    path: "{{ monitoring_notify_now_script_path }}"
+  register: monitoring_notify_now_script_stat
+  when: monitoring_notify_now_enabled
+
+- name: "Validate | Assert monitoring_notify artifacts exist"
+  ansible.builtin.assert:
+    that:
+      - monitoring_notify_now_service_unit_stat.stat.exists
+      - monitoring_notify_now_script_stat.stat.exists
+    fail_msg: >-
+      monitoring_notify_now expects the recurring monitoring_notify role to be
+      applied first so the managed service unit and script already exist
+    quiet: true
+  when: monitoring_notify_now_enabled
+
+- name: "Validate | Stat monitoring_notify status before run"
+  ansible.builtin.stat:
+    path: "{{ monitoring_notify_now_status_path }}"
+    checksum_algorithm: sha1
+  register: monitoring_notify_now_status_before
+  when: monitoring_notify_now_enabled
+
+- name: "Validate | Start monitoring_notify oneshot service now"
+  ansible.builtin.systemd_service:
+    name: "{{ monitoring_notify_now_service_unit }}"
+    state: started
+  register: monitoring_notify_now_service_start
+  failed_when: false
+  when:
+    - monitoring_notify_now_enabled
+    - not monitoring_notify_now_send_test_alert
+
+- name: "Validate | Run monitoring_notify script directly with test-alert override"
+  ansible.builtin.command:
+    argv:
+      - "{{ monitoring_notify_now_script_path }}"
+  environment:
+    MONITOR_NOTIFY_TEST_ALERT: "1"
+    MONITOR_NOTIFY_INCLUDE_DOCKER_TAG_INFO: >-
+      {{
+        '1' if (monitoring_notify_now_include_docker_tag_info | bool) else '0'
+      }}
+  register: monitoring_notify_now_service_start
+  changed_when: false
+  failed_when: false
+  when:
+    - monitoring_notify_now_enabled
+    - monitoring_notify_now_send_test_alert
+
+- name: "Validate | Wait for monitoring_notify status file"
+  ansible.builtin.stat:
+    path: "{{ monitoring_notify_now_status_path }}"
+    checksum_algorithm: sha1
+  register: monitoring_notify_now_status_file
+  retries: 10
+  delay: 1
+  until: >-
+    monitoring_notify_now_status_file.stat.exists
+    and (
+      not (monitoring_notify_now_status_before.stat.exists | default(false))
+      or (monitoring_notify_now_status_file.stat.checksum | default(''))
+         != (monitoring_notify_now_status_before.stat.checksum | default(''))
+      or (monitoring_notify_now_status_file.stat.mtime | default(0))
+         > (monitoring_notify_now_status_before.stat.mtime | default(0))
+    )
+  failed_when: false
+  when: monitoring_notify_now_enabled
+
+- name: "Validate | Derive monitoring_notify freshness"
+  ansible.builtin.set_fact:
+    monitoring_notify_now_status_is_fresh: >-
+      {{
+        (monitoring_notify_now_status_file.stat.exists | default(false))
+        and (
+          not (monitoring_notify_now_status_before.stat.exists | default(false))
+          or (monitoring_notify_now_status_file.stat.checksum | default(''))
+             != (monitoring_notify_now_status_before.stat.checksum | default(''))
+          or (monitoring_notify_now_status_file.stat.mtime | default(0))
+             > (monitoring_notify_now_status_before.stat.mtime | default(0))
+        )
+      }}
+  changed_when: false
+  when: monitoring_notify_now_enabled
+
+- name: "Validate | Assert monitoring_notify status was refreshed"
+  ansible.builtin.assert:
+    that:
+      - monitoring_notify_now_status_is_fresh
+    fail_msg: >-
+      monitoring_notify_now did not observe a freshly updated status file for the
+      current run.
+      systemd_msg={{ monitoring_notify_now_service_start.msg | default('') }}
+      previous_exists={{ monitoring_notify_now_status_before.stat.exists | default(false) }}
+      current_exists={{ monitoring_notify_now_status_file.stat.exists | default(false) }}
+    quiet: true
+  when: monitoring_notify_now_enabled
+
+- name: "Validate | Read monitoring_notify status JSON"
+  ansible.builtin.slurp:
+    src: "{{ monitoring_notify_now_status_path }}"
+  register: monitoring_notify_now_status_slurp
+  when: monitoring_notify_now_enabled
+
+- name: "Validate | Parse monitoring_notify status JSON"
+  ansible.builtin.set_fact:
+    monitoring_notify_now_status: "{{ monitoring_notify_now_status_slurp.content | b64decode | from_json }}"
+  changed_when: false
+  when: monitoring_notify_now_enabled
+
+- name: "Validate | Print monitoring_notify summary"
+  ansible.builtin.debug:
+    msg: >-
+      [monitoring_notify_now] host={{ inventory_hostname }}
+      | status={{ monitoring_notify_now_status.status | default('unknown') }}
+      | timestamp={{ monitoring_notify_now_status.timestamp | default('n/a') }}
+      | fleet={{ monitoring_notify_now_status.details.fleet_status | default('unknown') }}
+      | ok={{ monitoring_notify_now_status.details.fleet_summary.ok | default('n/a') }}
+      | warn={{ monitoring_notify_now_status.details.fleet_summary.warn | default('n/a') }}
+      | fail={{ monitoring_notify_now_status.details.fleet_summary.fail | default('n/a') }}
+      | alerts={{ monitoring_notify_now_status.details.alert_count | default('n/a') }}
+      | infos={{ monitoring_notify_now_status.details.info_count | default('n/a') }}
+      | sent={{ monitoring_notify_now_status.details.notification_sent | default('n/a') }}
+      | reason={{ monitoring_notify_now_status.details.notification_reason | default('n/a') }}
+  when: monitoring_notify_now_enabled
+
+- name: "Validate | Assert monitoring_notify run result is acceptable"
+  ansible.builtin.assert:
+    that:
+      - not (monitoring_notify_now_service_start.failed | default(false))
+      - (monitoring_notify_now_status.status | default('')) in monitoring_notify_now_allowed_statuses
+    fail_msg: >-
+      monitoring_notify_now run failed.
+      systemd_msg={{ monitoring_notify_now_service_start.msg | default('') }}
+      status={{ monitoring_notify_now_status.status | default('unknown') }}
+    quiet: true
+  when: monitoring_notify_now_enabled

@@ -1,0 +1,78 @@
+---
+# roles/monitoring_docker_tag/tasks/assert.yml
+# Assert phase tasks for the `monitoring_docker_tag` role.
+# Validates the package, path, Docker, registry, backup, and timer inputs
+# before the managed monitoring script and units are rendered.
+
+- name: "Assert | Validate monitoring_docker_tag variables when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_docker_tag_enabled is boolean
+      - monitoring_docker_tag_packages is sequence
+      - monitoring_docker_tag_packages is not string
+      - monitoring_docker_tag_packages | length > 0
+      - monitoring_docker_tag_packages | select('string') | list | length == monitoring_docker_tag_packages | length
+      - monitoring_docker_tag_unit_name is string
+      - monitoring_docker_tag_unit_name | trim | length > 0
+      - monitoring_docker_tag_script_path is string
+      - monitoring_docker_tag_script_path.startswith('/')
+      - monitoring_docker_tag_state_dir is string
+      - monitoring_docker_tag_state_dir.startswith('/')
+      - monitoring_docker_tag_status_dir is string
+      - monitoring_docker_tag_status_dir.startswith('/')
+      - monitoring_docker_tag_status_path is string
+      - monitoring_docker_tag_status_path.startswith('/')
+      - monitoring_docker_tag_host is string
+      - monitoring_docker_tag_host | trim | length > 0
+      - monitoring_docker_tag_job_name is string
+      - monitoring_docker_tag_job_name | trim | length > 0
+      - monitoring_docker_tag_json_schema is string
+      - monitoring_docker_tag_json_schema | trim | length > 0
+      - monitoring_docker_tag_docker_command is string
+      - monitoring_docker_tag_docker_command | trim | length > 0
+      - monitoring_docker_tag_skopeo_command is string
+      - monitoring_docker_tag_skopeo_command | trim | length > 0
+      - monitoring_docker_tag_registry_auth_file is string
+      - monitoring_docker_tag_registry_auth_file.startswith('/')
+      - monitoring_docker_tag_registry_insecure is boolean
+      - monitoring_docker_tag_registry_timeout_seconds is number
+      - monitoring_docker_tag_registry_timeout_seconds >= 1
+      - monitoring_docker_tag_track_stopped_containers is boolean
+      - monitoring_docker_tag_skip_prerelease_tags is boolean
+      - monitoring_docker_tag_floating_tags is sequence
+      - monitoring_docker_tag_floating_tags is not string
+      - monitoring_docker_tag_floating_tags | select('string') | list | length == monitoring_docker_tag_floating_tags | length
+      - monitoring_docker_tag_backup_enabled is boolean or monitoring_docker_tag_backup_enabled is string
+      - monitoring_docker_tag_backup_enabled | string in ['True', 'False', 'true', 'false']
+      - monitoring_docker_tag_backup_stop_containers is sequence
+      - monitoring_docker_tag_backup_stop_containers is not string
+      - monitoring_docker_tag_backup_stop_containers | select('string') | list | length == monitoring_docker_tag_backup_stop_containers | length
+      - monitoring_docker_tag_backup_state_paths is sequence
+      - monitoring_docker_tag_backup_state_paths is not string
+      - monitoring_docker_tag_backup_state_paths | length > 0
+      - monitoring_docker_tag_backup_state_paths | select('string') | list | length == monitoring_docker_tag_backup_state_paths | length
+      - monitoring_docker_tag_timer_on_calendar is string
+      - monitoring_docker_tag_timer_on_calendar | trim | length > 0
+      - monitoring_docker_tag_timer_randomized_delay_sec is string or monitoring_docker_tag_timer_randomized_delay_sec is number
+      - >-
+        (
+          monitoring_docker_tag_timer_randomized_delay_sec is string
+          and monitoring_docker_tag_timer_randomized_delay_sec | trim | length > 0
+        )
+        or (monitoring_docker_tag_timer_randomized_delay_sec is number)
+      - monitoring_docker_tag_timer_accuracy_sec is string
+      - monitoring_docker_tag_timer_accuracy_sec | trim | length > 0
+      - monitoring_docker_tag_timer_persistent is boolean
+    fail_msg: >-
+      monitoring_docker_tag requires valid package, path, Docker, registry,
+      backup, and timer inputs when the role is enabled
+    quiet: true
+  when: monitoring_docker_tag_enabled
+
+- name: "Assert | Validate monitoring_docker_tag variables when disabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_docker_tag_enabled is boolean
+    fail_msg: "monitoring_docker_tag_enabled must be a boolean"
+    quiet: true
+  when: not monitoring_docker_tag_enabled

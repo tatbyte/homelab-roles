@@ -1,0 +1,15 @@
+---
+# roles/monitoring_web/tasks/main.yml
+# Task entrypoint for the `monitoring_web` role.
+
+- name: "Discover | Reuse existing monitoring_web deployment settings when requested"
+  ansible.builtin.import_tasks: discover.yml
+
+- name: "Assert | Validate monitoring_web variables"
+  ansible.builtin.import_tasks: assert.yml
+
+- name: "Config | Render and manage monitoring_web artifacts"
+  ansible.builtin.import_tasks: config.yml
+
+- name: "Validate | Assert monitoring_web final state"
+  ansible.builtin.import_tasks: validate.yml

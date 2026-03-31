@@ -1,0 +1,81 @@
+---
+# roles/monitoring_web/tasks/discover.yml
+# Discovery tasks for the `monitoring_web` role.
+# Allows an already-deployed dashboard to keep receiving updated site assets
+# even when the current inventory no longer carries the original host/auth
+# settings explicitly.
+
+- name: "Discover | Check for an existing monitoring_web Compose file"
+  ansible.builtin.stat:
+    path: "{{ monitoring_web_compose_file_path }}"
+  register: monitoring_web_existing_compose_file
+  changed_when: false
+  when: monitoring_web_manage_existing_install
+
+- name: "Discover | Read existing monitoring_web Compose file"
+  ansible.builtin.slurp:
+    src: "{{ monitoring_web_compose_file_path }}"
+  register: monitoring_web_existing_compose_slurp
+  when:
+    - monitoring_web_manage_existing_install
+    - monitoring_web_existing_compose_file.stat.exists
+
+- name: "Discover | Decode existing monitoring_web Compose text"
+  ansible.builtin.set_fact:
+    monitoring_web_existing_compose_text: "{{ monitoring_web_existing_compose_slurp.content | b64decode }}"
+  when:
+    - monitoring_web_manage_existing_install
+    - monitoring_web_existing_compose_file.stat.exists
+
+- name: "Discover | Parse existing monitoring_web Compose data"
+  ansible.builtin.set_fact:
+    monitoring_web_existing_compose_data: "{{ monitoring_web_existing_compose_text | from_yaml }}"
+    monitoring_web_existing_labels: |-
+      {{ ((monitoring_web_existing_compose_text | from_yaml)
+      .services[monitoring_web_compose_service_name].labels)
+      | default([], true) }}
+  when:
+    - monitoring_web_manage_existing_install
+    - monitoring_web_existing_compose_file.stat.exists
+
+- name: "Discover | Reuse existing monitoring_web host and auth settings when missing"
+  ansible.builtin.set_fact:
+    monitoring_web_discovered_host: |-
+      {{ monitoring_web_existing_labels |
+      join('\n') |
+      regex_findall('Host\\(`([^`]+)`\\)') |
+      first | default('') }}
+    monitoring_web_discovered_basic_auth_users: |-
+      {{ ((monitoring_web_existing_labels |
+      join('\n') |
+      regex_findall('basicauth\\.users=([^\\n]+)') |
+      first | default('')) |
+      split(',') | map('trim') |
+      map('replace', '$$', '$') |
+      reject('equalto', '') | list) }}
+  when:
+    - monitoring_web_manage_existing_install
+    - monitoring_web_existing_compose_file.stat.exists
+
+- name: "Discover | Derive effective monitoring_web settings"
+  ansible.builtin.set_fact:
+    monitoring_web_effective_host: |-
+      {{ monitoring_web_host
+      if (monitoring_web_host | trim | length) > 0
+      else (monitoring_web_discovered_host | default('')) }}
+    monitoring_web_effective_basic_auth_users: |-
+      {{ monitoring_web_basic_auth_users
+      if (monitoring_web_basic_auth_users | length) > 0
+      else (monitoring_web_discovered_basic_auth_users | default([])) }}
+    monitoring_web_effective_basic_auth_enabled: |-
+      {{ (monitoring_web_basic_auth_enabled or
+      ((monitoring_web_basic_auth_users | length) > 0) or
+      ((monitoring_web_discovered_basic_auth_users | default([]) | length) > 0))
+      | bool }}
+
+- name: "Discover | Default effective monitoring_web settings without reuse"
+  ansible.builtin.set_fact:
+    monitoring_web_effective_host: "{{ monitoring_web_host }}"
+    monitoring_web_effective_basic_auth_users: "{{ monitoring_web_basic_auth_users }}"
+    monitoring_web_effective_basic_auth_enabled: "{{ monitoring_web_basic_auth_enabled | bool }}"
+  when: not monitoring_web_manage_existing_install

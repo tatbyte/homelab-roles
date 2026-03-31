@@ -1,0 +1,119 @@
+---
+# roles/monitoring_web/tasks/assert.yml
+# Assert phase tasks for the `monitoring_web` role.
+
+- name: "Assert | Validate monitoring_web variables when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_web_enabled is boolean
+      - monitoring_web_compose_command is sequence
+      - monitoring_web_compose_command | length > 0
+      - monitoring_web_project_dir is string
+      - monitoring_web_project_dir.startswith('/')
+      - monitoring_web_compose_file_path is string
+      - monitoring_web_compose_file_path.startswith('/')
+      - monitoring_web_nginx_conf_path is string
+      - monitoring_web_nginx_conf_path.startswith('/')
+      - monitoring_web_publish_dir is string
+      - monitoring_web_publish_dir.startswith('/')
+      - monitoring_web_publish_hosts_dir is string
+      - monitoring_web_publish_hosts_dir.startswith('/')
+      - monitoring_web_publish_html_path is string
+      - monitoring_web_publish_html_path.startswith('/')
+      - monitoring_web_publish_index_path is string
+      - monitoring_web_publish_index_path.startswith('/')
+      - monitoring_web_manifest_path is string
+      - monitoring_web_manifest_path.startswith('/')
+      - monitoring_web_service_worker_path is string
+      - monitoring_web_service_worker_path.startswith('/')
+      - monitoring_web_icon_path is string
+      - monitoring_web_icon_path.startswith('/')
+      - monitoring_web_compose_project_name is string
+      - monitoring_web_compose_project_name | trim | length > 0
+      - monitoring_web_compose_service_name is string
+      - monitoring_web_compose_service_name | trim | length > 0
+      - monitoring_web_container_name is string
+      - monitoring_web_container_name | trim | length > 0
+      - monitoring_web_image is string
+      - monitoring_web_image | trim | length > 0
+      - monitoring_web_proxy_network_name is string
+      - monitoring_web_proxy_network_name | trim | length > 0
+      - monitoring_web_effective_host is string
+      - monitoring_web_effective_host | trim | length > 0
+      - monitoring_web_router_name is string
+      - monitoring_web_router_name | trim | length > 0
+      - monitoring_web_effective_basic_auth_enabled is boolean
+      - monitoring_web_effective_basic_auth_users is sequence
+      - monitoring_web_effective_basic_auth_users is not string
+      - monitoring_web_basic_auth_middleware is string
+      - monitoring_web_basic_auth_middleware | trim | length > 0
+      - monitoring_web_router_entrypoints is sequence
+      - monitoring_web_router_entrypoints | length > 0
+      - monitoring_web_tls_certresolver is string
+      - monitoring_web_tls_certresolver | trim | length > 0
+      - monitoring_web_container_port is number
+      - monitoring_web_container_port > 0
+      - monitoring_web_container_port < 65536
+      - monitoring_web_publish_dir_mode is string
+      - monitoring_web_publish_dir_mode | trim | length > 0
+      - monitoring_web_publish_file_mode is string
+      - monitoring_web_publish_file_mode | trim | length > 0
+      - monitoring_web_title is string
+      - monitoring_web_title | trim | length > 0
+      - monitoring_web_short_title is string
+      - monitoring_web_short_title | trim | length > 0
+      - monitoring_web_theme_color is string
+      - monitoring_web_theme_color | trim | length > 0
+      - monitoring_web_background_color is string
+      - monitoring_web_background_color | trim | length > 0
+      - >-
+        (
+          groups['monitoring'] | default([])
+          | map('extract', hostvars, 'monitoring_include_web')
+          | map('default', false)
+          | select('equalto', true)
+          | list
+          | length
+        ) <= 1
+    fail_msg: >-
+      monitoring_web requires valid Docker Compose, Traefik, and hostname values,
+      and at most one web-enabled collector host in the current inventory
+    quiet: true
+  when: monitoring_web_enabled
+
+- name: "Assert | Validate monitoring_web basic-auth users when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_web_effective_basic_auth_users | length > 0
+      - >-
+        (
+          monitoring_web_effective_basic_auth_users
+          | select('string')
+          | map('trim')
+          | reject('equalto', '')
+          | list
+          | length
+        ) == (monitoring_web_effective_basic_auth_users | length)
+      - >-
+        (
+          monitoring_web_effective_basic_auth_users
+          | map('trim')
+          | select('search', '^[^:]+:.+$')
+          | list
+          | length
+        ) == (monitoring_web_effective_basic_auth_users | length)
+    fail_msg: >-
+      monitoring_web basic auth requires one or more non-empty user:hash entries
+      when monitoring_web_basic_auth_enabled is true
+    quiet: true
+  when:
+    - monitoring_web_enabled
+    - monitoring_web_effective_basic_auth_enabled
+
+- name: "Assert | Validate monitoring_web variables when disabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_web_enabled is boolean
+    fail_msg: "monitoring_web_enabled must be a boolean"
+    quiet: true
+  when: not monitoring_web_enabled

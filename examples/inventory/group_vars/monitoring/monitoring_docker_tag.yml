@@ -1,0 +1,11 @@
+---
+# examples/inventory/group_vars/monitoring/monitoring_docker_tag.yml
+# Shared Docker tag monitoring variables for the example `monitoring` group.
+# Keeps the example Docker image-tag monitor on the same daily cadence used by
+# the production repo while still allowing host_vars to override later.
+
+monitoring_docker_tag_enabled: true
+monitoring_docker_tag_status_dir: /var/lib/monitor
+monitoring_docker_tag_status_path: "{{ monitoring_docker_tag_status_dir }}/docker-tag.json"
+monitoring_docker_tag_timer_on_calendar: "*-*-* 09:15:00"
+monitoring_docker_tag_timer_randomized_delay_sec: 0

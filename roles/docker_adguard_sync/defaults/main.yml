@@ -55,6 +55,11 @@ docker_adguard_sync_service_user: "{{ docker_adguard_service_user | default('srv
 docker_adguard_sync_service_uid: "{{ docker_adguard_service_uid | default(1160) }}"
 docker_adguard_sync_access_group: "{{ docker_adguard_access_group | default('access_adguard') }}"
 docker_adguard_sync_access_gid: "{{ docker_adguard_access_gid | default(1160) }}"
+docker_adguard_sync_service_user_comment: >-
+  {{
+    docker_adguard_service_user_comment
+    | default('AdGuard service account managed by Ansible')
+  }}
 docker_adguard_sync_container_user: "{{ docker_adguard_sync_service_uid }}:{{ docker_adguard_sync_access_gid }}"
 docker_adguard_sync_service_user_shell: >-
   {{

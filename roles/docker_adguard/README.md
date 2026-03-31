@@ -28,6 +28,7 @@ Traefik-connected proxy-network deployment, role-owned access identities, and
 | `docker_adguard_project_dir` | `/srv/adguard` | no | Directory that stores the managed Compose project files |
 | `docker_adguard_data_dir` | `/srv/adguard/data` | no | Directory that stores AdGuard persistent data for backup-friendly restores |
 | `docker_adguard_service_user` | `srv_adguard` | no | Role-owned service user that owns AdGuard data paths on the host |
+| `docker_adguard_service_user_comment` | `AdGuard service account managed by Ansible` | no | Comment/description enforced on the managed AdGuard service user |
 | `docker_adguard_access_group` | `access_adguard` | no | Role-owned feature access group used for AdGuard host access |
 | `docker_adguard_access_group_members` | de-duplicated `bootstrap_user` / `user_account_name` list with `admin` fallback | no | Existing admin users that should receive AdGuard host access when present |
 | `docker_adguard_proxy_network_name` | `docker_traefik_network_name` or `traefik_proxy` fallback | no | External Docker network name created by Traefik and joined by AdGuard |

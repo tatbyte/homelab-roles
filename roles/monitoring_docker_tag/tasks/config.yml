@@ -1,0 +1,85 @@
+---
+# roles/monitoring_docker_tag/tasks/config.yml
+# Config phase tasks for the `monitoring_docker_tag` role.
+# Renders the managed monitoring runner and systemd timer and service units, or
+# removes them when the role is disabled.
+
+- name: "Config | Ensure monitoring_docker_tag directories exist"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - path: "{{ monitoring_docker_tag_state_dir }}"
+      mode: "0755"
+    - path: "{{ monitoring_docker_tag_status_dir }}"
+      mode: "{{ monitoring_docker_tag_status_dir_mode }}"
+  when: monitoring_docker_tag_enabled
+
+- name: "Config | Render monitoring_docker_tag script"
+  ansible.builtin.template:
+    src: monitoring-docker-tag.py.j2
+    dest: "{{ monitoring_docker_tag_script_path }}"
+    owner: "{{ monitoring_docker_tag_script_owner }}"
+    group: "{{ monitoring_docker_tag_script_group }}"
+    mode: "{{ monitoring_docker_tag_script_mode }}"
+  when: monitoring_docker_tag_enabled
+
+- name: "Config | Render monitoring_docker_tag systemd units"
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "/etc/systemd/system/{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - src: monitoring-docker-tag.service.j2
+      dest: "{{ monitoring_docker_tag_service_unit }}"
+    - src: monitoring-docker-tag.timer.j2
+      dest: "{{ monitoring_docker_tag_timer_unit }}"
+  when: monitoring_docker_tag_enabled
+
+- name: "Config | Reload systemd after monitoring_docker_tag unit updates"
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when: monitoring_docker_tag_enabled
+
+- name: "Config | Ensure monitoring_docker_tag timer is enabled and started"
+  ansible.builtin.systemd_service:
+    name: "{{ monitoring_docker_tag_timer_unit }}"
+    enabled: true
+    state: started
+  when: monitoring_docker_tag_enabled
+
+- name: "Config | Stop and disable monitoring_docker_tag timer when disabled"
+  ansible.builtin.systemd_service:
+    name: "{{ monitoring_docker_tag_timer_unit }}"
+    enabled: false
+    state: stopped
+  failed_when: false
+  when: not monitoring_docker_tag_enabled
+
+- name: "Config | Stop monitoring_docker_tag service when disabled"
+  ansible.builtin.systemd_service:
+    name: "{{ monitoring_docker_tag_service_unit }}"
+    state: stopped
+  failed_when: false
+  when: not monitoring_docker_tag_enabled
+
+- name: "Config | Remove monitoring_docker_tag managed files when disabled"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ monitoring_docker_tag_script_path }}"
+    - "{{ monitoring_docker_tag_status_path }}"
+    - "/etc/systemd/system/{{ monitoring_docker_tag_service_unit }}"
+    - "/etc/systemd/system/{{ monitoring_docker_tag_timer_unit }}"
+  when: not monitoring_docker_tag_enabled
+
+- name: "Config | Reload systemd after monitoring_docker_tag cleanup"
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when: not monitoring_docker_tag_enabled

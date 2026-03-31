@@ -1,0 +1,108 @@
+---
+# roles/monitoring_collect/tasks/assert.yml
+# Assert phase tasks for the `monitoring_collect` role.
+
+- name: "Assert | Validate monitoring_collect variables when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_collect_enabled is boolean
+      - monitoring_collect_packages is sequence
+      - monitoring_collect_packages | length > 0
+      - monitoring_collect_sources is sequence
+      - monitoring_collect_sources | length > 0
+      - monitoring_collect_sources | select('mapping') | list | length == monitoring_collect_sources | length
+      - monitoring_collect_sources | map(attribute='name') | select('string') | list | length == monitoring_collect_sources | length
+      - monitoring_collect_sources | map(attribute='name') | map('length') | min > 0
+      - monitoring_collect_output_dir is string
+      - monitoring_collect_output_dir | length > 0
+      - monitoring_collect_output_dir.startswith('/')
+      - monitoring_collect_index_path is string
+      - monitoring_collect_index_path | length > 0
+      - monitoring_collect_index_path.startswith('/')
+      - monitoring_collect_ssh_manage_private_key is boolean
+      - monitoring_collect_ssh_private_key is string
+      - monitoring_collect_ssh_private_key_path is string
+      - monitoring_collect_ssh_private_key_path | length > 0
+      - monitoring_collect_ssh_private_key_path.startswith('/')
+      - monitoring_collect_ssh_identity_file is string
+      - monitoring_collect_ssh_known_hosts_path is string
+      - monitoring_collect_ssh_known_hosts_path | length > 0
+      - monitoring_collect_ssh_known_hosts_path.startswith('/')
+      - monitoring_collect_service_user is string
+      - monitoring_collect_service_user | length > 0
+      - monitoring_collect_service_group is string
+      - monitoring_collect_service_group | length > 0
+      - monitoring_collect_timer_on_calendar is string
+      - monitoring_collect_timer_on_calendar | length > 0
+      - monitoring_collect_timer_randomized_delay_sec is string or monitoring_collect_timer_randomized_delay_sec is number
+      - monitoring_collect_timer_accuracy_sec is string
+      - monitoring_collect_timer_accuracy_sec | length > 0
+      - monitoring_collect_timer_persistent is boolean
+      - monitoring_collect_public_json_enabled is boolean
+    fail_msg: >-
+      monitoring_collect requires valid source definitions, paths, and timer
+      values when enabled
+    quiet: true
+  when: monitoring_collect_enabled
+
+- name: "Assert | Validate managed monitoring_collect SSH private key when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_collect_ssh_private_key | trim | length > 0
+    fail_msg: >-
+      monitoring_collect_ssh_private_key must contain the OpenSSH private key
+      material when monitoring_collect_ssh_manage_private_key is enabled
+    quiet: true
+  when:
+    - monitoring_collect_enabled
+    - monitoring_collect_ssh_manage_private_key
+
+- name: "Assert | Validate monitoring_collect public JSON mirror variables when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_collect_public_json_dir is string
+      - monitoring_collect_public_json_dir.startswith('/')
+      - monitoring_collect_public_hosts_dir is string
+      - monitoring_collect_public_hosts_dir.startswith('/')
+      - monitoring_collect_public_index_path is string
+      - monitoring_collect_public_index_path.startswith('/')
+      - monitoring_collect_public_dir_mode is string
+      - monitoring_collect_public_dir_mode | trim | length > 0
+      - monitoring_collect_public_file_mode is string
+      - monitoring_collect_public_file_mode | trim | length > 0
+    fail_msg: >-
+      monitoring_collect public JSON mirroring requires valid publish paths and
+      file modes when monitoring_collect_public_json_enabled is true
+    quiet: true
+  when:
+    - monitoring_collect_enabled
+    - monitoring_collect_public_json_enabled
+
+- name: "Assert | Validate each monitoring_collect source entry when enabled"
+  ansible.builtin.assert:
+    that:
+      - item.name is string
+      - item.name | length > 0
+      - item.display_name is not defined or (item.display_name is string and item.display_name | length > 0)
+      - item.local is not defined or item.local is boolean
+      - (item.local | default(false)) or (item.ssh_host is defined and item.ssh_host is string and item.ssh_host | length > 0)
+      - item.ssh_user is not defined or item.ssh_user is string
+      - item.status_path is not defined or (item.status_path is string and item.status_path | length > 0)
+      - item.storage_health_path is not defined or (item.storage_health_path is string and item.storage_health_path | length > 0)
+      - item.backup_path is not defined or (item.backup_path is string and item.backup_path | length > 0)
+    fail_msg: >-
+      monitoring_collect source entries must define a non-empty name, optional
+      display text, and a reachable ssh_host for remote entries
+    quiet: true
+  loop: "{{ monitoring_collect_sources }}"
+  loop_control:
+    label: "{{ item.name | default('unnamed-source') }}"
+  when: monitoring_collect_enabled
+
+- name: "Assert | Validate monitoring_collect variables when disabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_collect_enabled is boolean
+    fail_msg: "monitoring_collect_enabled must be a boolean"
+    quiet: true
+  when: not monitoring_collect_enabled

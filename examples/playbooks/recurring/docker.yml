@@ -1,0 +1,50 @@
+---
+# examples/playbooks/recurring/docker.yml
+# Docker phase playbook for the example lab.
+# Connects as the automation account after the user phase, loads an optional
+# local Vault vars file from the control machine inside the Docker play so
+# `--limit` runs still receive the overrides, applies the aggregate `docker`
+# role to hosts in the `docker` inventory group, and optionally re-runs
+# `base_firewall` so Docker-declared ports can be enforced after service
+# registration.
+
+- name: Apply docker role after user
+  hosts: docker
+  become: true
+  pre_tasks:
+    - name: Check local Vault vars file when enabled # noqa: run-once[task]
+      ansible.builtin.stat:
+        path: "{{ secret_sources_local_vault_file }}"
+      delegate_to: localhost
+      become: false
+      vars:
+        ansible_become: false
+      register: docker_local_vault_file
+      run_once: true
+      tags: [always]
+      when: secret_sources_use_local_vault_file | default(true)
+
+    - name: Fail when local Vault vars are enabled but missing # noqa: run-once[task]
+      ansible.builtin.fail:
+        msg: >-
+          secret_sources_use_local_vault_file is true, but the local Vault vars
+          file was not found at {{ secret_sources_local_vault_file }}.
+      run_once: true
+      tags: [always]
+      when:
+        - secret_sources_use_local_vault_file | default(true)
+        - not docker_local_vault_file.stat.exists
+
+    - name: Load local Vault vars file on localhost
+      ansible.builtin.include_vars:
+        file: "{{ secret_sources_local_vault_file }}"
+      delegate_to: localhost
+      become: false
+      vars:
+        ansible_become: false
+      tags: [always]
+      when: secret_sources_use_local_vault_file | default(true)
+  roles:
+    - role: docker
+    - role: base_firewall
+      when: base_firewall_enabled | default(base_include_firewall | default(false))

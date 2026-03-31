@@ -1,0 +1,51 @@
+---
+# roles/monitoring_notify/defaults/main.yml
+# Default variables for the `monitoring_notify` role.
+# Reads the aggregated collector index and sends deduplicated ntfy alerts for
+# a small set of actionable monitoring conditions.
+
+monitoring_notify_enabled: true
+monitoring_notify_manage_existing_install: false
+
+monitoring_notify_packages:
+  - curl
+  - jq
+
+monitoring_notify_unit_name: monitor-notify
+monitoring_notify_service_unit: "{{ monitoring_notify_unit_name }}.service"
+monitoring_notify_timer_unit: "{{ monitoring_notify_unit_name }}.timer"
+monitoring_notify_script_path: "/usr/local/bin/{{ monitoring_notify_unit_name }}.sh"
+monitoring_notify_state_dir: "/usr/local/lib/{{ monitoring_notify_unit_name }}"
+monitoring_notify_state_hash_path: "{{ monitoring_notify_state_dir }}/last-alerts.sha256"
+monitoring_notify_status_dir: /var/lib/monitor
+monitoring_notify_status_path: "{{ monitoring_notify_status_dir }}/monitor-notify.json"
+
+monitoring_notify_script_owner: root
+monitoring_notify_script_group: root
+monitoring_notify_script_mode: "0750"
+monitoring_notify_status_dir_mode: "0755"
+
+monitoring_notify_index_path: "{{ monitoring_collect_index_path | default('/var/lib/monitor/collect/index.json') }}"
+monitoring_notify_include_docker_down: true
+monitoring_notify_include_backup_failed: true
+monitoring_notify_include_collect_errors: true
+monitoring_notify_info_ntfy_priority: default
+monitoring_notify_info_ntfy_tags:
+  - information_source
+  - computer
+
+monitoring_notify_ntfy_url: ""
+monitoring_notify_ntfy_title_prefix: Homelab Monitor
+monitoring_notify_ntfy_priority: high
+monitoring_notify_ntfy_tags:
+  - warning
+  - computer
+
+monitoring_notify_status_host: "{{ ansible_hostname | default(inventory_hostname) }}"
+monitoring_notify_job_name: monitoring_notify
+monitoring_notify_json_schema: monitoring_notify_status_v1
+
+monitoring_notify_timer_on_calendar: "*-*-* *:50:00"
+monitoring_notify_timer_randomized_delay_sec: 0
+monitoring_notify_timer_accuracy_sec: 1m
+monitoring_notify_timer_persistent: true

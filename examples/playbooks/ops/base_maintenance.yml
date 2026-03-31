@@ -1,0 +1,23 @@
+---
+# examples/playbooks/ops/base_maintenance.yml
+# Dedicated package-maintenance playbook for the example lab.
+# Applies the explicit update, full-upgrade, and restart-check roles one host
+# at a time so reboot-capable maintenance remains reviewable and low-blast-radius.
+
+- name: Apply base maintenance roles on example base hosts
+  hosts: base
+  serial: 1
+  become: true
+  vars:
+    base_updates_enabled: true
+    base_upgrade_enabled: true
+    base_upgrade_mode: full
+    base_upgrade_allow_reboot: true
+    base_needrestart_enabled: true
+  roles:
+    - role: base_updates
+      tags: [base_maintenance, base_updates]
+    - role: base_upgrade
+      tags: [base_maintenance, base_upgrade]
+    - role: base_needrestart
+      tags: [base_maintenance, base_needrestart]

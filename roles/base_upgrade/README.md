@@ -17,7 +17,7 @@ Explains how the role applies explicit APT package upgrades on Debian-family hos
 
 | Variable | Default | Required | Description |
 |----------|---------|----------|-------------|
-| `base_upgrade_cache_valid_time` | `0` | no | APT cache age in seconds before the role refreshes package metadata; `0` forces a refresh on every role run |
+| `base_upgrade_cache_valid_time` | `3600` | no | APT cache age in seconds before the role refreshes package metadata; `0` forces a refresh on every role run |
 | `base_upgrade_mode` | `safe` | no | Upgrade mode applied during the run; supported values are `safe` and `full` |
 | `base_upgrade_autoremove` | `false` | no | Whether the role should remove unused dependency packages after the requested upgrade |
 | `base_upgrade_allow_reboot` | `false` | no | Whether the role may reboot the host automatically when package maintenance requires it |

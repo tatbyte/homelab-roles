@@ -1,0 +1,727 @@
+{# roles/monitoring_docker_tag/templates/monitoring-docker-tag.py.j2 #}
+#!/usr/bin/env python3
+# Managed by Ansible: monitoring_docker_tag
+# Source: roles/monitoring_docker_tag/templates/monitoring-docker-tag.py.j2
+
+import datetime as dt
+import functools
+import json
+import os
+import platform
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+STATUS_PATH = {{ monitoring_docker_tag_status_path | to_json }}
+HOST = {{ monitoring_docker_tag_host | to_json }}
+JOB_NAME = {{ monitoring_docker_tag_job_name | to_json }}
+JSON_SCHEMA = {{ monitoring_docker_tag_json_schema | to_json }}
+DOCKER_COMMAND = {{ monitoring_docker_tag_docker_command | to_json }}
+SKOPEO_COMMAND = {{ monitoring_docker_tag_skopeo_command | to_json }}
+REGISTRY_AUTH_FILE = {{ monitoring_docker_tag_registry_auth_file | to_json }}
+REGISTRY_INSECURE = {{ monitoring_docker_tag_registry_insecure | ternary('True', 'False') }}
+REGISTRY_TIMEOUT_SECONDS = {{ monitoring_docker_tag_registry_timeout_seconds | int | to_json }}
+TRACK_STOPPED_CONTAINERS = {{ monitoring_docker_tag_track_stopped_containers | ternary('True', 'False') }}
+SKIP_PRERELEASE_TAGS = {{ monitoring_docker_tag_skip_prerelease_tags | ternary('True', 'False') }}
+FLOATING_TAGS = set({{ monitoring_docker_tag_floating_tags | map('lower') | list | to_json }})
+BACKUP_ENABLED = {{ monitoring_docker_tag_backup_enabled | bool | ternary('True', 'False') }}
+BACKUP_STOP_CONTAINERS = set({{ monitoring_docker_tag_backup_stop_containers | to_json }})
+BACKUP_STATE_PATH_PREFIXES = tuple({{ monitoring_docker_tag_backup_state_paths | to_json }})
+
+PRERELEASE_PATTERN = re.compile(r"(alpha|beta|rc|pre|preview|ea|nightly|dev|snapshot|canary|test)", re.IGNORECASE)
+TAG_MUST_START_PATTERN = re.compile(r"^[Vv]?\d")
+BRANCH_MAJOR_PATTERN = re.compile(r"^[Vv]?(\d+)$")
+LEADING_VERSION_PATTERN = re.compile(r"^[Vv]?(\d+(?:\.\d+)*)")
+LINUXSERVER_SUFFIX_PATTERN = re.compile(r"-ls\d+$", re.IGNORECASE)
+FLAVOR_MARKERS = (
+    "alpine",
+    "slim",
+    "bookworm",
+    "bullseye",
+    "buster",
+    "jammy",
+    "noble",
+    "ubuntu",
+    "debian",
+    "distroless",
+)
+ARCHITECTURE_MISMATCH_PATTERNS = (
+    re.compile(r"no image found in image index.*architecture", re.IGNORECASE),
+    re.compile(r"no image found in manifest list.*architecture", re.IGNORECASE),
+    re.compile(r"no match for platform in manifest", re.IGNORECASE),
+    re.compile(r"manifest.*architecture", re.IGNORECASE),
+)
+
+
+def iso_timestamp():
+    return dt.datetime.now(dt.timezone.utc).astimezone().isoformat(timespec="seconds")
+
+
+def run_command(args, timeout=None):
+    return subprocess.run(
+        args,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=timeout,
+    )
+
+
+def normalize_error(stderr, fallback):
+    message = (stderr or "").strip()
+    if message:
+        return re.sub(r"\s+", " ", message)
+    return fallback
+
+
+def write_status(payload):
+    os.makedirs(os.path.dirname(STATUS_PATH), exist_ok=True)
+    fd, temp_path = tempfile.mkstemp(prefix=".docker-tag.", suffix=".json", dir=os.path.dirname(STATUS_PATH))
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2, sort_keys=True)
+        handle.write("\n")
+    os.replace(temp_path, STATUS_PATH)
+
+
+def normalize_platform(machine_value):
+    machine = str(machine_value or "").strip().lower()
+    architecture = machine
+    variant = ""
+    if machine in {"x86_64", "amd64"}:
+        architecture = "amd64"
+    elif machine in {"aarch64", "arm64"}:
+        architecture = "arm64"
+    elif machine in {"armv7l", "armv7", "armhf"}:
+        architecture = "arm"
+        variant = "v7"
+    elif machine in {"armv6l", "armv6"}:
+        architecture = "arm"
+        variant = "v6"
+    elif machine == "arm":
+        architecture = "arm"
+    elif machine in {"i386", "i486", "i586", "i686", "x86"}:
+        architecture = "386"
+    elif machine in {"ppc64le"}:
+        architecture = "ppc64le"
+    elif machine in {"s390x"}:
+        architecture = "s390x"
+    elif machine in {"riscv64"}:
+        architecture = "riscv64"
+    return architecture, variant
+
+
+HOST_PLATFORM_MACHINE = platform.machine().lower()
+HOST_PLATFORM_OS = "linux"
+HOST_PLATFORM_ARCHITECTURE, HOST_PLATFORM_VARIANT = normalize_platform(HOST_PLATFORM_MACHINE)
+HOST_PLATFORM_LABEL = "/".join(
+    part
+    for part in (HOST_PLATFORM_OS, HOST_PLATFORM_ARCHITECTURE, HOST_PLATFORM_VARIANT)
+    if part
+)
+
+
+def compare_number_lists(left, right):
+    max_len = max(len(left), len(right))
+    for index in range(max_len):
+        left_value = left[index] if index < len(left) else 0
+        right_value = right[index] if index < len(right) else 0
+        if left_value < right_value:
+            return -1
+        if left_value > right_value:
+            return 1
+    return 0
+
+
+def classify_bump(current_numbers, latest_numbers):
+    max_len = max(len(current_numbers), len(latest_numbers), 3)
+    for index in range(max_len):
+        current_value = current_numbers[index] if index < len(current_numbers) else 0
+        latest_value = latest_numbers[index] if index < len(latest_numbers) else 0
+        if current_value != latest_value:
+            if index == 0:
+                return "major"
+            if index == 1:
+                return "minor"
+            return "patch"
+    return "patch"
+
+
+def flavor_markers_for_tag(tag):
+    lowered = str(tag or "").strip().lower()
+    return [marker for marker in FLAVOR_MARKERS if marker in lowered]
+
+
+def tag_family_constraints(tag, parsed_tag):
+    lowered = str(tag or "").strip().lower()
+    branch_major_match = BRANCH_MAJOR_PATTERN.match(lowered)
+    return {
+        "branch_major": int(branch_major_match.group(1)) if branch_major_match else None,
+        "flavor_markers": flavor_markers_for_tag(lowered),
+        "linuxserver_suffix": bool(LINUXSERVER_SUFFIX_PATTERN.search(lowered)),
+        "core_major": (
+            int(parsed_tag["core_numbers"][0])
+            if parsed_tag.get("core_numbers")
+            else None
+        ),
+    }
+
+
+def candidate_matches_family(current_constraints, candidate_tag, parsed_candidate):
+    candidate_lower = str(candidate_tag or "").strip().lower()
+
+    branch_major = current_constraints.get("branch_major")
+    if branch_major is not None:
+        candidate_numbers = list(parsed_candidate.get("numbers") or [])
+        if not candidate_numbers or candidate_numbers[0] != branch_major:
+            return False
+
+    if current_constraints.get("linuxserver_suffix") and not LINUXSERVER_SUFFIX_PATTERN.search(candidate_lower):
+        return False
+    if current_constraints.get("linuxserver_suffix") and current_constraints.get("core_major") is not None:
+        candidate_core_numbers = list(parsed_candidate.get("core_numbers") or [])
+        if not candidate_core_numbers or candidate_core_numbers[0] != current_constraints["core_major"]:
+            return False
+
+    for marker in current_constraints.get("flavor_markers") or []:
+        if marker not in candidate_lower:
+            return False
+
+    return True
+
+
+def parse_numeric_tag(tag):
+    value = str(tag or "").strip()
+    if not value or not TAG_MUST_START_PATTERN.match(value):
+        return None
+    numbers = [int(item) for item in re.findall(r"\d+", value)]
+    leading_version_match = LEADING_VERSION_PATTERN.match(value)
+    core_numbers = []
+    if leading_version_match:
+        core_numbers = [int(item) for item in leading_version_match.group(1).split(".")]
+    if not numbers:
+        return None
+    return {
+        "tag": value,
+        "numbers": numbers,
+        "core_numbers": core_numbers,
+        "prerelease": bool(PRERELEASE_PATTERN.search(value)),
+    }
+
+
+def parse_image_reference(image):
+    raw_value = str(image or "").strip()
+    if not raw_value:
+        return {
+            "image": "",
+            "repository": "",
+            "normalized_repository": "",
+            "registry": "",
+            "repository_path": "",
+            "tag": "",
+            "digest": "",
+        }
+
+    digest = ""
+    if "@" in raw_value:
+        raw_value, digest = raw_value.split("@", 1)
+
+    last_slash = raw_value.rfind("/")
+    last_colon = raw_value.rfind(":")
+    if last_colon > last_slash:
+        repository = raw_value[:last_colon]
+        tag = raw_value[last_colon + 1 :]
+    else:
+        repository = raw_value
+        tag = "latest"
+
+    parts = repository.split("/")
+    if len(parts) == 1:
+        registry = "docker.io"
+        repository_path = f"library/{parts[0]}"
+    elif "." in parts[0] or ":" in parts[0] or parts[0] == "localhost":
+        registry = parts[0]
+        repository_path = "/".join(parts[1:])
+    else:
+        registry = "docker.io"
+        repository_path = repository
+
+    return {
+        "image": str(image or ""),
+        "repository": repository,
+        "normalized_repository": f"{registry}/{repository_path}",
+        "registry": registry,
+        "repository_path": repository_path,
+        "tag": tag,
+        "digest": digest,
+    }
+
+
+def should_have_backup(mounts):
+    for mount in mounts:
+        if not mount.get("rw", False):
+            continue
+        if mount.get("type") == "volume":
+            return True
+        source = str(mount.get("source") or "")
+        destination = str(mount.get("destination") or "")
+        if source.startswith(BACKUP_STATE_PATH_PREFIXES):
+            return True
+        if destination.startswith(("/config", "/data", "/var/lib")):
+            return True
+    return False
+
+
+def normalize_mounts(mounts):
+    normalized = []
+    for mount in mounts or []:
+        normalized.append(
+            {
+                "type": str(mount.get("Type") or ""),
+                "source": str(mount.get("Source") or ""),
+                "destination": str(mount.get("Destination") or ""),
+                "rw": bool(mount.get("RW", False)),
+                "name": str(mount.get("Name") or ""),
+            }
+        )
+    return normalized
+
+
+TAG_CACHE = {}
+TAG_INSPECT_CACHE = {}
+
+
+def list_remote_tags(normalized_repository):
+    if normalized_repository in TAG_CACHE:
+        return TAG_CACHE[normalized_repository]
+
+    command = [SKOPEO_COMMAND, "list-tags"]
+    if REGISTRY_INSECURE:
+        command.append("--tls-verify=false")
+    if REGISTRY_AUTH_FILE and os.path.exists(REGISTRY_AUTH_FILE):
+        command.extend(["--authfile", REGISTRY_AUTH_FILE])
+    command.append(f"docker://{normalized_repository}")
+
+    try:
+        result = run_command(command, timeout=REGISTRY_TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired:
+        payload = {
+            "ok": False,
+            "tags": [],
+            "error": f"registry lookup timed out after {REGISTRY_TIMEOUT_SECONDS}s",
+        }
+        TAG_CACHE[normalized_repository] = payload
+        return payload
+
+    if result.returncode != 0:
+        payload = {
+            "ok": False,
+            "tags": [],
+            "error": normalize_error(
+                result.stderr,
+                f"registry lookup failed with exit code {result.returncode}",
+            ),
+        }
+        TAG_CACHE[normalized_repository] = payload
+        return payload
+
+    try:
+        payload_json = json.loads(result.stdout or "{}")
+    except json.JSONDecodeError:
+        payload = {
+            "ok": False,
+            "tags": [],
+            "error": "registry lookup returned invalid JSON",
+        }
+        TAG_CACHE[normalized_repository] = payload
+        return payload
+
+    payload = {
+        "ok": True,
+        "tags": payload_json.get("Tags") or [],
+        "error": "",
+    }
+    TAG_CACHE[normalized_repository] = payload
+    return payload
+
+
+def compare_version_items(left, right):
+    return compare_number_lists(left["numbers"], right["numbers"])
+
+
+def is_architecture_mismatch(message):
+    return any(pattern.search(message or "") for pattern in ARCHITECTURE_MISMATCH_PATTERNS)
+
+
+def inspect_remote_tag(normalized_repository, tag):
+    cache_key = f"{normalized_repository}:{tag}"
+    if cache_key in TAG_INSPECT_CACHE:
+        return TAG_INSPECT_CACHE[cache_key]
+
+    command = [SKOPEO_COMMAND, "inspect"]
+    if REGISTRY_INSECURE:
+        command.append("--tls-verify=false")
+    if REGISTRY_AUTH_FILE and os.path.exists(REGISTRY_AUTH_FILE):
+        command.extend(["--authfile", REGISTRY_AUTH_FILE])
+    command.append(f"docker://{cache_key}")
+
+    try:
+        result = run_command(command, timeout=REGISTRY_TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired:
+        payload = {
+            "ok": False,
+            "compatible": False,
+            "platform": {},
+            "error": f"registry inspect timed out after {REGISTRY_TIMEOUT_SECONDS}s",
+        }
+        TAG_INSPECT_CACHE[cache_key] = payload
+        return payload
+
+    if result.returncode != 0:
+        error_text = normalize_error(
+            result.stderr,
+            f"registry inspect failed with exit code {result.returncode}",
+        )
+        payload = {
+            "ok": is_architecture_mismatch(error_text),
+            "compatible": False,
+            "platform": {},
+            "error": "" if is_architecture_mismatch(error_text) else error_text,
+        }
+        TAG_INSPECT_CACHE[cache_key] = payload
+        return payload
+
+    try:
+        payload_json = json.loads(result.stdout or "{}")
+    except json.JSONDecodeError:
+        payload = {
+            "ok": False,
+            "compatible": False,
+            "platform": {},
+            "error": "registry inspect returned invalid JSON",
+        }
+        TAG_INSPECT_CACHE[cache_key] = payload
+        return payload
+
+    result_architecture, result_variant = normalize_platform(payload_json.get("Architecture"))
+    result_os = str(payload_json.get("Os") or HOST_PLATFORM_OS).strip().lower()
+    compatible = True
+    if result_architecture:
+        compatible = compatible and result_architecture == HOST_PLATFORM_ARCHITECTURE
+    if HOST_PLATFORM_VARIANT and result_variant:
+        compatible = compatible and result_variant == HOST_PLATFORM_VARIANT
+    if result_os:
+        compatible = compatible and result_os == HOST_PLATFORM_OS
+
+    payload = {
+        "ok": True,
+        "compatible": compatible,
+        "platform": {
+            "os": result_os,
+            "architecture": result_architecture or HOST_PLATFORM_ARCHITECTURE,
+            "variant": result_variant,
+            "digest": str(payload_json.get("Digest") or ""),
+        },
+        "error": "",
+    }
+    TAG_INSPECT_CACHE[cache_key] = payload
+    return payload
+
+
+def classify_container(container):
+    name = str(container.get("Name") or "").lstrip("/")
+    state = container.get("State") or {}
+    image_ref = parse_image_reference((container.get("Config") or {}).get("Image"))
+    normalized_mounts = normalize_mounts(container.get("Mounts") or [])
+    current_tag = image_ref["tag"]
+    current_version = parse_numeric_tag(current_tag)
+    floating = current_tag.lower() in FLOATING_TAGS
+    should_backup = should_have_backup(normalized_mounts)
+    backup_stop_configured = name in BACKUP_STOP_CONTAINERS
+    family_constraints = tag_family_constraints(current_tag, current_version or {})
+    base_item = {
+        "name": name,
+        "image": image_ref["image"],
+        "repository": image_ref["normalized_repository"],
+        "current_tag": current_tag,
+        "running": bool(state.get("Running", False)),
+        "status": "ok",
+        "tracking": "semantic",
+        "update_available": False,
+        "latest_tag": "",
+        "bump_type": "",
+        "ok_to_update": False,
+        "review_required": False,
+        "architecture_compatible": True,
+        "target_platform": HOST_PLATFORM_LABEL,
+        "resolved_platform": "",
+        "should_have_backup": should_backup,
+        "backup_host_enabled": BACKUP_ENABLED,
+        "backup_stop_configured": backup_stop_configured,
+        "backup_recommended": False,
+        "notes": [],
+        "mounts": normalized_mounts,
+    }
+
+    if not image_ref["repository"]:
+        base_item["tracking"] = "unknown"
+        base_item["status"] = "review"
+        base_item["notes"].append("Container image reference is empty.")
+        return base_item
+
+    if floating:
+        base_item["tracking"] = "floating"
+        base_item["notes"].append(
+            f"Current tag {current_tag} is a floating tag, so semantic update guidance is skipped."
+        )
+        return base_item
+
+    if current_version is None:
+        base_item["tracking"] = "non_semver"
+        base_item["notes"].append(
+            f"Current tag {current_tag} does not look numeric enough for semantic update classification."
+        )
+        return base_item
+
+    remote_tags = list_remote_tags(image_ref["normalized_repository"])
+    if not remote_tags["ok"]:
+        base_item["status"] = "review"
+        base_item["tracking"] = "lookup_error"
+        base_item["notes"].append(remote_tags["error"])
+        return base_item
+
+    best_candidate = None
+    candidate_versions = []
+    for candidate_tag in remote_tags["tags"]:
+        parsed_candidate = parse_numeric_tag(candidate_tag)
+        if parsed_candidate is None:
+            continue
+        if SKIP_PRERELEASE_TAGS and not current_version["prerelease"] and parsed_candidate["prerelease"]:
+            continue
+        if not candidate_matches_family(family_constraints, candidate_tag, parsed_candidate):
+            continue
+        if compare_number_lists(parsed_candidate["numbers"], current_version["numbers"]) <= 0:
+            continue
+        candidate_versions.append(parsed_candidate)
+
+    candidate_versions.sort(key=functools.cmp_to_key(compare_version_items), reverse=True)
+
+    best_candidate_platform = {}
+    architecture_filtered_tags = []
+    candidate_lookup_error = ""
+    for parsed_candidate in candidate_versions:
+        candidate_inspect = inspect_remote_tag(image_ref["normalized_repository"], parsed_candidate["tag"])
+        if not candidate_inspect["ok"]:
+            candidate_lookup_error = candidate_inspect["error"]
+            break
+        if not candidate_inspect["compatible"]:
+            architecture_filtered_tags.append(parsed_candidate["tag"])
+            continue
+        best_candidate = parsed_candidate
+        best_candidate_platform = candidate_inspect["platform"]
+        break
+
+    if best_candidate is None:
+        if candidate_lookup_error:
+            base_item["status"] = "review"
+            base_item["tracking"] = "lookup_error"
+            base_item["architecture_compatible"] = False
+            base_item["notes"].append(candidate_lookup_error)
+            return base_item
+        if architecture_filtered_tags:
+            base_item["notes"].append(
+                "Newer tags exist, but none of the newer numeric candidates matched this host platform "
+                f"({HOST_PLATFORM_LABEL})."
+            )
+        return base_item
+
+    bump_type = classify_bump(current_version["numbers"], best_candidate["numbers"])
+    ok_to_update = bump_type == "patch"
+    review_required = not ok_to_update
+    backup_recommended = should_backup or bump_type in ("minor", "major")
+
+    base_item["status"] = "review"
+    base_item["update_available"] = True
+    base_item["latest_tag"] = best_candidate["tag"]
+    base_item["bump_type"] = bump_type
+    base_item["ok_to_update"] = ok_to_update
+    base_item["review_required"] = review_required
+    base_item["backup_recommended"] = backup_recommended
+    base_item["architecture_compatible"] = True
+    base_item["resolved_platform"] = "/".join(
+        part
+        for part in (
+            best_candidate_platform.get("os") or HOST_PLATFORM_OS,
+            best_candidate_platform.get("architecture") or HOST_PLATFORM_ARCHITECTURE,
+            best_candidate_platform.get("variant") or "",
+        )
+        if part
+    )
+
+    if bump_type == "patch":
+        base_item["notes"].append(
+            f"Patch-style update detected: {current_tag} -> {best_candidate['tag']}."
+        )
+    elif bump_type == "minor":
+        base_item["notes"].append(
+            f"Minor-style update detected: {current_tag} -> {best_candidate['tag']}. Review release notes first."
+        )
+    else:
+        base_item["notes"].append(
+            f"Major-style update detected: {current_tag} -> {best_candidate['tag']}. Treat this as a manual review item."
+        )
+
+    if backup_recommended:
+        if BACKUP_ENABLED:
+            if backup_stop_configured:
+                base_item["notes"].append("Backups are enabled and this container is already in the stop-before-backup list.")
+            elif should_backup:
+                base_item["notes"].append("Backups are enabled, but this container is not in the stop-before-backup list.")
+        elif should_backup:
+            base_item["notes"].append("Writable container state was detected, but host backups are not enabled.")
+
+    if architecture_filtered_tags:
+        base_item["notes"].append(
+            "Skipped newer tags that did not match this host platform: "
+            + ", ".join(architecture_filtered_tags[:5])
+            + ("." if len(architecture_filtered_tags) <= 5 else ", ...")
+        )
+
+    return base_item
+
+
+def build_failure_status(message):
+    return {
+        "schema": JSON_SCHEMA,
+        "host": HOST,
+        "job": JOB_NAME,
+        "timestamp": iso_timestamp(),
+        "status": "fail",
+        "details": {
+            "docker_available": bool(shutil.which(DOCKER_COMMAND)),
+            "skopeo_available": bool(shutil.which(SKOPEO_COMMAND)),
+            "backup_enabled": BACKUP_ENABLED,
+            "host_platform": {
+                "machine": HOST_PLATFORM_MACHINE,
+                "os": HOST_PLATFORM_OS,
+                "architecture": HOST_PLATFORM_ARCHITECTURE,
+                "variant": HOST_PLATFORM_VARIANT,
+                "label": HOST_PLATFORM_LABEL,
+            },
+            "error": message,
+            "total_containers": 0,
+            "tracked_container_count": 0,
+            "update_available_count": 0,
+            "ok_to_update_count": 0,
+            "review_required_count": 0,
+            "backup_recommended_count": 0,
+            "should_have_backup_count": 0,
+            "lookup_error_count": 0,
+            "floating_tag_count": 0,
+            "bump_counts": {
+                "patch": 0,
+                "minor": 0,
+                "major": 0,
+            },
+            "containers": [],
+        },
+    }
+
+
+def main():
+    if shutil.which(DOCKER_COMMAND) is None:
+        write_status(build_failure_status(f"Docker command {DOCKER_COMMAND!r} is not available."))
+        return 0
+
+    if shutil.which(SKOPEO_COMMAND) is None:
+        write_status(build_failure_status(f"Skopeo command {SKOPEO_COMMAND!r} is not available."))
+        return 0
+
+    ps_command = [DOCKER_COMMAND, "ps", "-aq"]
+    if not TRACK_STOPPED_CONTAINERS:
+        ps_command = [DOCKER_COMMAND, "ps", "-q"]
+
+    ps_result = run_command(ps_command)
+    if ps_result.returncode != 0:
+        write_status(
+            build_failure_status(
+                normalize_error(ps_result.stderr, f"{DOCKER_COMMAND} ps failed with exit code {ps_result.returncode}")
+            )
+        )
+        return 0
+
+    container_ids = [item.strip() for item in (ps_result.stdout or "").splitlines() if item.strip()]
+    containers = []
+    inspect_error = ""
+    if container_ids:
+        inspect_result = run_command([DOCKER_COMMAND, "container", "inspect", *container_ids])
+        if inspect_result.returncode != 0:
+            inspect_error = normalize_error(
+                inspect_result.stderr,
+                f"{DOCKER_COMMAND} container inspect failed with exit code {inspect_result.returncode}",
+            )
+        else:
+            try:
+                containers = json.loads(inspect_result.stdout or "[]")
+            except json.JSONDecodeError:
+                inspect_error = "docker inspect returned invalid JSON"
+
+    if inspect_error:
+        write_status(build_failure_status(inspect_error))
+        return 0
+
+    classified = [classify_container(item) for item in containers]
+    classified.sort(key=lambda entry: (entry["status"] == "ok", entry["name"]))
+
+    update_available_count = sum(1 for item in classified if item["update_available"])
+    ok_to_update_count = sum(1 for item in classified if item["ok_to_update"])
+    review_required_count = sum(1 for item in classified if item["review_required"])
+    backup_recommended_count = sum(1 for item in classified if item["backup_recommended"])
+    lookup_error_count = sum(1 for item in classified if item["tracking"] == "lookup_error")
+    floating_tag_count = sum(1 for item in classified if item["tracking"] == "floating")
+    tracked_container_count = sum(1 for item in classified if item["tracking"] == "semantic")
+    should_have_backup_count = sum(1 for item in classified if item["should_have_backup"])
+    bump_counts = {
+        "patch": sum(1 for item in classified if item["bump_type"] == "patch"),
+        "minor": sum(1 for item in classified if item["bump_type"] == "minor"),
+        "major": sum(1 for item in classified if item["bump_type"] == "major"),
+    }
+
+    overall_status = "ok"
+    payload = {
+        "schema": JSON_SCHEMA,
+        "host": HOST,
+        "job": JOB_NAME,
+        "timestamp": iso_timestamp(),
+        "status": overall_status,
+        "details": {
+            "docker_available": True,
+            "skopeo_available": True,
+            "backup_enabled": BACKUP_ENABLED,
+            "host_platform": {
+                "machine": HOST_PLATFORM_MACHINE,
+                "os": HOST_PLATFORM_OS,
+                "architecture": HOST_PLATFORM_ARCHITECTURE,
+                "variant": HOST_PLATFORM_VARIANT,
+                "label": HOST_PLATFORM_LABEL,
+            },
+            "total_containers": len(classified),
+            "tracked_container_count": tracked_container_count,
+            "update_available_count": update_available_count,
+            "ok_to_update_count": ok_to_update_count,
+            "review_required_count": review_required_count,
+            "backup_recommended_count": backup_recommended_count,
+            "should_have_backup_count": should_have_backup_count,
+            "lookup_error_count": lookup_error_count,
+            "floating_tag_count": floating_tag_count,
+            "bump_counts": bump_counts,
+            "containers": classified,
+        },
+    }
+    write_status(payload)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

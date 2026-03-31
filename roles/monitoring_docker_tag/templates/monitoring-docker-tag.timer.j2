@@ -1,0 +1,13 @@
+{# roles/monitoring_docker_tag/templates/monitoring-docker-tag.timer.j2 #}
+[Unit]
+Description=Schedule Docker image tag update checks
+
+[Timer]
+OnCalendar={{ monitoring_docker_tag_timer_on_calendar }}
+RandomizedDelaySec={{ monitoring_docker_tag_timer_randomized_delay_sec }}
+AccuracySec={{ monitoring_docker_tag_timer_accuracy_sec }}
+Persistent={{ monitoring_docker_tag_timer_persistent | ternary('true', 'false') }}
+Unit={{ monitoring_docker_tag_service_unit }}
+
+[Install]
+WantedBy=timers.target

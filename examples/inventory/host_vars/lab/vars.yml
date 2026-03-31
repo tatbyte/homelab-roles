@@ -68,19 +68,26 @@ monitoring_include_authorized_key: false
 monitoring_include_status: true
 monitoring_include_storage_health: true
 monitoring_include_collect: true
-monitoring_include_web: true
+monitoring_notify_manage_existing_install: false
 monitoring_include_notify: >-
   {{
-    (vault_monitor_notify_ntfy_url | default('') | trim | length) > 0
+    (vault_monitoring_notify_ntfy_url | default('') | trim | length) > 0
+    or (monitoring_notify_manage_existing_install | bool)
   }}
 monitoring_status_storage_additional_mounts: []
 monitoring_storage_health_devices:
   - label: root_disk
     device: /dev/sda
     type: smart
-monitor_web_enabled: true
-monitor_web_host: "{{ vault_monitor_collect_web_host | default('') }}"
-monitor_collect_sources:
+monitoring_web_host: "{{ vault_monitoring_collect_web_host | default('') }}"
+monitoring_web_manage_existing_install: false
+monitoring_include_web: >-
+  {{
+    (monitoring_web_host | trim | length) > 0
+    or (monitoring_web_manage_existing_install | bool)
+  }}
+monitoring_web_enabled: "{{ monitoring_include_web | bool }}"
+monitoring_collect_sources:
   - name: lab
     display_name: lab
     local: true

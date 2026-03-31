@@ -1,0 +1,182 @@
+---
+# roles/monitoring_web/tasks/config.yml
+# Config phase tasks for the `monitoring_web` role.
+
+- name: "Config | Inspect required Traefik proxy network for monitoring_web"
+  ansible.builtin.command:
+    argv:
+      - docker
+      - network
+      - inspect
+      - "{{ monitoring_web_proxy_network_name }}"
+  register: monitoring_web_proxy_network
+  changed_when: false
+  failed_when: false
+  when: monitoring_web_enabled
+
+- name: "Config | Require Traefik proxy network before publishing monitoring_web"
+  ansible.builtin.assert:
+    that:
+      - monitoring_web_proxy_network.rc == 0
+    fail_msg: >-
+      monitoring_web publishing requires the external proxy network
+      {{ monitoring_web_proxy_network_name }}. Run docker_traefik first or point
+      monitoring_web_proxy_network_name at an existing Traefik network.
+    quiet: true
+  when: monitoring_web_enabled
+
+- name: "Config | Check whether a managed monitoring_web Compose file already exists"
+  ansible.builtin.stat:
+    path: "{{ monitoring_web_compose_file_path }}"
+  register: monitoring_web_compose_file_stat
+  changed_when: false
+
+- name: "Config | Stop managed monitoring_web project when disabled"
+  ansible.builtin.command:
+    argv: >-
+      {{
+        monitoring_web_compose_command
+        + [
+            '--project-name',
+            monitoring_web_compose_project_name,
+            '--file',
+            monitoring_web_compose_file_path,
+            'down',
+          ]
+      }}
+  register: monitoring_web_compose_down
+  changed_when: monitoring_web_compose_file_stat.stat.exists
+  when:
+    - not monitoring_web_enabled
+    - monitoring_web_compose_file_stat.stat.exists
+
+- name: "Config | Ensure monitoring_web project directory exists"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - path: "{{ monitoring_web_project_dir }}"
+      owner: root
+      group: root
+      mode: "0755"
+    - path: "{{ monitoring_web_publish_dir }}"
+      owner: "{{ monitoring_web_site_owner }}"
+      group: "{{ monitoring_web_site_group }}"
+      mode: "{{ monitoring_web_publish_dir_mode }}"
+  when: monitoring_web_enabled
+
+- name: "Config | Normalize monitoring_web published site ownership"
+  ansible.builtin.file:
+    path: "{{ monitoring_web_publish_dir }}"
+    state: directory
+    owner: "{{ monitoring_web_site_owner }}"
+    group: "{{ monitoring_web_site_group }}"
+    recurse: true
+  when: monitoring_web_enabled
+
+- name: "Config | Render published monitoring_web dashboard pages"
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ monitoring_web_site_owner }}"
+    group: "{{ monitoring_web_site_group }}"
+    mode: "{{ monitoring_web_publish_file_mode }}"
+  loop:
+    - src: monitor-collect-index.html.j2
+      dest: "{{ monitoring_web_publish_html_path }}"
+    - src: monitor-collect-host.html.j2
+      dest: "{{ monitoring_web_host_template_path }}"
+  when: monitoring_web_enabled
+
+- name: "Config | Render published monitoring_web PWA assets"
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ monitoring_web_site_owner }}"
+    group: "{{ monitoring_web_site_group }}"
+    mode: "{{ monitoring_web_publish_file_mode }}"
+  loop:
+    - src: monitor-collect-manifest.webmanifest.j2
+      dest: "{{ monitoring_web_manifest_path }}"
+    - src: monitor-collect-service-worker.js.j2
+      dest: "{{ monitoring_web_service_worker_path }}"
+    - src: monitor-collect-icon.svg.j2
+      dest: "{{ monitoring_web_icon_path }}"
+  when: monitoring_web_enabled
+
+- name: "Config | Copy published monitoring_web PNG app icons"
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ monitoring_web_site_owner }}"
+    group: "{{ monitoring_web_site_group }}"
+    mode: "{{ monitoring_web_publish_file_mode }}"
+  loop:
+    - src: monitor-collect-icon-180.png
+      dest: "{{ monitoring_web_icon_png_180_path }}"
+    - src: monitor-collect-icon-192.png
+      dest: "{{ monitoring_web_icon_png_192_path }}"
+    - src: monitor-collect-icon-512.png
+      dest: "{{ monitoring_web_icon_png_512_path }}"
+  when: monitoring_web_enabled
+
+- name: "Config | Render monitoring_web nginx config"
+  ansible.builtin.template:
+    src: monitor-collect-web-nginx.conf.j2
+    dest: "{{ monitoring_web_nginx_conf_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: monitoring_web_enabled
+
+- name: "Config | Render monitoring_web Compose file"
+  ansible.builtin.template:
+    src: monitor-collect-web-compose.yml.j2
+    dest: "{{ monitoring_web_compose_file_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: monitoring_web_enabled
+
+- name: "Config | Reconcile monitoring_web Docker Compose project"
+  ansible.builtin.command:
+    argv: >-
+      {{
+        monitoring_web_compose_command
+        + [
+            '--project-name',
+            monitoring_web_compose_project_name,
+            '--file',
+            monitoring_web_compose_file_path,
+            'up',
+            '--detach',
+          ]
+      }}
+  register: monitoring_web_compose_up
+  changed_when: >-
+    'Creating' in (monitoring_web_compose_up.stdout ~ monitoring_web_compose_up.stderr)
+    or 'Recreating' in (monitoring_web_compose_up.stdout ~ monitoring_web_compose_up.stderr)
+    or 'Starting' in (monitoring_web_compose_up.stdout ~ monitoring_web_compose_up.stderr)
+    or 'Pulling' in (monitoring_web_compose_up.stdout ~ monitoring_web_compose_up.stderr)
+    or 'Created' in (monitoring_web_compose_up.stdout ~ monitoring_web_compose_up.stderr)
+    or 'Recreated' in (monitoring_web_compose_up.stdout ~ monitoring_web_compose_up.stderr)
+    or 'Started' in (monitoring_web_compose_up.stdout ~ monitoring_web_compose_up.stderr)
+  when: monitoring_web_enabled
+
+- name: "Config | Remove legacy monitoring_collect host-web service unit"
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ monitoring_web_legacy_service_unit }}"
+    state: absent
+
+- name: "Config | Remove monitoring_web project artifacts when disabled"
+  ansible.builtin.file:
+    path: "{{ monitoring_web_project_dir }}"
+    state: absent
+  when: not monitoring_web_enabled
+
+- name: "Config | Reload systemd after monitoring_web cleanup"
+  ansible.builtin.systemd_service:
+    daemon_reload: true

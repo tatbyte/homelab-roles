@@ -1,0 +1,482 @@
+{# roles/monitoring_notify/templates/monitor-notify.sh.j2 #}
+#!/usr/bin/env bash
+# Managed by Ansible: monitoring_notify
+# Source: roles/monitoring_notify/templates/monitor-notify.sh.j2
+
+set -euo pipefail
+umask 077
+
+index_path={{ monitoring_notify_index_path | to_json }}
+state_hash_path={{ monitoring_notify_state_hash_path | to_json }}
+status_path={{ monitoring_notify_status_path | to_json }}
+ntfy_url={{ monitoring_notify_effective_ntfy_url | to_json }}
+title_prefix={{ monitoring_notify_ntfy_title_prefix | to_json }}
+ntfy_priority={{ monitoring_notify_ntfy_priority | to_json }}
+host_name={{ monitoring_notify_status_host | to_json }}
+job_name={{ monitoring_notify_job_name | to_json }}
+json_schema={{ monitoring_notify_json_schema | to_json }}
+include_docker_down={{ monitoring_notify_include_docker_down | ternary('true', 'false') | to_json }}
+include_backup_failed={{ monitoring_notify_include_backup_failed | ternary('true', 'false') | to_json }}
+include_collect_errors={{ monitoring_notify_include_collect_errors | ternary('true', 'false') | to_json }}
+info_ntfy_priority={{ monitoring_notify_info_ntfy_priority | to_json }}
+force_test_alert="${MONITOR_NOTIFY_TEST_ALERT:-0}"
+include_docker_tag_info="${MONITOR_NOTIFY_INCLUDE_DOCKER_TAG_INFO:-0}"
+
+ntfy_tags=(
+{% for item in monitoring_notify_ntfy_tags %}
+  {{ item | to_json }}
+{% endfor %}
+)
+
+info_ntfy_tags=(
+{% for item in monitoring_notify_info_ntfy_tags %}
+  {{ item | to_json }}
+{% endfor %}
+)
+
+default_fleet_state_json='{"overall_status":"unknown","summary":{"ok":0,"warn":0,"fail":0},"hosts":[]}'
+
+tags_csv_from_array() {
+  printf '%s\n' "$@" | sed '/^$/d' | paste -sd ',' -
+}
+
+build_global_state_json() {
+  jq -c -n \
+    --slurpfile index "$index_path" \
+    '
+    ($index[0] // {}) as $root
+    | ($root.hosts // []) as $hosts
+    | ($root.summary // {
+        ok: ($hosts | map(select(.summary_status == "ok")) | length),
+        warn: ($hosts | map(select(.summary_status == "warn")) | length),
+        fail: ($hosts | map(select(.summary_status == "fail")) | length)
+      }) as $summary
+    | {
+        overall_status: (
+          if (($summary.fail // 0) | tonumber) > 0 then "fail"
+          elif (($summary.warn // 0) | tonumber) > 0 then "warn"
+          else "ok"
+          end
+        ),
+        summary: {
+          ok: (($summary.ok // 0) | tonumber),
+          warn: (($summary.warn // 0) | tonumber),
+          fail: (($summary.fail // 0) | tonumber)
+        },
+        hosts: [
+          $hosts[]
+          | {
+              name: (.name // ""),
+              display_name: (.display_name // .name // "unknown"),
+              summary_status: (.summary_status // "unknown"),
+              stale: (.stale // false)
+            }
+        ]
+      }
+    '
+}
+
+build_notification_title() {
+  local fleet_state_json="$1"
+  jq -nr \
+    --arg prefix "$title_prefix" \
+    --argjson fleet "$fleet_state_json" \
+    '
+    $prefix
+    + " fleet"
+    + " | ok="
+    + (($fleet.summary.ok // 0) | tostring)
+    + " warn="
+    + (($fleet.summary.warn // 0) | tostring)
+    + " fail="
+    + (($fleet.summary.fail // 0) | tostring)
+    '
+}
+
+build_notification_body() {
+  local fleet_state_json="$1"
+  local alerts_json="$2"
+  local infos_json="$3"
+  jq -nr \
+    --arg collector "$host_name" \
+    --arg timestamp "$timestamp" \
+    --argjson fleet "$fleet_state_json" \
+    --argjson alerts "$alerts_json" \
+    --argjson infos "$infos_json" \
+    '
+    [
+      "Collector: " + $collector,
+      "Timestamp: " + $timestamp,
+      "Fleet state: "
+        + (($fleet.overall_status // "unknown") | ascii_upcase)
+        + " | ok=" + (($fleet.summary.ok // 0) | tostring)
+        + " warn=" + (($fleet.summary.warn // 0) | tostring)
+        + " fail=" + (($fleet.summary.fail // 0) | tostring),
+      "",
+      "Hosts:",
+      (
+        $fleet.hosts[]
+        | "- "
+          + (.display_name // .name // "unknown")
+          + ": "
+          + (.summary_status // "unknown")
+          + (
+              if (.stale // false)
+              then " | stale cache"
+              else ""
+              end
+            )
+      ),
+      "",
+      (
+        if ($alerts | length) > 0 then
+          "Actionable alerts:"
+        else
+          "Actionable alerts: none"
+        end
+      ),
+      (
+        if ($alerts | length) > 0 then
+          ($alerts[] | "- " + .message)
+        else
+          empty
+        end
+      ),
+      (
+        if ($infos | length) > 0 then
+          "",
+          "Review-only container tag checks:",
+          ($infos[] | "- " + .message)
+        else
+          empty
+        end
+      )
+    ] | join("\n")
+    '
+}
+
+send_notification() {
+  local title="$1"
+  local priority="$2"
+  local tags_csv="$3"
+  local body="$4"
+  local -a curl_cmd
+
+  curl_cmd=(
+    curl
+    -fsS
+    -X POST
+    -H "Title: ${title}"
+    -H "Priority: ${priority}"
+  )
+
+  if [ -n "$tags_csv" ]; then
+    curl_cmd+=(-H "Tags: ${tags_csv}")
+  fi
+
+  "${curl_cmd[@]}" --data-binary "$body" "$ntfy_url"
+}
+
+write_status_json() {
+  local timestamp="$1"
+  local role_status="$2"
+  local alert_count="$3"
+  local info_count="$4"
+  local notification_sent="$5"
+  local notification_reason="$6"
+  local error_text="$7"
+  local alerts_json="$8"
+  local infos_json="$9"
+  local fleet_state_json="${10}"
+  local tmp_json
+  local tags_json
+  local info_tags_json
+
+  tags_json="$(
+    printf '%s\n' "${ntfy_tags[@]}" \
+      | jq -R -s 'split("\n") | map(select(length > 0))'
+  )"
+  info_tags_json="$(
+    printf '%s\n' "${info_ntfy_tags[@]}" \
+      | jq -R -s 'split("\n") | map(select(length > 0))'
+  )"
+
+  tmp_json="$(mktemp "${status_path}.XXXXXX")"
+  jq -n \
+    --arg schema "$json_schema" \
+    --arg host "$host_name" \
+    --arg job "$job_name" \
+    --arg timestamp "$timestamp" \
+    --arg status "$role_status" \
+    --arg index_path "$index_path" \
+    --arg notification_reason "$notification_reason" \
+    --arg error "$error_text" \
+    --argjson alert_count "$alert_count" \
+    --argjson info_count "$info_count" \
+    --argjson notification_sent "$notification_sent" \
+    --argjson alerts "$alerts_json" \
+    --argjson infos "$infos_json" \
+    --argjson fleet_state "$fleet_state_json" \
+    --argjson tags "$tags_json" \
+    --argjson info_tags "$info_tags_json" \
+    '{
+      schema: $schema,
+      host: $host,
+      job: $job,
+      timestamp: $timestamp,
+      status: $status,
+      details: {
+        index_path: $index_path,
+        alert_count: $alert_count,
+        info_count: $info_count,
+        fleet_status: ($fleet_state.overall_status // "unknown"),
+        fleet_summary: ($fleet_state.summary // { ok: 0, warn: 0, fail: 0 }),
+        alerts: $alerts,
+        infos: $infos,
+        notification_sent: $notification_sent,
+        notification_reason: $notification_reason,
+        ntfy_tags: $tags,
+        info_ntfy_tags: $info_tags,
+        error: $error
+      }
+    }' >"$tmp_json"
+  mv "$tmp_json" "$status_path"
+}
+
+timestamp="$(date --iso-8601=ns)"
+mkdir -p "$(dirname "$status_path")" "$(dirname "$state_hash_path")"
+
+if [ ! -f "$index_path" ]; then
+  write_status_json "$timestamp" fail 0 0 false missing_index "collector index not found" '[]' '[]' "$default_fleet_state_json"
+  exit 1
+fi
+
+if ! alerts_json="$(
+  jq -c -n \
+    --slurpfile index "$index_path" \
+    --argjson include_docker_down "$include_docker_down" \
+    --argjson include_backup_failed "$include_backup_failed" \
+    --argjson include_collect_errors "$include_collect_errors" \
+    '
+    ($index[0].hosts // []) as $hosts
+    | [
+        $hosts[] as $host
+        | (
+            if $include_docker_down then
+              ($host.status.details.docker_non_running_containers // [])
+              | map(select(type == "string"))
+              | if length > 0 then
+                  {
+                    type: "docker_down",
+                    host_name: ($host.name // ""),
+                    display_name: ($host.display_name // $host.name // "unknown"),
+                    summary: ((length | tostring) + " Docker container(s) down"),
+                    message: (($host.display_name // $host.name // "unknown") + ": non-running containers: " + (join(", "))),
+                    details: { containers: . }
+                  }
+                else empty end
+            else empty end
+          ),
+          (
+            if $include_backup_failed and (($host.backup.status // "") == "error") then
+              {
+                type: "backup_failed",
+                host_name: ($host.name // ""),
+                display_name: ($host.display_name // $host.name // "unknown"),
+                summary: "Backup failed",
+                message: (
+                  ($host.display_name // $host.name // "unknown")
+                  + ": backup failed"
+                  + (
+                      if (($host.backup.error // "") | length) > 0
+                      then " (" + ($host.backup.error // "") + ")"
+                      else ""
+                    end
+                    )
+                ),
+                details: {
+                  error: ($host.backup.error // ""),
+                  exit_code: ($host.backup.exit_code // 0)
+                }
+              }
+            else empty end
+          ),
+          (
+            if $include_collect_errors then
+              (
+                ($host.errors // {})
+                | with_entries(
+                    select(
+                      .key != "docker_tag"
+                      and ((.value // "") | tostring | length > 0)
+                    )
+                  )
+              ) as $errors
+              | ($errors | keys) as $error_keys
+              | if ($error_keys | length) > 0 then
+                  {
+                    type: "collector_fetch_error",
+                    host_name: ($host.name // ""),
+                    display_name: ($host.display_name // $host.name // "unknown"),
+                    summary: ((($error_keys | length) | tostring) + " monitoring contract fetch error(s)"),
+                    message: (
+                      ($host.display_name // $host.name // "unknown")
+                      + ": collector failed to refresh "
+                      + ($error_keys | join(", "))
+                      + (
+                          if ($host.stale // false)
+                          then " (stale cache in use)"
+                          else ""
+                        end
+                        )
+                    ),
+                    details: {
+                      stale: ($host.stale // false),
+                      failed_contracts: $error_keys,
+                      errors: $errors
+                    }
+                  }
+                elif ($host.stale // false) then
+                  {
+                    type: "collector_stale_cache",
+                    host_name: ($host.name // ""),
+                    display_name: ($host.display_name // $host.name // "unknown"),
+                    summary: "Collector is using stale cached monitoring data",
+                    message: (
+                      ($host.display_name // $host.name // "unknown")
+                      + ": collector is using stale cached monitoring data"
+                    ),
+                    details: {
+                      stale: true,
+                      failed_contracts: [],
+                      errors: {}
+                    }
+                  }
+                else empty end
+            else empty end
+          )
+      ]'
+)"; then
+  write_status_json "$timestamp" fail 0 0 false invalid_index "collector index is missing or invalid JSON" '[]' '[]' "$default_fleet_state_json"
+  exit 1
+fi
+
+global_state_json="$(build_global_state_json)"
+alert_count="$(jq -nr --argjson alerts "$alerts_json" '$alerts | length')"
+docker_tag_infos_json="$(
+  jq -c -n \
+    --slurpfile index "$index_path" \
+    --argjson include_docker_tag_info "$( [ "$include_docker_tag_info" = "1" ] && printf 'true' || printf 'false' )" \
+    '
+    if ($include_docker_tag_info | not) then
+      []
+    else
+      ($index[0].hosts // []) as $hosts
+      | [
+          $hosts[] as $host
+          | (($host.docker_tag.details.containers // []) | map(select(.update_available == true))) as $updates
+          | if ($updates | length) > 0 then
+              {
+                type: "docker_tag_review",
+                host_name: ($host.name // ""),
+                display_name: ($host.display_name // $host.name // "unknown"),
+                summary: ((($updates | length) | tostring) + " container tag review item(s)"),
+                message: (
+                  ($host.display_name // $host.name // "unknown")
+                  + ": "
+                  + (
+                      $updates
+                      | map(
+                          (.name // "container")
+                          + " "
+                          + (.current_tag // "n/a")
+                          + " -> "
+                          + (.latest_tag // "n/a")
+                          + (
+                              if (.bump_type // "") != ""
+                              then " (" + (.bump_type // "") + ")"
+                              else ""
+                            end
+                            )
+                        )
+                      | join(", ")
+                    )
+                ),
+                details: {
+                  containers: (
+                    $updates
+                    | map({
+                        name: (.name // ""),
+                        current_tag: (.current_tag // ""),
+                        latest_tag: (.latest_tag // ""),
+                        bump_type: (.bump_type // ""),
+                        ok_to_update: (.ok_to_update // false),
+                        review_required: (.review_required // false)
+                      })
+                  )
+                }
+              }
+            else empty end
+        ]
+    end
+    '
+)"
+info_count="$(jq -nr --argjson infos "$docker_tag_infos_json" '$infos | length')"
+
+if [ "$alert_count" -eq 0 ]; then
+  if [ "$info_count" -gt 0 ]; then
+    info_body="$(build_notification_body "$global_state_json" "$alerts_json" "$docker_tag_infos_json")"
+    info_title="$(build_notification_title "$global_state_json")"
+    info_tags_csv="$(tags_csv_from_array "${info_ntfy_tags[@]}")"
+
+    if ! send_notification "$info_title" "$info_ntfy_priority" "$info_tags_csv" "$info_body"; then
+      write_status_json "$timestamp" fail 0 "$info_count" false info_send_failed "failed to post monitoring state notification to ntfy" "$alerts_json" "$docker_tag_infos_json" "$global_state_json"
+      exit 1
+    fi
+
+    write_status_json "$timestamp" ok 0 "$info_count" true state_sent "" "$alerts_json" "$docker_tag_infos_json" "$global_state_json"
+    exit 0
+  fi
+
+  if [ "$force_test_alert" = "1" ]; then
+    notification_body="$(build_notification_body "$global_state_json" "$alerts_json" "$docker_tag_infos_json")"
+    title="$(build_notification_title "$global_state_json")"
+    info_tags_csv="$(tags_csv_from_array "${info_ntfy_tags[@]}")"
+
+    if ! send_notification "$title" "$info_ntfy_priority" "$info_tags_csv" "$notification_body"; then
+      write_status_json "$timestamp" fail 0 "$info_count" false test_send_failed "failed to post monitoring state notification to ntfy" "$alerts_json" "$docker_tag_infos_json" "$global_state_json"
+      exit 1
+    fi
+
+    write_status_json "$timestamp" ok 0 "$info_count" true state_sent "" "$alerts_json" "$docker_tag_infos_json" "$global_state_json"
+    exit 0
+  fi
+
+  rm -f "$state_hash_path"
+  write_status_json "$timestamp" ok 0 0 false none "" "$alerts_json" "$docker_tag_infos_json" "$global_state_json"
+  exit 0
+fi
+
+alerts_hash="$(printf '%s' "$alerts_json" | sha256sum | awk '{print $1}')"
+previous_hash=""
+if [ -f "$state_hash_path" ]; then
+  previous_hash="$(tr -d '\n' <"$state_hash_path")"
+fi
+
+if [ "$alerts_hash" = "$previous_hash" ]; then
+  write_status_json "$timestamp" warn "$alert_count" "$info_count" false unchanged "" "$alerts_json" "$docker_tag_infos_json" "$global_state_json"
+  exit 0
+fi
+
+notification_body="$(build_notification_body "$global_state_json" "$alerts_json" "$docker_tag_infos_json")"
+title="$(build_notification_title "$global_state_json")"
+tags_csv="$(tags_csv_from_array "${ntfy_tags[@]}")"
+
+if ! send_notification "$title" "$ntfy_priority" "$tags_csv" "$notification_body"; then
+  write_status_json "$timestamp" fail "$alert_count" "$info_count" false send_failed "failed to post notification to ntfy" "$alerts_json" "$docker_tag_infos_json" "$global_state_json"
+  exit 1
+fi
+
+printf '%s\n' "$alerts_hash" >"$state_hash_path"
+chmod 0600 "$state_hash_path"
+write_status_json "$timestamp" warn "$alert_count" "$info_count" true sent "" "$alerts_json" "$docker_tag_infos_json" "$global_state_json"

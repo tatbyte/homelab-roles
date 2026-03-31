@@ -1,0 +1,20 @@
+---
+# roles/monitoring_docker_tag/tasks/main.yml
+# Task entrypoint for the `monitoring_docker_tag` role.
+# Imports the assert, install, config, and validate phase files in order.
+
+- name: Assert
+  ansible.builtin.import_tasks: assert.yml
+  tags: [assert, monitoring_docker_tag, monitoring_docker_tag_assert]
+
+- name: Install
+  ansible.builtin.import_tasks: install.yml
+  tags: [install, monitoring_docker_tag, monitoring_docker_tag_install]
+
+- name: Config
+  ansible.builtin.import_tasks: config.yml
+  tags: [config, monitoring_docker_tag, monitoring_docker_tag_config]
+
+- name: Validate
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate, monitoring_docker_tag, monitoring_docker_tag_validate]

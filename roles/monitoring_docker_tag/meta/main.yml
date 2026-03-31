@@ -1,0 +1,7 @@
+---
+# roles/monitoring_docker_tag/meta/main.yml
+# Role metadata for `monitoring_docker_tag`.
+# Leaves dependencies empty because execution order is defined in the consumer
+# playbook or aggregate `monitoring` role.
+
+dependencies: []
