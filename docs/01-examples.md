@@ -29,15 +29,26 @@ The example assumes Debian-family hosts.
 - Put hosts in the matching inventory groups (`bootstrap`, `base`, `user`,
   `docker`, `backup`, `monitoring`) so grouped vars and playbooks line up
   cleanly.
-- Keep `examples/playbooks/backup.yml` on the aggregate `backup` role so the
+- Keep `examples/playbooks/recurring/backup.yml` on the aggregate `backup` role so the
   recurring backup, repository init, prune, and check timers stay in the same
   steady-state path.
-- Keep `examples/playbooks/monitoring.yml` on the aggregate `monitoring` role
+- Keep `examples/playbooks/recurring/monitoring.yml` on the aggregate `monitoring` role
   so host-local status generation stays on one stable entrypoint.
-- Keep `examples/playbooks/base.yml` for the non-maintenance baseline and
-  `examples/playbooks/base_maintenance.yml` for one-host-at-a-time package
+- Keep `examples/playbooks/ops/monitoring_ops.yml` as the aggregate operator
+  entrypoint for the monitoring helper playbooks.
+- Keep focused `*_now` monitoring helpers such as
+  `examples/playbooks/ops/monitoring_docker_tag_now.yml` under
+  `examples/playbooks/ops/` so manual validation stays separate from the
+  recurring stack.
+- Keep non-monitoring manual-run entrypoints explicit, such as
+  `examples/playbooks/ops/bootstrap.yml`,
+  `examples/playbooks/ops/base_maintenance.yml` and
+  `examples/playbooks/ops/backup_restic_now.yml`, instead of reintroducing an
+  aggregate ops playbook.
+- Keep `examples/playbooks/recurring/base.yml` for the non-maintenance baseline and
+  `examples/playbooks/ops/base_maintenance.yml` for one-host-at-a-time package
   maintenance.
-- Keep `examples/playbooks/site.yml` as the post-bootstrap stack:
+- Keep `examples/playbooks/recurring/site.yml` as the post-bootstrap stack:
   `base`, `user`, `docker`, `backup`, then `monitoring`.
 
 ## Secret Loading

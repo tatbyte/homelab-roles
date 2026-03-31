@@ -1,0 +1,11 @@
+---
+# examples/playbooks/recurring/user.yml
+# User phase playbook for the example lab.
+# Connects as the automation account after the base phase and applies the
+# aggregate `user` role to hosts in the `user` inventory group.
+
+- name: Apply user role after base
+  hosts: user
+  become: true
+  roles:
+    - role: user

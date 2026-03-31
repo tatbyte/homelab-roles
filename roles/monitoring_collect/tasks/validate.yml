@@ -1,0 +1,94 @@
+---
+# roles/monitoring_collect/tasks/validate.yml
+# Validate phase tasks for the `monitoring_collect` role.
+
+- name: "Validate | Stat monitoring_collect managed paths"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ monitoring_collect_script_path }}"
+    - "{{ monitoring_collect_state_dir }}"
+    - "{{ monitoring_collect_ssh_dir }}"
+    - "/etc/systemd/system/{{ monitoring_collect_service_unit }}"
+    - "/etc/systemd/system/{{ monitoring_collect_timer_unit }}"
+    - "{{ monitoring_collect_output_dir }}"
+  register: monitoring_collect_managed_paths
+  when: monitoring_collect_enabled
+
+- name: "Validate | Stat managed monitoring_collect SSH private key"
+  ansible.builtin.stat:
+    path: "{{ monitoring_collect_ssh_private_key_path }}"
+  register: monitoring_collect_private_key_stat
+  when:
+    - monitoring_collect_enabled
+    - monitoring_collect_ssh_manage_private_key
+
+- name: "Validate | Stat monitoring_collect public JSON mirror paths"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ monitoring_collect_public_json_dir }}"
+    - "{{ monitoring_collect_public_hosts_dir }}"
+  register: monitoring_collect_public_paths
+  when:
+    - monitoring_collect_enabled
+    - monitoring_collect_public_json_enabled
+
+- name: "Validate | Stat monitoring_collect timer enablement symlink"
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/timers.target.wants/{{ monitoring_collect_timer_unit }}"
+  register: monitoring_collect_timer_enabled_symlink
+  when: monitoring_collect_enabled
+
+- name: "Validate | Read monitoring_collect timer systemd state" # noqa: command-instead-of-module
+  ansible.builtin.command:
+    argv:
+      - systemctl
+      - show
+      - "{{ monitoring_collect_timer_unit }}"
+      - --property=LoadState
+      - --property=ActiveState
+      - --property=UnitFileState
+      - --property=SubState
+  register: monitoring_collect_timer_state
+  changed_when: false
+  when: monitoring_collect_enabled
+
+- name: "Validate | Assert monitoring_collect final state when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_collect_managed_paths.results | map(attribute='stat.exists') | min
+      - not monitoring_collect_ssh_manage_private_key or monitoring_collect_private_key_stat.stat.exists
+      - not monitoring_collect_public_json_enabled or (monitoring_collect_public_paths.results | map(attribute='stat.exists') | min)
+      - monitoring_collect_timer_enabled_symlink.stat.exists
+      - monitoring_collect_timer_state.rc == 0
+      - "'LoadState=loaded' in monitoring_collect_timer_state.stdout_lines"
+      - "'ActiveState=active' in monitoring_collect_timer_state.stdout_lines"
+      - "'UnitFileState=enabled' in monitoring_collect_timer_state.stdout_lines"
+    fail_msg: >-
+      monitoring_collect is enabled, but the expected files, mirror directories,
+      or timer state were not validated successfully
+    quiet: true
+  when: monitoring_collect_enabled
+
+- name: "Validate | Stat monitoring_collect managed files when disabled"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ monitoring_collect_script_path }}"
+    - "{{ monitoring_collect_output_dir }}"
+    - "{{ monitoring_collect_state_dir }}"
+    - "/etc/systemd/system/{{ monitoring_collect_service_unit }}"
+    - "/etc/systemd/system/{{ monitoring_collect_timer_unit }}"
+  register: monitoring_collect_removed_paths
+  when: not monitoring_collect_enabled
+
+- name: "Validate | Assert monitoring_collect cleanup when disabled"
+  ansible.builtin.assert:
+    that:
+      - not (monitoring_collect_removed_paths.results | map(attribute='stat.exists') | max)
+    fail_msg: >-
+      monitoring_collect is disabled, but one or more managed files still exist
+      on the host
+    quiet: true
+  when: not monitoring_collect_enabled

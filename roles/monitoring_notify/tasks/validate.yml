@@ -1,0 +1,71 @@
+---
+# roles/monitoring_notify/tasks/validate.yml
+# Validate phase tasks for the `monitoring_notify` role.
+
+- name: "Validate | Stat monitoring_notify managed paths"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ monitoring_notify_script_path }}"
+    - "{{ monitoring_notify_state_dir }}"
+    - "{{ monitoring_notify_status_dir }}"
+    - "/etc/systemd/system/{{ monitoring_notify_service_unit }}"
+    - "/etc/systemd/system/{{ monitoring_notify_timer_unit }}"
+  register: monitoring_notify_managed_paths
+  when: monitoring_notify_enabled
+
+- name: "Validate | Stat monitoring_notify timer enablement symlink"
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/timers.target.wants/{{ monitoring_notify_timer_unit }}"
+  register: monitoring_notify_timer_enabled_symlink
+  when: monitoring_notify_enabled
+
+- name: "Validate | Read monitoring_notify timer systemd state" # noqa: command-instead-of-module
+  ansible.builtin.command:
+    argv:
+      - systemctl
+      - show
+      - "{{ monitoring_notify_timer_unit }}"
+      - --property=LoadState
+      - --property=ActiveState
+      - --property=UnitFileState
+      - --property=SubState
+  register: monitoring_notify_timer_state
+  changed_when: false
+  when: monitoring_notify_enabled
+
+- name: "Validate | Assert monitoring_notify final state when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_notify_managed_paths.results | map(attribute='stat.exists') | min
+      - monitoring_notify_timer_enabled_symlink.stat.exists
+      - monitoring_notify_timer_state.rc == 0
+      - "'LoadState=loaded' in monitoring_notify_timer_state.stdout_lines"
+      - "'ActiveState=active' in monitoring_notify_timer_state.stdout_lines"
+      - "'UnitFileState=enabled' in monitoring_notify_timer_state.stdout_lines"
+    fail_msg: >-
+      monitoring_notify is enabled, but the expected files or timer state were
+      not validated successfully
+    quiet: true
+  when: monitoring_notify_enabled
+
+- name: "Validate | Stat monitoring_notify managed files when disabled"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ monitoring_notify_script_path }}"
+    - "{{ monitoring_notify_state_dir }}"
+    - "/etc/systemd/system/{{ monitoring_notify_service_unit }}"
+    - "/etc/systemd/system/{{ monitoring_notify_timer_unit }}"
+  register: monitoring_notify_removed_paths
+  when: not monitoring_notify_enabled
+
+- name: "Validate | Assert monitoring_notify cleanup when disabled"
+  ansible.builtin.assert:
+    that:
+      - not (monitoring_notify_removed_paths.results | map(attribute='stat.exists') | max)
+    fail_msg: >-
+      monitoring_notify is disabled, but one or more managed files still exist
+      on the host
+    quiet: true
+  when: not monitoring_notify_enabled

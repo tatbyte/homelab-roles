@@ -21,7 +21,7 @@
     home: "{{ docker_adguard_sync_service_user_home }}"
     create_home: false
     state: present
-    comment: "AdGuard Sync service account managed by Ansible"
+    comment: "{{ docker_adguard_sync_service_user_comment }}"
   when: docker_adguard_sync_enabled | bool
 
 - name: "Config | Collect existing user entries for AdGuard Sync access-group management"

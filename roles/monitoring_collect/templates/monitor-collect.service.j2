@@ -1,0 +1,15 @@
+{# roles/monitoring_collect/templates/monitor-collect.service.j2 #}
+[Unit]
+Description=Collect monitoring contracts into one aggregated JSON
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User={{ monitoring_collect_service_user }}
+Group={{ monitoring_collect_service_group }}
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart={{ monitoring_collect_script_path }}
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

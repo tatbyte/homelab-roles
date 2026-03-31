@@ -21,7 +21,7 @@
     home: "{{ docker_adguard_project_dir }}"
     create_home: false
     state: present
-    comment: "AdGuard service account managed by Ansible"
+    comment: "{{ docker_adguard_service_user_comment }}"
   when: docker_adguard_enabled | bool
 
 - name: "Config | Resolve effective AdGuard admin credentials"

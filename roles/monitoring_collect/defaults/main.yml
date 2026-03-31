@@ -1,0 +1,59 @@
+---
+# roles/monitoring_collect/defaults/main.yml
+# Default variables for the `monitoring_collect` role.
+# Defines the recurring collector script, aggregated JSON output, and optional
+# public JSON mirror consumed by other roles such as `monitoring_web`.
+
+monitoring_collect_enabled: true
+
+monitoring_collect_packages:
+  - jq
+  - openssh-client
+
+monitoring_collect_unit_name: monitor-collect
+monitoring_collect_service_unit: "{{ monitoring_collect_unit_name }}.service"
+monitoring_collect_timer_unit: "{{ monitoring_collect_unit_name }}.timer"
+monitoring_collect_script_path: "/usr/local/bin/{{ monitoring_collect_unit_name }}.sh"
+monitoring_collect_state_dir: "/usr/local/lib/{{ monitoring_collect_unit_name }}"
+
+monitoring_collect_output_dir: /var/lib/monitor/collect
+monitoring_collect_hosts_dir: "{{ monitoring_collect_output_dir }}/hosts"
+monitoring_collect_index_path: "{{ monitoring_collect_output_dir }}/index.json"
+
+monitoring_collect_public_json_enabled: "{{ monitoring_web_enabled | default(false) | bool }}"
+monitoring_collect_public_json_dir: "{{ monitoring_web_publish_dir | default('/srv/monitor-collect-web/site') }}"
+monitoring_collect_public_hosts_dir: "{{ monitoring_collect_public_json_dir }}/hosts"
+monitoring_collect_public_index_path: "{{ monitoring_collect_public_json_dir }}/index.json"
+monitoring_collect_public_host_page_template_path: "{{ monitoring_web_host_template_path | default('/srv/monitor-collect-web/site/host.html') }}"
+
+monitoring_collect_service_user: "{{ ansible_user | default('root') }}"
+monitoring_collect_service_group: "{{ ansible_user | default('root') }}"
+monitoring_collect_script_owner: root
+monitoring_collect_script_group: root
+monitoring_collect_script_mode: "0755"
+monitoring_collect_output_dir_mode: "0750"
+monitoring_collect_public_dir_mode: "0755"
+monitoring_collect_public_file_mode: "0644"
+
+monitoring_collect_host: "{{ ansible_hostname | default(inventory_hostname) }}"
+monitoring_collect_job_name: monitoring_collect
+monitoring_collect_json_schema: monitoring_collect_index_v1
+
+monitoring_collect_sources: []
+monitoring_collect_status_path_default: /var/lib/monitor/status.json
+monitoring_collect_storage_health_path_default: /var/lib/monitor/storage-health.json
+monitoring_collect_docker_tag_path_default: /var/lib/monitor/docker-tag.json
+monitoring_collect_backup_path_default: /var/lib/monitor/restic-backup.json
+monitoring_collect_ssh_connect_timeout_seconds: 10
+monitoring_collect_ssh_strict_host_key_checking: accept-new
+monitoring_collect_ssh_dir: "{{ monitoring_collect_state_dir }}/ssh"
+monitoring_collect_ssh_manage_private_key: false
+monitoring_collect_ssh_private_key: ""
+monitoring_collect_ssh_private_key_path: "{{ monitoring_collect_ssh_dir }}/id_ed25519"
+monitoring_collect_ssh_identity_file: ""
+monitoring_collect_ssh_known_hosts_path: "{{ monitoring_collect_ssh_dir }}/known_hosts"
+
+monitoring_collect_timer_on_calendar: "*-*-* *:35:00"
+monitoring_collect_timer_randomized_delay_sec: 0
+monitoring_collect_timer_accuracy_sec: 1m
+monitoring_collect_timer_persistent: true

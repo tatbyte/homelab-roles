@@ -1,0 +1,133 @@
+---
+# roles/monitoring_docker_tag_now/tasks/validate.yml
+# Validate phase tasks for the `monitoring_docker_tag_now` role.
+# Starts the managed oneshot monitoring service immediately, reads the
+# resulting JSON status file, prints a short summary, and fails when the run
+# result is not acceptable.
+
+- name: "Validate | Stat monitoring_docker_tag service unit"
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/{{ monitoring_docker_tag_now_service_unit }}"
+  register: monitoring_docker_tag_now_service_unit_stat
+  when: monitoring_docker_tag_now_enabled
+
+- name: "Validate | Stat monitoring_docker_tag script path"
+  ansible.builtin.stat:
+    path: "{{ monitoring_docker_tag_now_script_path }}"
+  register: monitoring_docker_tag_now_script_stat
+  when: monitoring_docker_tag_now_enabled
+
+- name: "Validate | Assert monitoring_docker_tag artifacts exist"
+  ansible.builtin.assert:
+    that:
+      - monitoring_docker_tag_now_service_unit_stat.stat.exists
+      - monitoring_docker_tag_now_script_stat.stat.exists
+    fail_msg: >-
+      monitoring_docker_tag_now expects the recurring monitoring_docker_tag
+      role to be applied first so the managed service unit and script already
+      exist
+    quiet: true
+  when: monitoring_docker_tag_now_enabled
+
+- name: "Validate | Stat monitoring_docker_tag file before run"
+  ansible.builtin.stat:
+    path: "{{ monitoring_docker_tag_now_status_path }}"
+    checksum_algorithm: sha1
+  register: monitoring_docker_tag_now_status_before
+  when: monitoring_docker_tag_now_enabled
+
+- name: "Validate | Start monitoring_docker_tag oneshot service now"
+  ansible.builtin.systemd_service:
+    name: "{{ monitoring_docker_tag_now_service_unit }}"
+    state: started
+  register: monitoring_docker_tag_now_service_start
+  failed_when: false
+  when: monitoring_docker_tag_now_enabled
+
+- name: "Validate | Wait for monitoring_docker_tag file to appear"
+  ansible.builtin.wait_for:
+    path: "{{ monitoring_docker_tag_now_status_path }}"
+    state: present
+    timeout: "{{ monitoring_docker_tag_now_wait_timeout_seconds | int }}"
+  register: monitoring_docker_tag_now_wait_for_file
+  failed_when: false
+  when: monitoring_docker_tag_now_enabled
+
+- name: "Validate | Stat monitoring_docker_tag file after run"
+  ansible.builtin.stat:
+    path: "{{ monitoring_docker_tag_now_status_path }}"
+    checksum_algorithm: sha1
+  register: monitoring_docker_tag_now_status_file
+  when: monitoring_docker_tag_now_enabled
+
+- name: "Validate | Derive monitoring_docker_tag freshness"
+  ansible.builtin.set_fact:
+    monitoring_docker_tag_now_status_is_fresh: >-
+      {{
+        not (monitoring_docker_tag_now_service_start.failed | default(false))
+        and not (monitoring_docker_tag_now_wait_for_file.failed | default(false))
+        and
+        (monitoring_docker_tag_now_status_file.stat.exists | default(false))
+        and (
+          not (monitoring_docker_tag_now_status_before.stat.exists | default(false))
+          or (monitoring_docker_tag_now_status_file.stat.checksum | default(''))
+             != (monitoring_docker_tag_now_status_before.stat.checksum | default(''))
+          or (monitoring_docker_tag_now_status_file.stat.mtime | default(0))
+             > (monitoring_docker_tag_now_status_before.stat.mtime | default(0))
+        )
+      }}
+  changed_when: false
+  when: monitoring_docker_tag_now_enabled
+
+- name: "Validate | Assert monitoring_docker_tag file was refreshed"
+  ansible.builtin.assert:
+    that:
+      - monitoring_docker_tag_now_status_is_fresh
+    fail_msg: >-
+      monitoring_docker_tag_now did not observe a freshly updated status file
+      for the current run.
+      systemd_msg={{ monitoring_docker_tag_now_service_start.msg | default('') }}
+      previous_exists={{ monitoring_docker_tag_now_status_before.stat.exists | default(false) }}
+      current_exists={{ monitoring_docker_tag_now_status_file.stat.exists | default(false) }}
+      previous_mtime={{ monitoring_docker_tag_now_status_before.stat.mtime | default('n/a') }}
+      current_mtime={{ monitoring_docker_tag_now_status_file.stat.mtime | default('n/a') }}
+      previous_checksum={{ monitoring_docker_tag_now_status_before.stat.checksum | default('n/a') }}
+      current_checksum={{ monitoring_docker_tag_now_status_file.stat.checksum | default('n/a') }}
+    quiet: true
+  when: monitoring_docker_tag_now_enabled
+
+- name: "Validate | Read monitoring_docker_tag JSON"
+  ansible.builtin.slurp:
+    src: "{{ monitoring_docker_tag_now_status_path }}"
+  register: monitoring_docker_tag_now_status_slurp
+  when: monitoring_docker_tag_now_enabled
+
+- name: "Validate | Parse monitoring_docker_tag JSON"
+  ansible.builtin.set_fact:
+    monitoring_docker_tag_now_status: "{{ monitoring_docker_tag_now_status_slurp.content | b64decode | from_json }}"
+  changed_when: false
+  when: monitoring_docker_tag_now_enabled
+
+- name: "Validate | Print monitoring_docker_tag summary"
+  ansible.builtin.debug:
+    msg: >-
+      [monitoring_docker_tag_now] host={{ inventory_hostname }}
+      | status={{ monitoring_docker_tag_now_status.status | default('unknown') }}
+      | timestamp={{ monitoring_docker_tag_now_status.timestamp | default('n/a') }}
+      | updates={{ monitoring_docker_tag_now_status.details.update_available_count | default('n/a') }}
+      | safe={{ monitoring_docker_tag_now_status.details.ok_to_update_count | default('n/a') }}
+      | review={{ monitoring_docker_tag_now_status.details.review_required_count | default('n/a') }}
+  when: monitoring_docker_tag_now_enabled
+
+- name: "Validate | Assert monitoring_docker_tag run result is acceptable"
+  ansible.builtin.assert:
+    that:
+      - not (monitoring_docker_tag_now_service_start.failed | default(false))
+      - (monitoring_docker_tag_now_status.status | default('')) in monitoring_docker_tag_now_allowed_statuses
+    fail_msg: >-
+      monitoring_docker_tag_now run failed.
+      systemd_msg={{ monitoring_docker_tag_now_service_start.msg | default('') }}
+      status={{ monitoring_docker_tag_now_status.status | default('unknown') }}
+      details={{ monitoring_docker_tag_now_status.details | default({}) | to_json }}
+    quiet: true
+  when: monitoring_docker_tag_now_enabled

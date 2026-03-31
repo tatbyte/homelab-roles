@@ -1,0 +1,83 @@
+---
+# roles/monitoring_notify/tasks/config.yml
+# Config phase tasks for the `monitoring_notify` role.
+
+- name: "Config | Ensure monitoring_notify directories exist"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - path: "{{ monitoring_notify_state_dir }}"
+      mode: "0755"
+    - path: "{{ monitoring_notify_status_dir }}"
+      mode: "{{ monitoring_notify_status_dir_mode }}"
+  when: monitoring_notify_enabled
+
+- name: "Config | Render monitoring_notify script"
+  ansible.builtin.template:
+    src: monitor-notify.sh.j2
+    dest: "{{ monitoring_notify_script_path }}"
+    owner: "{{ monitoring_notify_script_owner }}"
+    group: "{{ monitoring_notify_script_group }}"
+    mode: "{{ monitoring_notify_script_mode }}"
+  when: monitoring_notify_enabled
+
+- name: "Config | Render monitoring_notify systemd units"
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "/etc/systemd/system/{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - src: monitor-notify.service.j2
+      dest: "{{ monitoring_notify_service_unit }}"
+    - src: monitor-notify.timer.j2
+      dest: "{{ monitoring_notify_timer_unit }}"
+  when: monitoring_notify_enabled
+
+- name: "Config | Reload systemd after monitoring_notify unit updates"
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when: monitoring_notify_enabled
+
+- name: "Config | Ensure monitoring_notify timer is enabled and started"
+  ansible.builtin.systemd_service:
+    name: "{{ monitoring_notify_timer_unit }}"
+    enabled: true
+    state: started
+  when: monitoring_notify_enabled
+
+- name: "Config | Stop and disable monitoring_notify timer when disabled"
+  ansible.builtin.systemd_service:
+    name: "{{ monitoring_notify_timer_unit }}"
+    enabled: false
+    state: stopped
+  failed_when: false
+  when: not monitoring_notify_enabled
+
+- name: "Config | Stop monitoring_notify service when disabled"
+  ansible.builtin.systemd_service:
+    name: "{{ monitoring_notify_service_unit }}"
+    state: stopped
+  failed_when: false
+  when: not monitoring_notify_enabled
+
+- name: "Config | Remove monitoring_notify managed files when disabled"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ monitoring_notify_script_path }}"
+    - "{{ monitoring_notify_state_dir }}"
+    - "/etc/systemd/system/{{ monitoring_notify_service_unit }}"
+    - "/etc/systemd/system/{{ monitoring_notify_timer_unit }}"
+  when: not monitoring_notify_enabled
+
+- name: "Config | Reload systemd after monitoring_notify cleanup"
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when: not monitoring_notify_enabled

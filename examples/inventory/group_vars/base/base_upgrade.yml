@@ -4,8 +4,9 @@
 # Defines the immediate APT upgrade behavior available during the base phase.
 
 base_upgrade_enabled: false
-# Refresh package metadata on every explicit upgrade run in the example lab.
-base_upgrade_cache_valid_time: 0
+# Reuse package metadata for one hour so repeated explicit maintenance runs can
+# stay idempotent unless the cache is actually stale.
+base_upgrade_cache_valid_time: 3600
 
 # Use the safer upgrade mode by default so packages that require broader
 # dependency changes stay reviewable.

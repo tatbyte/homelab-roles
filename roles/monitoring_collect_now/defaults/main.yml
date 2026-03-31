@@ -1,0 +1,11 @@
+---
+# roles/monitoring_collect_now/defaults/main.yml
+# Default variables for the `monitoring_collect_now` role.
+
+monitoring_collect_now_enabled: true
+monitoring_collect_now_service_unit: "{{ monitoring_collect_service_unit | default('monitor-collect.service') }}"
+monitoring_collect_now_index_path: "{{ monitoring_collect_index_path | default('/var/lib/monitor/collect/index.json') }}"
+monitoring_collect_now_script_path: "{{ monitoring_collect_script_path | default('/usr/local/bin/monitor-collect.sh') }}"
+monitoring_collect_now_allowed_statuses:
+  - ok
+  - warn

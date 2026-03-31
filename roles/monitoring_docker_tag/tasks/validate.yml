@@ -1,0 +1,72 @@
+---
+# roles/monitoring_docker_tag/tasks/validate.yml
+# Validate phase tasks for the `monitoring_docker_tag` role.
+# Verifies the rendered files and timer state after configuration.
+
+- name: "Validate | Stat monitoring_docker_tag managed paths"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ monitoring_docker_tag_script_path }}"
+    - "{{ monitoring_docker_tag_state_dir }}"
+    - "/etc/systemd/system/{{ monitoring_docker_tag_service_unit }}"
+    - "/etc/systemd/system/{{ monitoring_docker_tag_timer_unit }}"
+    - "{{ monitoring_docker_tag_status_dir }}"
+  register: monitoring_docker_tag_managed_paths
+  when: monitoring_docker_tag_enabled
+
+- name: "Validate | Stat monitoring_docker_tag timer enablement symlink"
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/timers.target.wants/{{ monitoring_docker_tag_timer_unit }}"
+  register: monitoring_docker_tag_timer_enabled_symlink
+  when: monitoring_docker_tag_enabled
+
+- name: "Validate | Read monitoring_docker_tag timer systemd state" # noqa: command-instead-of-module
+  ansible.builtin.command:
+    argv:
+      - systemctl
+      - show
+      - "{{ monitoring_docker_tag_timer_unit }}"
+      - --property=LoadState
+      - --property=ActiveState
+      - --property=UnitFileState
+      - --property=SubState
+  register: monitoring_docker_tag_timer_state
+  changed_when: false
+  when: monitoring_docker_tag_enabled
+
+- name: "Validate | Assert monitoring_docker_tag final state when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_docker_tag_managed_paths.results | map(attribute='stat.exists') | min
+      - monitoring_docker_tag_timer_enabled_symlink.stat.exists
+      - monitoring_docker_tag_timer_state.rc == 0
+      - "'LoadState=loaded' in monitoring_docker_tag_timer_state.stdout_lines"
+      - "'ActiveState=active' in monitoring_docker_tag_timer_state.stdout_lines"
+      - "'UnitFileState=enabled' in monitoring_docker_tag_timer_state.stdout_lines"
+    fail_msg: >-
+      monitoring_docker_tag is enabled, but the expected files or timer state
+      were not validated successfully
+    quiet: true
+  when: monitoring_docker_tag_enabled
+
+- name: "Validate | Stat monitoring_docker_tag managed files when disabled"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ monitoring_docker_tag_script_path }}"
+    - "{{ monitoring_docker_tag_status_path }}"
+    - "/etc/systemd/system/{{ monitoring_docker_tag_service_unit }}"
+    - "/etc/systemd/system/{{ monitoring_docker_tag_timer_unit }}"
+  register: monitoring_docker_tag_removed_paths
+  when: not monitoring_docker_tag_enabled
+
+- name: "Validate | Assert monitoring_docker_tag cleanup when disabled"
+  ansible.builtin.assert:
+    that:
+      - not (monitoring_docker_tag_removed_paths.results | map(attribute='stat.exists') | max)
+    fail_msg: >-
+      monitoring_docker_tag is disabled, but one or more managed files still
+      exist on the host
+    quiet: true
+  when: not monitoring_docker_tag_enabled

@@ -129,44 +129,44 @@ vault_backup_restic_idrive_e2_secret_access_key: "replace-me"
 vault_backup_restic_password: "replace-me"
 
 # ---------------------------------------------------------------------------
-# monitor_collect
+# monitoring_collect
 # ---------------------------------------------------------------------------
 
 # Optional dedicated SSH private key used by the collector host when
-# `monitor_collect_ssh_manage_private_key` is enabled.
-vault_monitor_collect_ssh_private_key: |
+# `monitoring_collect_ssh_manage_private_key` is enabled.
+vault_monitoring_collect_ssh_private_key: |
   replace-me-with-your-monitor-collect-private-key
 
 # Matching public key installed on the remote monitored hosts through
 # `monitoring_authorized_key`.
-vault_monitor_collect_ssh_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleMonitorCollectPublicKey collector@example.invalid"
+vault_monitoring_collect_ssh_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleMonitorCollectPublicKey collector@example.invalid"
 
 # ---------------------------------------------------------------------------
-# monitor_web
+# monitoring_web
 # ---------------------------------------------------------------------------
 
 # Optional public hostname published by Traefik for the collected monitoring
 # dashboard.
-vault_monitor_collect_web_host: "monitor.example.com"
+vault_monitoring_collect_web_host: "monitor.example.com"
 
 # Optional dashboard title shown on the collected monitoring page.
-vault_monitor_collect_web_title: "Lab Monitor"
+vault_monitoring_collect_web_title: "Lab Monitor"
 
 # Optional shorter title used for the installable dashboard on mobile home
 # screens.
-vault_monitor_collect_web_short_title: "Monitor"
+vault_monitoring_collect_web_short_title: "Monitor"
 
 # Optional Traefik basic-auth entries for the monitoring dashboard, in the same
 # `user:hash` format as the Traefik dashboard itself. Leave empty to disable
 # auth for the dashboard route.
-vault_monitor_collect_web_basic_auth_users:
+vault_monitoring_collect_web_basic_auth_users:
   - "monitor:replace-me-with-htpasswd-hash"
 
 # ---------------------------------------------------------------------------
-# monitor_notify
+# monitoring_notify
 # ---------------------------------------------------------------------------
 
 # Optional ntfy topic URL used by the collector host to send monitoring
-# notifications. Leave this unset to keep `monitor_notify` disabled in the
+# notifications. Leave this unset to keep `monitoring_notify` disabled in the
 # example inventory.
-vault_monitor_notify_ntfy_url: "https://ntfy.sh/example-lab-monitor"
+vault_monitoring_notify_ntfy_url: "https://ntfy.sh/example-lab-monitor"

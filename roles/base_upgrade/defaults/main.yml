@@ -3,7 +3,7 @@
 # Default variables for the `base_upgrade` role.
 # Defines the APT cache policy, upgrade mode, autoremove behavior, and reboot handling enforced during the base phase.
 
-base_upgrade_cache_valid_time: 0
+base_upgrade_cache_valid_time: 3600
 base_upgrade_mode: safe
 base_upgrade_autoremove: false
 base_upgrade_allow_reboot: false

@@ -1,0 +1,17 @@
+---
+# examples/playbooks/recurring/base.yml
+# Base phase playbook for the example lab.
+# Connects as the automation account after bootstrap and applies the `base`
+# role to hosts in the `base` inventory group for the normal host-baseline
+# path. Reboot-capable package maintenance now lives in the separate
+# `base_maintenance.yml` playbook.
+
+- name: Apply base role after bootstrap
+  hosts: base
+  become: true
+  vars:
+    base_updates_enabled: false
+    base_upgrade_enabled: false
+    base_needrestart_enabled: false
+  roles:
+    - role: base

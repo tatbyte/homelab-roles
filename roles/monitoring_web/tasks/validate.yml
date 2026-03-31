@@ -1,0 +1,73 @@
+---
+# roles/monitoring_web/tasks/validate.yml
+# Validate phase tasks for the `monitoring_web` role.
+
+- name: "Validate | Stat monitoring_web artifacts"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ monitoring_web_project_dir }}"
+    - "{{ monitoring_web_publish_dir }}"
+    - "{{ monitoring_web_publish_html_path }}"
+    - "{{ monitoring_web_host_template_path }}"
+    - "{{ monitoring_web_manifest_path }}"
+    - "{{ monitoring_web_service_worker_path }}"
+    - "{{ monitoring_web_icon_path }}"
+    - "{{ monitoring_web_icon_png_180_path }}"
+    - "{{ monitoring_web_icon_png_192_path }}"
+    - "{{ monitoring_web_icon_png_512_path }}"
+    - "{{ monitoring_web_nginx_conf_path }}"
+    - "{{ monitoring_web_compose_file_path }}"
+  register: monitoring_web_artifacts
+  when: monitoring_web_enabled
+
+- name: "Validate | Read monitoring_web Docker Compose running services" # noqa: command-instead-of-module
+  ansible.builtin.command:
+    argv: >-
+      {{
+        monitoring_web_compose_command
+        + [
+            '--project-name',
+            monitoring_web_compose_project_name,
+            '--file',
+            monitoring_web_compose_file_path,
+            'ps',
+            '--services',
+            '--status',
+            'running',
+          ]
+      }}
+  register: monitoring_web_running_services
+  changed_when: false
+  when: monitoring_web_enabled
+
+- name: "Validate | Assert monitoring_web final state when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_web_artifacts.results | map(attribute='stat.exists') | min
+      - monitoring_web_running_services.rc == 0
+      - monitoring_web_compose_service_name in (monitoring_web_running_services.stdout_lines | default([]))
+    fail_msg: >-
+      monitoring_web is enabled, but the expected Docker Compose artifacts or
+      running container state were not validated successfully
+    quiet: true
+  when: monitoring_web_enabled
+
+- name: "Validate | Stat monitoring_web managed files when disabled"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ monitoring_web_project_dir }}"
+    - "/etc/systemd/system/{{ monitoring_web_legacy_service_unit }}"
+  register: monitoring_web_removed_paths
+  when: not monitoring_web_enabled
+
+- name: "Validate | Assert monitoring_web cleanup when disabled"
+  ansible.builtin.assert:
+    that:
+      - not (monitoring_web_removed_paths.results | map(attribute='stat.exists') | max)
+    fail_msg: >-
+      monitoring_web is disabled, but one or more managed files still exist on
+      the host
+    quiet: true
+  when: not monitoring_web_enabled

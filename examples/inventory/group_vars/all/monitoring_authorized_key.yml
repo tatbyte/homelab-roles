@@ -9,10 +9,16 @@
 # same non-root automation account used by the playbooks.
 monitoring_authorized_key_user: "{{ ansible_user }}"
 
+# Optional controller-local fallback public key path for the dedicated
+# monitoring collector identity when the example Vault file leaves the public
+# key unset.
+monitoring_authorized_key_local_public_key_path: "{{ lookup('env', 'HOME') }}/.ssh/monitor_collect_ed25519.pub"
+
 # Public SSH key allowed to connect for monitoring-style access.
 # Prefer a Vault-sourced collector public key when one is available.
 monitoring_authorized_key_key: >-
   {{
-    vault_monitor_collect_ssh_public_key
+    vault_monitoring_collect_ssh_public_key
+    | default(lookup('file', monitoring_authorized_key_local_public_key_path, errors='ignore'), true)
     | default('ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleMonitoringKey control-monitoring')
   }}

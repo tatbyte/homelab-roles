@@ -1,0 +1,10 @@
+---
+# roles/monitoring_docker_tag/tasks/install.yml
+# Install phase tasks for the `monitoring_docker_tag` role.
+# Installs the packages required by the recurring Docker tag checks.
+
+- name: "Install | Ensure monitoring_docker_tag packages are installed"
+  ansible.builtin.package:
+    name: "{{ monitoring_docker_tag_packages }}"
+    state: present
+  when: monitoring_docker_tag_enabled

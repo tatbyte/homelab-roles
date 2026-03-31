@@ -1,0 +1,58 @@
+---
+# roles/monitoring_notify/tasks/assert.yml
+# Assert phase tasks for the `monitoring_notify` role.
+
+- name: "Assert | Validate monitoring_notify variables when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_notify_enabled is boolean
+      - monitoring_notify_packages is sequence
+      - monitoring_notify_packages | length > 0
+      - monitoring_notify_index_path is string
+      - monitoring_notify_index_path | trim | length > 0
+      - monitoring_notify_index_path.startswith('/')
+      - monitoring_notify_status_path is string
+      - monitoring_notify_status_path | trim | length > 0
+      - monitoring_notify_status_path.startswith('/')
+      - monitoring_notify_state_hash_path is string
+      - monitoring_notify_state_hash_path | trim | length > 0
+      - monitoring_notify_state_hash_path.startswith('/')
+      - monitoring_notify_include_docker_down is boolean
+      - monitoring_notify_include_backup_failed is boolean
+      - monitoring_notify_effective_ntfy_url is string
+      - monitoring_notify_effective_ntfy_url | trim | length > 0
+      - monitoring_notify_ntfy_title_prefix is string
+      - monitoring_notify_ntfy_title_prefix | trim | length > 0
+      - monitoring_notify_ntfy_priority is string
+      - monitoring_notify_ntfy_priority | trim | length > 0
+      - monitoring_notify_ntfy_tags is sequence
+      - monitoring_notify_ntfy_tags is not string
+      - monitoring_notify_timer_on_calendar is string
+      - monitoring_notify_timer_on_calendar | trim | length > 0
+      - monitoring_notify_timer_randomized_delay_sec is string or monitoring_notify_timer_randomized_delay_sec is number
+      - monitoring_notify_timer_accuracy_sec is string
+      - monitoring_notify_timer_accuracy_sec | trim | length > 0
+      - monitoring_notify_timer_persistent is boolean
+      - >-
+        (
+          groups['monitoring'] | default([])
+          | map('extract', hostvars, 'monitoring_include_notify')
+          | map('default', false)
+          | select('equalto', true)
+          | list
+          | length
+        ) <= 1
+    fail_msg: >-
+      monitoring_notify requires a collector index path, an ntfy URL, valid timer
+      values, and at most one notify-enabled collector host in the current
+      inventory
+    quiet: true
+  when: monitoring_notify_enabled
+
+- name: "Assert | Validate monitoring_notify variables when disabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_notify_enabled is boolean
+    fail_msg: "monitoring_notify_enabled must be a boolean"
+    quiet: true
+  when: not monitoring_notify_enabled

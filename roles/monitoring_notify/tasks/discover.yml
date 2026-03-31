@@ -1,0 +1,50 @@
+---
+# roles/monitoring_notify/tasks/discover.yml
+# Discovery tasks for the `monitoring_notify` role.
+# Allows an already-installed notify runner to keep receiving updates even when
+# the current inventory omits the original ntfy URL locally.
+
+- name: "Discover | Check for an existing monitoring_notify script"
+  ansible.builtin.stat:
+    path: "{{ monitoring_notify_script_path }}"
+  register: monitoring_notify_existing_script
+  changed_when: false
+  when: monitoring_notify_manage_existing_install
+
+- name: "Discover | Read existing monitoring_notify script"
+  ansible.builtin.slurp:
+    src: "{{ monitoring_notify_script_path }}"
+  register: monitoring_notify_existing_script_slurp
+  when:
+    - monitoring_notify_manage_existing_install
+    - monitoring_notify_existing_script.stat.exists
+
+- name: "Discover | Decode existing monitoring_notify script"
+  ansible.builtin.set_fact:
+    monitoring_notify_existing_script_text: "{{ monitoring_notify_existing_script_slurp.content | b64decode }}"
+  when:
+    - monitoring_notify_manage_existing_install
+    - monitoring_notify_existing_script.stat.exists
+
+- name: "Discover | Reuse existing monitoring_notify ntfy URL when missing"
+  ansible.builtin.set_fact:
+    monitoring_notify_discovered_ntfy_url: >-
+      {{
+        monitoring_notify_existing_script_text
+        | regex_findall('(?m)^ntfy_url=(.+)$')
+        | first
+        | default('""')
+        | from_json
+      }}
+  when:
+    - monitoring_notify_manage_existing_install
+    - monitoring_notify_existing_script.stat.exists
+
+- name: "Discover | Derive effective monitoring_notify ntfy URL"
+  ansible.builtin.set_fact:
+    monitoring_notify_effective_ntfy_url: >-
+      {{
+        monitoring_notify_ntfy_url
+        if (monitoring_notify_ntfy_url | trim | length) > 0
+        else (monitoring_notify_discovered_ntfy_url | default(''))
+      }}

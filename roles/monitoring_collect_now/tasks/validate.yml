@@ -1,0 +1,126 @@
+---
+# roles/monitoring_collect_now/tasks/validate.yml
+# Starts the managed collector service immediately, reads the aggregated index,
+# prints a short summary, and fails when the run result is not acceptable.
+
+- name: "Validate | Stat monitoring_collect service unit"
+  ansible.builtin.stat:
+    path: "/etc/systemd/system/{{ monitoring_collect_now_service_unit }}"
+  register: monitoring_collect_now_service_unit_stat
+  when: monitoring_collect_now_enabled
+
+- name: "Validate | Stat monitoring_collect script path"
+  ansible.builtin.stat:
+    path: "{{ monitoring_collect_now_script_path }}"
+  register: monitoring_collect_now_script_stat
+  when: monitoring_collect_now_enabled
+
+- name: "Validate | Assert monitoring_collect artifacts exist"
+  ansible.builtin.assert:
+    that:
+      - monitoring_collect_now_service_unit_stat.stat.exists
+      - monitoring_collect_now_script_stat.stat.exists
+    fail_msg: >-
+      monitoring_collect_now expects the recurring monitoring_collect role to be
+      applied first so the managed service unit and script already exist
+    quiet: true
+  when: monitoring_collect_now_enabled
+
+- name: "Validate | Stat monitoring_collect index before run"
+  ansible.builtin.stat:
+    path: "{{ monitoring_collect_now_index_path }}"
+    checksum_algorithm: sha1
+  register: monitoring_collect_now_index_before
+  when: monitoring_collect_now_enabled
+
+- name: "Validate | Start monitoring_collect oneshot service now"
+  ansible.builtin.systemd_service:
+    name: "{{ monitoring_collect_now_service_unit }}"
+    state: started
+  register: monitoring_collect_now_service_start
+  failed_when: false
+  when: monitoring_collect_now_enabled
+
+- name: "Validate | Wait for monitoring_collect index"
+  ansible.builtin.stat:
+    path: "{{ monitoring_collect_now_index_path }}"
+    checksum_algorithm: sha1
+  register: monitoring_collect_now_index_file
+  retries: 10
+  delay: 1
+  until: >-
+    monitoring_collect_now_index_file.stat.exists
+    and (
+      not (monitoring_collect_now_index_before.stat.exists | default(false))
+      or (monitoring_collect_now_index_file.stat.checksum | default(''))
+         != (monitoring_collect_now_index_before.stat.checksum | default(''))
+      or (monitoring_collect_now_index_file.stat.mtime | default(0))
+         > (monitoring_collect_now_index_before.stat.mtime | default(0))
+    )
+  failed_when: false
+  when: monitoring_collect_now_enabled
+
+- name: "Validate | Derive monitoring_collect freshness"
+  ansible.builtin.set_fact:
+    monitoring_collect_now_index_is_fresh: >-
+      {{
+        (monitoring_collect_now_index_file.stat.exists | default(false))
+        and (
+          not (monitoring_collect_now_index_before.stat.exists | default(false))
+          or (monitoring_collect_now_index_file.stat.checksum | default(''))
+             != (monitoring_collect_now_index_before.stat.checksum | default(''))
+          or (monitoring_collect_now_index_file.stat.mtime | default(0))
+             > (monitoring_collect_now_index_before.stat.mtime | default(0))
+        )
+      }}
+  changed_when: false
+  when: monitoring_collect_now_enabled
+
+- name: "Validate | Assert monitoring_collect index was refreshed"
+  ansible.builtin.assert:
+    that:
+      - monitoring_collect_now_index_is_fresh
+    fail_msg: >-
+      monitoring_collect_now did not observe a freshly updated index for the
+      current run.
+      systemd_msg={{ monitoring_collect_now_service_start.msg | default('') }}
+      previous_exists={{ monitoring_collect_now_index_before.stat.exists | default(false) }}
+      current_exists={{ monitoring_collect_now_index_file.stat.exists | default(false) }}
+    quiet: true
+  when: monitoring_collect_now_enabled
+
+- name: "Validate | Read monitoring_collect index JSON"
+  ansible.builtin.slurp:
+    src: "{{ monitoring_collect_now_index_path }}"
+  register: monitoring_collect_now_index_slurp
+  when: monitoring_collect_now_enabled
+
+- name: "Validate | Parse monitoring_collect index JSON"
+  ansible.builtin.set_fact:
+    monitoring_collect_now_index: "{{ monitoring_collect_now_index_slurp.content | b64decode | from_json }}"
+  changed_when: false
+  when: monitoring_collect_now_enabled
+
+- name: "Validate | Print monitoring_collect summary"
+  ansible.builtin.debug:
+    msg: >-
+      [monitoring_collect_now] host={{ inventory_hostname }}
+      | status={{ monitoring_collect_now_index.status | default('unknown') }}
+      | timestamp={{ monitoring_collect_now_index.timestamp | default('n/a') }}
+      | host_count={{ monitoring_collect_now_index.host_count | default('n/a') }}
+      | ok={{ monitoring_collect_now_index.summary.ok | default('n/a') }}
+      | warn={{ monitoring_collect_now_index.summary.warn | default('n/a') }}
+      | fail={{ monitoring_collect_now_index.summary.fail | default('n/a') }}
+  when: monitoring_collect_now_enabled
+
+- name: "Validate | Assert monitoring_collect run result is acceptable"
+  ansible.builtin.assert:
+    that:
+      - not (monitoring_collect_now_service_start.failed | default(false))
+      - (monitoring_collect_now_index.status | default('')) in monitoring_collect_now_allowed_statuses
+    fail_msg: >-
+      monitoring_collect_now run failed.
+      systemd_msg={{ monitoring_collect_now_service_start.msg | default('') }}
+      status={{ monitoring_collect_now_index.status | default('unknown') }}
+    quiet: true
+  when: monitoring_collect_now_enabled

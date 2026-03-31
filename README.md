@@ -107,15 +107,21 @@ Example infra playbook:
 Run the example lab from repo root:
 
 ```sh
-ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/bootstrap.yml
-ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/site.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/bootstrap.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/recurring/site.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/base_maintenance.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/backup_restic_now.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/monitoring_ops.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/monitoring_docker_tag_now.yml
 ```
 
 Dedicated maintenance stays separate:
 
 ```sh
-ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/base_maintenance.yml
-ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/monitoring.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/base_maintenance.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/recurring/monitoring.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/backup_restic_now.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/monitoring_ops.yml
 ```
 
 Optional `base_sshd` integration check:
@@ -127,8 +133,11 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/te
 Or from the `examples/` directory:
 
 ```sh
-ansible-playbook playbooks/bootstrap.yml
-ansible-playbook playbooks/site.yml
+ansible-playbook playbooks/ops/bootstrap.yml
+ansible-playbook playbooks/recurring/site.yml
+ansible-playbook playbooks/ops/base_maintenance.yml
+ansible-playbook playbooks/ops/backup_restic_now.yml
+ansible-playbook playbooks/ops/monitoring_ops.yml
 ```
 
 See [examples/README.md](examples/README.md) for the runbook and

@@ -1,0 +1,154 @@
+---
+# roles/monitoring_collect/tasks/config.yml
+# Config phase tasks for the `monitoring_collect` role.
+
+- name: "Config | Ensure monitoring_collect directories exist"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - path: "{{ monitoring_collect_state_dir }}"
+      owner: root
+      group: root
+      mode: "0755"
+    - path: "{{ monitoring_collect_ssh_dir }}"
+      owner: "{{ monitoring_collect_service_user }}"
+      group: "{{ monitoring_collect_service_group }}"
+      mode: "0700"
+    - path: "{{ monitoring_collect_output_dir }}"
+      owner: "{{ monitoring_collect_service_user }}"
+      group: "{{ monitoring_collect_service_group }}"
+      mode: "{{ monitoring_collect_output_dir_mode }}"
+    - path: "{{ monitoring_collect_hosts_dir }}"
+      owner: "{{ monitoring_collect_service_user }}"
+      group: "{{ monitoring_collect_service_group }}"
+      mode: "{{ monitoring_collect_output_dir_mode }}"
+  when: monitoring_collect_enabled
+
+- name: "Config | Ensure monitoring_collect public JSON mirror directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ monitoring_collect_service_user }}"
+    group: "{{ monitoring_collect_service_group }}"
+    mode: "{{ monitoring_collect_public_dir_mode }}"
+  loop:
+    - "{{ monitoring_collect_public_json_dir }}"
+    - "{{ monitoring_collect_public_hosts_dir }}"
+  when:
+    - monitoring_collect_enabled
+    - monitoring_collect_public_json_enabled
+
+- name: "Config | Ensure monitoring_collect known_hosts file exists"
+  ansible.builtin.file:
+    path: "{{ monitoring_collect_ssh_known_hosts_path }}"
+    state: touch
+    owner: "{{ monitoring_collect_service_user }}"
+    group: "{{ monitoring_collect_service_group }}"
+    mode: "0600"
+    modification_time: preserve
+    access_time: preserve
+  when: monitoring_collect_enabled
+
+- name: "Config | Render monitoring_collect SSH private key"
+  ansible.builtin.copy:
+    dest: "{{ monitoring_collect_ssh_private_key_path }}"
+    content: "{{ monitoring_collect_ssh_private_key | trim ~ '\n' }}"
+    owner: "{{ monitoring_collect_service_user }}"
+    group: "{{ monitoring_collect_service_group }}"
+    mode: "0600"
+  when:
+    - monitoring_collect_enabled
+    - monitoring_collect_ssh_manage_private_key
+
+- name: "Config | Remove managed monitoring_collect SSH private key when disabled"
+  ansible.builtin.file:
+    path: "{{ monitoring_collect_ssh_private_key_path }}"
+    state: absent
+  when:
+    - monitoring_collect_enabled
+    - not monitoring_collect_ssh_manage_private_key
+
+- name: "Config | Render monitoring_collect script"
+  ansible.builtin.template:
+    src: monitor-collect.sh.j2
+    dest: "{{ monitoring_collect_script_path }}"
+    owner: "{{ monitoring_collect_script_owner }}"
+    group: "{{ monitoring_collect_script_group }}"
+    mode: "{{ monitoring_collect_script_mode }}"
+  when: monitoring_collect_enabled
+
+- name: "Config | Remove legacy monitoring_collect private dashboard assets"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ monitoring_collect_output_dir }}/index.html"
+    - "{{ monitoring_collect_output_dir }}/manifest.webmanifest"
+    - "{{ monitoring_collect_output_dir }}/service-worker.js"
+    - "{{ monitoring_collect_output_dir }}/icon.svg"
+    - "{{ monitoring_collect_output_dir }}/icon-180.png"
+    - "{{ monitoring_collect_output_dir }}/icon-192.png"
+    - "{{ monitoring_collect_output_dir }}/icon-512.png"
+  when: monitoring_collect_enabled
+
+- name: "Config | Render monitoring_collect systemd units"
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "/etc/systemd/system/{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - src: monitor-collect.service.j2
+      dest: "{{ monitoring_collect_service_unit }}"
+    - src: monitor-collect.timer.j2
+      dest: "{{ monitoring_collect_timer_unit }}"
+  when: monitoring_collect_enabled
+
+- name: "Config | Reload systemd after monitoring_collect unit updates"
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when: monitoring_collect_enabled
+
+- name: "Config | Ensure monitoring_collect timer is enabled and started"
+  ansible.builtin.systemd_service:
+    name: "{{ monitoring_collect_timer_unit }}"
+    enabled: true
+    state: started
+  when: monitoring_collect_enabled
+
+- name: "Config | Stop and disable monitoring_collect timer when disabled"
+  ansible.builtin.systemd_service:
+    name: "{{ monitoring_collect_timer_unit }}"
+    enabled: false
+    state: stopped
+  failed_when: false
+  when: not monitoring_collect_enabled
+
+- name: "Config | Stop monitoring_collect service when disabled"
+  ansible.builtin.systemd_service:
+    name: "{{ monitoring_collect_service_unit }}"
+    state: stopped
+  failed_when: false
+  when: not monitoring_collect_enabled
+
+- name: "Config | Remove monitoring_collect managed files when disabled"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - "{{ monitoring_collect_script_path }}"
+    - "{{ monitoring_collect_output_dir }}"
+    - "{{ monitoring_collect_state_dir }}"
+    - "/etc/systemd/system/{{ monitoring_collect_service_unit }}"
+    - "/etc/systemd/system/{{ monitoring_collect_timer_unit }}"
+  when: not monitoring_collect_enabled
+
+- name: "Config | Reload systemd after monitoring_collect cleanup"
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+  when: not monitoring_collect_enabled

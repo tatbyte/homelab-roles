@@ -1,0 +1,50 @@
+---
+# roles/monitoring_web/defaults/main.yml
+# Default variables for the `monitoring_web` role.
+# Publishes the collected monitoring dashboard through Docker + Traefik while
+# reusing the existing monitor-collect web project naming on disk.
+
+monitoring_web_enabled: true
+monitoring_web_manage_existing_install: false
+
+monitoring_web_unit_name: monitor-collect-web
+monitoring_web_legacy_service_unit: "{{ monitoring_web_unit_name }}.service"
+monitoring_web_project_dir: "/srv/{{ monitoring_web_unit_name }}"
+monitoring_web_compose_file_path: "{{ monitoring_web_project_dir }}/compose.yml"
+monitoring_web_nginx_conf_path: "{{ monitoring_web_project_dir }}/default.conf"
+monitoring_web_publish_dir: "{{ monitoring_web_project_dir }}/site"
+monitoring_web_publish_hosts_dir: "{{ monitoring_web_publish_dir }}/hosts"
+monitoring_web_publish_html_path: "{{ monitoring_web_publish_dir }}/index.html"
+monitoring_web_host_template_path: "{{ monitoring_web_publish_dir }}/host.html"
+monitoring_web_publish_index_path: "{{ monitoring_web_publish_dir }}/index.json"
+monitoring_web_manifest_path: "{{ monitoring_web_publish_dir }}/manifest.webmanifest"
+monitoring_web_service_worker_path: "{{ monitoring_web_publish_dir }}/service-worker.js"
+monitoring_web_icon_path: "{{ monitoring_web_publish_dir }}/icon.svg"
+monitoring_web_icon_png_180_path: "{{ monitoring_web_publish_dir }}/icon-180.png"
+monitoring_web_icon_png_192_path: "{{ monitoring_web_publish_dir }}/icon-192.png"
+monitoring_web_icon_png_512_path: "{{ monitoring_web_publish_dir }}/icon-512.png"
+monitoring_web_compose_project_name: "{{ monitoring_web_unit_name }}"
+monitoring_web_compose_service_name: web
+monitoring_web_container_name: "{{ monitoring_web_unit_name }}"
+monitoring_web_image_repository: nginx
+monitoring_web_image_tag: "1.27-alpine"
+monitoring_web_image: "{{ monitoring_web_image_repository }}:{{ monitoring_web_image_tag }}"
+monitoring_web_compose_command: "{{ docker_engine_effective_compose_command | default(['docker', 'compose']) }}"
+monitoring_web_proxy_network_name: "{{ docker_traefik_network_name | default('traefik_proxy') }}"
+monitoring_web_host: ""
+monitoring_web_router_name: "{{ monitoring_web_unit_name }}"
+monitoring_web_basic_auth_enabled: false
+monitoring_web_basic_auth_users: []
+monitoring_web_basic_auth_middleware: "{{ monitoring_web_router_name }}-auth"
+monitoring_web_router_entrypoints:
+  - websecure
+monitoring_web_tls_certresolver: "{{ docker_traefik_certresolver_name | default('letsencrypt') }}"
+monitoring_web_container_port: 80
+monitoring_web_publish_dir_mode: "0755"
+monitoring_web_publish_file_mode: "0644"
+monitoring_web_site_owner: "{{ monitoring_collect_service_user | default(ansible_user | default('root')) }}"
+monitoring_web_site_group: "{{ monitoring_collect_service_group | default(ansible_user | default('root')) }}"
+monitoring_web_title: Homelab Monitor
+monitoring_web_short_title: Monitor
+monitoring_web_theme_color: "#071019"
+monitoring_web_background_color: "#071019"

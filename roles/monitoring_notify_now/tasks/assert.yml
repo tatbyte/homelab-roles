@@ -1,0 +1,30 @@
+---
+# roles/monitoring_notify_now/tasks/assert.yml
+# Assert phase tasks for the `monitoring_notify_now` role.
+
+- name: "Assert | Validate monitoring_notify_now variables when enabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_notify_now_enabled is boolean
+      - monitoring_notify_now_service_unit is string
+      - monitoring_notify_now_service_unit | trim | length > 0
+      - monitoring_notify_now_script_path is string
+      - monitoring_notify_now_script_path.startswith('/')
+      - monitoring_notify_now_status_path is string
+      - monitoring_notify_now_status_path.startswith('/')
+      - monitoring_notify_now_send_test_alert is boolean
+      - monitoring_notify_now_allowed_statuses is sequence
+      - monitoring_notify_now_allowed_statuses | length > 0
+    fail_msg: >-
+      monitoring_notify_now requires valid service, script, status path, and
+      allowed status values when enabled
+    quiet: true
+  when: monitoring_notify_now_enabled
+
+- name: "Assert | Validate monitoring_notify_now variables when disabled"
+  ansible.builtin.assert:
+    that:
+      - monitoring_notify_now_enabled is boolean
+    fail_msg: "monitoring_notify_now_enabled must be a boolean"
+    quiet: true
+  when: not monitoring_notify_now_enabled

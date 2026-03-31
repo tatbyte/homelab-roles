@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: tatbyte
+  description: Run the managed monitoring_notify service immediately for validation
+  license: MIT
+  min_ansible_version: "2.16"
+dependencies: []

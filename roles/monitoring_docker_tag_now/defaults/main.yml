@@ -1,0 +1,12 @@
+---
+# roles/monitoring_docker_tag_now/defaults/main.yml
+# Default variables for the `monitoring_docker_tag_now` role.
+
+monitoring_docker_tag_now_enabled: true
+monitoring_docker_tag_now_service_unit: "{{ monitoring_docker_tag_service_unit | default('monitoring-docker-tag.service') }}"
+monitoring_docker_tag_now_status_path: "{{ monitoring_docker_tag_status_path | default('/var/lib/monitor/docker-tag.json') }}"
+monitoring_docker_tag_now_script_path: "{{ monitoring_docker_tag_script_path | default('/usr/local/bin/monitoring-docker-tag.py') }}"
+monitoring_docker_tag_now_wait_timeout_seconds: 180
+monitoring_docker_tag_now_allowed_statuses:
+  - ok
+  - warn

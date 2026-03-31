@@ -1,0 +1,520 @@
+{# roles/monitoring_web/templates/monitor-collect-index.html.j2 #}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ monitoring_web_title }}</title>
+  <meta name="theme-color" content="{{ monitoring_web_theme_color }}">
+  <meta name="application-name" content="{{ monitoring_web_title }}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="{{ monitoring_web_short_title }}">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon-192.png" sizes="192x192" type="image/png">
+  <link rel="icon" href="./icon-512.png" sizes="512x512" type="image/png">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icon-180.png">
+  <style>
+    :root {
+      --bg: #071019;
+      --bg-2: #0c1723;
+      --panel: rgba(14, 24, 38, 0.92);
+      --panel-strong: rgba(10, 18, 30, 0.96);
+      --ink: #e7f1ff;
+      --muted: #8ea6c0;
+      --line: rgba(111, 142, 178, 0.24);
+      --ok: #39d98a;
+      --review: #5cc8ff;
+      --warn: #ffb84d;
+      --fail: #ff6b81;
+      --accent: #5cc8ff;
+      --accent-2: #6ef7d2;
+      --shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      user-select: text;
+      -webkit-user-select: text;
+      background:
+        radial-gradient(circle at top left, rgba(92, 200, 255, 0.14), transparent 26%),
+        radial-gradient(circle at 85% 10%, rgba(110, 247, 210, 0.08), transparent 22%),
+        linear-gradient(180deg, #050b12 0%, var(--bg) 55%, #04080d 100%);
+    }
+    code, pre, .mono {
+      font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+    }
+    .app {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+    .sidebar {
+      position: sticky;
+      top: 0;
+      align-self: start;
+      height: 100vh;
+      padding: 1.4rem 1.1rem;
+      border-right: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(10, 18, 30, 0.96) 0%, rgba(7, 16, 25, 0.9) 100%);
+    }
+    .brand { margin-bottom: 1.4rem; }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.3rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid rgba(92, 200, 255, 0.26);
+      background: rgba(92, 200, 255, 0.08);
+      color: var(--accent);
+      font-size: 0.74rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .brand h1 {
+      margin: 0.8rem 0 0;
+      font-size: clamp(2rem, 3vw, 3rem);
+      letter-spacing: -0.04em;
+    }
+    .brand p {
+      margin: 0.7rem 0 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .nav-title {
+      margin: 1.25rem 0 0.7rem;
+      color: var(--muted);
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .nav {
+      display: grid;
+      gap: 0.45rem;
+    }
+    .nav a {
+      color: var(--ink);
+      text-decoration: none;
+      padding: 0.72rem 0.82rem;
+      border-radius: 14px;
+      border: 1px solid transparent;
+      background: transparent;
+      transition: 120ms ease;
+    }
+    .nav a:hover {
+      border-color: var(--line);
+      background: rgba(92, 200, 255, 0.06);
+    }
+    .nav a strong {
+      display: block;
+      font-size: 0.96rem;
+    }
+    .nav a span {
+      display: block;
+      margin-top: 0.18rem;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+    .content {
+      min-width: 0;
+      padding: 1.6rem 1.5rem 3rem;
+    }
+    .hero {
+      margin-bottom: 1.4rem;
+      padding: 1.3rem;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background:
+        linear-gradient(140deg, rgba(92, 200, 255, 0.08), transparent 45%),
+        linear-gradient(180deg, rgba(12, 23, 35, 0.95), rgba(9, 16, 26, 0.96));
+      box-shadow: var(--shadow);
+    }
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: start;
+    }
+    .hero-meta {
+      color: var(--muted);
+      font-size: 0.96rem;
+      line-height: 1.55;
+      max-width: 52rem;
+    }
+    .summary,
+    .secondary-summary,
+    .hosts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.85rem;
+      margin-top: 1rem;
+    }
+    .summary-item,
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .summary-item {
+      padding: 0.9rem 1rem;
+      min-height: 108px;
+    }
+    .summary-item .label {
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .summary-item .value {
+      margin-top: 0.25rem;
+      font-size: 1.7rem;
+      font-weight: 700;
+    }
+    .summary-item .hint {
+      margin-top: 0.35rem;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+    .card {
+      padding: 1.05rem;
+    }
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      align-items: start;
+      margin-bottom: 0.8rem;
+    }
+    .card-title {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+    .card-meta {
+      margin-top: 0.28rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.3rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+      border: 1px solid var(--line);
+    }
+    .ok { color: var(--ok); border-color: rgba(57, 217, 138, 0.36); background: rgba(57, 217, 138, 0.08); }
+    .review { color: var(--review); border-color: rgba(92, 200, 255, 0.34); background: rgba(92, 200, 255, 0.08); }
+    .warn { color: var(--warn); border-color: rgba(255, 184, 77, 0.34); background: rgba(255, 184, 77, 0.08); }
+    .fail { color: var(--fail); border-color: rgba(255, 107, 129, 0.34); background: rgba(255, 107, 129, 0.08); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.75rem;
+    }
+    .section-card {
+      padding: 0.9rem 1rem;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+    }
+    .section-card h3 {
+      margin: 0 0 0.65rem;
+      font-size: 0.88rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.35rem 0;
+      border-top: 1px dashed rgba(142, 166, 192, 0.16);
+      font-size: 0.92rem;
+    }
+    .row:first-of-type { border-top: 0; }
+    .label { color: var(--muted); }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      margin-top: 0.95rem;
+    }
+    .actions a {
+      color: var(--accent-2);
+      text-decoration: none;
+      font-size: 0.84rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid rgba(110, 247, 210, 0.2);
+      background: rgba(110, 247, 210, 0.06);
+    }
+    .actions a:hover {
+      border-color: rgba(110, 247, 210, 0.38);
+    }
+    .muted { color: var(--muted); }
+    .error {
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 107, 129, 0.28);
+      background: rgba(255, 107, 129, 0.08);
+      color: #ffdbe2;
+      font-size: 0.9rem;
+    }
+    @media (max-width: 980px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+      .sidebar {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .content {
+        padding-top: 1.2rem;
+      }
+      .hero-top {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="eyebrow mono">monitoring_collect</div>
+        <h1>{{ monitoring_web_title }}</h1>
+        <p>Fleet summary over the collected monitoring contracts. Open a host card to drill into that host on its own page.</p>
+      </div>
+      <div class="nav-title">Overview</div>
+      <nav class="nav">
+        <a href="#summary-top"><strong>Fleet Summary</strong><span>Aggregated health and review counters</span></a>
+        <a href="./index.json"><strong>Raw Index</strong><span>Open the collected aggregate JSON</span></a>
+      </nav>
+      <div class="nav-title">Hosts</div>
+      <nav class="nav" id="host-nav"></nav>
+    </aside>
+
+    <main class="content">
+      <section class="hero" id="summary-top">
+        <div class="hero-top">
+          <div>
+            <div class="eyebrow mono" id="hero-status">Loading</div>
+            <h1>{{ monitoring_web_title }}</h1>
+            <div class="hero-meta" id="hero-meta">Waiting for <span class="mono">index.json</span>.</div>
+          </div>
+          <div class="actions">
+            <a href="./index.json">index.json</a>
+          </div>
+        </div>
+        <section class="summary" id="summary"></section>
+        <section class="secondary-summary" id="secondary-summary"></section>
+      </section>
+
+      <section class="hosts" id="hosts"></section>
+    </main>
+  </div>
+
+  <script>
+    const summaryEl = document.getElementById('summary');
+    const secondarySummaryEl = document.getElementById('secondary-summary');
+    const hostsEl = document.getElementById('hosts');
+    const hostNavEl = document.getElementById('host-nav');
+    const heroStatusEl = document.getElementById('hero-status');
+    const heroMetaEl = document.getElementById('hero-meta');
+
+    function statusClass(value) {
+      return ['ok', 'review', 'warn', 'fail'].includes(value) ? value : 'warn';
+    }
+
+    function statusText(value) {
+      return value || 'unknown';
+    }
+
+    function safeNumber(value, fallback = 0) {
+      return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+    }
+
+    function safeArray(value) {
+      return Array.isArray(value) ? value : [];
+    }
+
+    function summaryItem(label, value, hint = '') {
+      return `<div class="summary-item"><div class="label">${label}</div><div class="value">${value}</div>${hint ? `<div class="hint">${hint}</div>` : ''}</div>`;
+    }
+
+    function row(label, value) {
+      return `<div class="row"><span class="label">${label}</span><span>${value}</span></div>`;
+    }
+
+    function dockerTagDisplayStatus(host) {
+      const dockerTag = host.docker_tag || {};
+      const details = dockerTag.details || {};
+      if (safeNumber(details.lookup_error_count, 0) > 0) {
+        return 'warn';
+      }
+      if (safeNumber(details.update_available_count, 0) > 0) {
+        return 'review';
+      }
+      return dockerTag.status || 'ok';
+    }
+
+    function deriveFleetStats(hosts) {
+      return hosts.reduce((acc, host) => {
+        const status = host.status || {};
+        const storage = host.storage_health || {};
+        const dockerTagDetails = (host.docker_tag || {}).details || {};
+        const backupAge = status?.details?.backup_last_success_age_hours;
+        acc.stale += host.stale ? 1 : 0;
+        acc.totalDevices += safeNumber(storage?.details?.device_count, 0);
+        acc.totalMounts += safeArray(status?.details?.storage_mounts).length;
+        acc.runningContainers += safeNumber(status?.details?.containers_running, 0);
+        acc.totalContainers += safeNumber(status?.details?.containers_total, 0);
+        acc.pendingUpdates += safeNumber(dockerTagDetails?.update_available_count, 0);
+        acc.reviewFirst += safeNumber(dockerTagDetails?.review_required_count, 0);
+        acc.safeToUpdate += safeNumber(dockerTagDetails?.ok_to_update_count, 0);
+        acc.lookupErrors += safeNumber(dockerTagDetails?.lookup_error_count, 0);
+        if (typeof backupAge === 'number' && backupAge >= 0) {
+          acc.maxBackupAge = Math.max(acc.maxBackupAge, backupAge);
+        }
+        return acc;
+      }, {
+        stale: 0,
+        totalDevices: 0,
+        totalMounts: 0,
+        runningContainers: 0,
+        totalContainers: 0,
+        pendingUpdates: 0,
+        reviewFirst: 0,
+        safeToUpdate: 0,
+        lookupErrors: 0,
+        maxBackupAge: -1,
+      });
+    }
+
+    function navigationItem(host) {
+      return `
+        <a href="./hosts/${host.name}/index.html">
+          <strong>${host.display_name || host.name}</strong>
+          <span>${statusText(host.summary_status)}${host.stale ? ' | stale cache' : ''}</span>
+        </a>
+      `;
+    }
+
+    function hostCard(host) {
+      const status = host.status || {};
+      const storage = host.storage_health || {};
+      const backup = host.backup || {};
+      const dockerTagDetails = (host.docker_tag || {}).details || {};
+      const backupStatus = status?.details?.backup_status || (backup ? backup.status : 'missing');
+      const containersRunning = status?.details?.containers_running;
+      const containersTotal = status?.details?.containers_total;
+      const lastBackupAge = status?.details?.backup_last_success_age_hours;
+      const cardErrors = Object.entries(host.errors || {}).filter(([, value]) => value);
+      return `
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title">${host.display_name || host.name}</h2>
+              <div class="card-meta">${host.name}${host.ssh_host ? ` • ${host.ssh_host}` : ''}${host.local ? ' • local collector source' : ''}</div>
+            </div>
+            <div class="pill ${statusClass(host.summary_status)}">${statusText(host.summary_status)}</div>
+          </div>
+          <div class="grid">
+            <section class="section-card">
+              <h3>Quick Status</h3>
+              ${row('Host', statusText(status.status))}
+              ${row('Storage', statusText(storage.status))}
+              ${row('Container tags', statusText(dockerTagDisplayStatus(host)))}
+              ${row('Backup', statusText(backupStatus))}
+            </section>
+            <section class="section-card">
+              <h3>Review Snapshot</h3>
+              ${row('Pending updates', safeNumber(dockerTagDetails.update_available_count, 0))}
+              ${row('Safe to update', safeNumber(dockerTagDetails.ok_to_update_count, 0))}
+              ${row('Review first', safeNumber(dockerTagDetails.review_required_count, 0))}
+              ${row('Lookup errors', safeNumber(dockerTagDetails.lookup_error_count, 0))}
+            </section>
+            <section class="section-card">
+              <h3>Host Snapshot</h3>
+              ${row('Containers', containersRunning === undefined ? 'n/a' : `${containersRunning}/${containersTotal}`)}
+              ${row('Tracked devices', safeNumber(storage?.details?.device_count, 0))}
+              ${row('Tracked mounts', safeArray(status?.details?.storage_mounts).length)}
+              ${row('Last backup age', lastBackupAge === undefined || lastBackupAge < 0 ? 'n/a' : `${lastBackupAge}h`)}
+            </section>
+          </div>
+          <div class="actions">
+            <a href="./hosts/${host.name}/index.html">Open host page</a>
+            <a href="./hosts/${host.name}/status.json">status.json</a>
+            <a href="./hosts/${host.name}/docker-tag.json">docker-tag.json</a>
+          </div>
+          ${cardErrors.length ? `<div class="error">${cardErrors.map(([key, value]) => `<strong>${key}</strong>: ${value}`).join('<br>')}</div>` : ''}
+        </article>
+      `;
+    }
+
+    async function load() {
+      const response = await fetch('./index.json', { cache: 'no-store' });
+      const data = await response.json();
+      const hosts = Array.isArray(data.hosts) ? data.hosts : [];
+      const fleet = deriveFleetStats(hosts);
+
+      heroStatusEl.className = `eyebrow mono ${statusClass(data.status)}`;
+      heroStatusEl.textContent = statusText(data.status);
+      heroMetaEl.innerHTML = `Collector <span class="mono">${data.collector || 'n/a'}</span> updated <span class="mono">${data.timestamp || 'n/a'}</span>. Host rollups stay focused on system health, while Docker tags stay review-only unless the tag lookup itself failed.`;
+
+      summaryEl.innerHTML = [
+        summaryItem('Collector', data.collector || 'n/a', 'Current aggregation host'),
+        summaryItem('Hosts', data.host_count ?? 0, 'Sources in this index'),
+        summaryItem('OK', data.summary?.ok ?? 0, 'Healthy rollups'),
+        summaryItem('Warn', data.summary?.warn ?? 0, 'Real monitoring warnings'),
+        summaryItem('Fail', data.summary?.fail ?? 0, 'Broken or missing critical contracts'),
+        summaryItem('Stale', fleet.stale, 'Hosts using cached data'),
+      ].join('');
+
+      secondarySummaryEl.innerHTML = [
+        summaryItem('Containers', `${fleet.runningContainers}/${fleet.totalContainers}`, 'Running Docker containers'),
+        summaryItem('Pending updates', fleet.pendingUpdates, 'Review-only new image tags'),
+        summaryItem('Safe to update', fleet.safeToUpdate, 'Patch-style updates'),
+        summaryItem('Review first', fleet.reviewFirst, 'Minor or major updates'),
+        summaryItem('Lookup errors', fleet.lookupErrors, 'Registry lookup problems'),
+        summaryItem('Worst backup age', fleet.maxBackupAge < 0 ? 'n/a' : `${fleet.maxBackupAge}h`, 'Maximum reported backup age'),
+      ].join('');
+
+      hostNavEl.innerHTML = hosts.map(navigationItem).join('');
+      hostsEl.innerHTML = hosts.map(hostCard).join('');
+    }
+
+    load().catch((error) => {
+      heroStatusEl.className = 'eyebrow mono fail';
+      heroStatusEl.textContent = 'fail';
+      heroMetaEl.textContent = 'The dashboard could not load index.json.';
+      summaryEl.innerHTML = summaryItem('Error', 'failed', 'index.json could not be read');
+      hostsEl.innerHTML = `<div class="error">${error}</div>`;
+    });
+    setInterval(load, 60000);
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

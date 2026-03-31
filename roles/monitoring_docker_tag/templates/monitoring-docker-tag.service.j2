@@ -1,0 +1,11 @@
+{# roles/monitoring_docker_tag/templates/monitoring-docker-tag.service.j2 #}
+[Unit]
+Description=Monitor Docker image tag updates
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User={{ monitoring_docker_tag_service_user }}
+Group={{ monitoring_docker_tag_service_group }}
+ExecStart={{ monitoring_docker_tag_script_path }}

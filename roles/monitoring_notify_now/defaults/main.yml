@@ -1,0 +1,13 @@
+---
+# roles/monitoring_notify_now/defaults/main.yml
+# Default variables for the `monitoring_notify_now` role.
+
+monitoring_notify_now_enabled: true
+monitoring_notify_now_service_unit: "{{ monitoring_notify_service_unit | default('monitor-notify.service') }}"
+monitoring_notify_now_script_path: "{{ monitoring_notify_script_path | default('/usr/local/bin/monitor-notify.sh') }}"
+monitoring_notify_now_status_path: "{{ monitoring_notify_status_path | default('/var/lib/monitor/monitor-notify.json') }}"
+monitoring_notify_now_send_test_alert: true
+monitoring_notify_now_include_docker_tag_info: true
+monitoring_notify_now_allowed_statuses:
+  - ok
+  - warn

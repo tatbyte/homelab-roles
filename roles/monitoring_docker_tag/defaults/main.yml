@@ -1,0 +1,60 @@
+---
+# roles/monitoring_docker_tag/defaults/main.yml
+# Default variables for the `monitoring_docker_tag` role.
+# Defines the recurring Docker image-tag check, JSON output, and systemd timer
+# defaults used by the monitoring layer.
+
+monitoring_docker_tag_enabled: true
+
+monitoring_docker_tag_packages:
+  - python3
+  - skopeo
+
+monitoring_docker_tag_unit_name: monitoring-docker-tag
+monitoring_docker_tag_service_unit: "{{ monitoring_docker_tag_unit_name }}.service"
+monitoring_docker_tag_timer_unit: "{{ monitoring_docker_tag_unit_name }}.timer"
+monitoring_docker_tag_script_path: "/usr/local/bin/{{ monitoring_docker_tag_unit_name }}.py"
+monitoring_docker_tag_state_dir: "/usr/local/lib/{{ monitoring_docker_tag_unit_name }}"
+monitoring_docker_tag_status_dir: /var/lib/monitor
+monitoring_docker_tag_status_path: "{{ monitoring_docker_tag_status_dir }}/docker-tag.json"
+
+monitoring_docker_tag_service_user: root
+monitoring_docker_tag_service_group: root
+monitoring_docker_tag_script_owner: root
+monitoring_docker_tag_script_group: root
+monitoring_docker_tag_script_mode: "0750"
+monitoring_docker_tag_status_dir_mode: "0755"
+
+monitoring_docker_tag_host: "{{ ansible_hostname | default(inventory_hostname) }}"
+monitoring_docker_tag_job_name: monitor_docker_tag
+monitoring_docker_tag_json_schema: monitoring_docker_tag_v1
+
+monitoring_docker_tag_docker_command: docker
+monitoring_docker_tag_skopeo_command: skopeo
+monitoring_docker_tag_registry_auth_file: /root/.docker/config.json
+monitoring_docker_tag_registry_insecure: false
+monitoring_docker_tag_registry_timeout_seconds: 30
+monitoring_docker_tag_track_stopped_containers: false
+monitoring_docker_tag_skip_prerelease_tags: true
+monitoring_docker_tag_floating_tags:
+  - latest
+  - stable
+  - nightly
+  - main
+  - master
+  - edge
+  - develop
+  - devel
+  - rolling
+
+monitoring_docker_tag_backup_enabled: "{{ backup_include_restic | default(false) }}"
+monitoring_docker_tag_backup_stop_containers: "{{ backup_restic_docker_stop_containers | default([]) }}"
+monitoring_docker_tag_backup_state_paths:
+  - /srv/
+  - /mnt/
+  - /var/lib/
+
+monitoring_docker_tag_timer_on_calendar: "*-*-* 09:15:00"
+monitoring_docker_tag_timer_randomized_delay_sec: 0
+monitoring_docker_tag_timer_accuracy_sec: 1m
+monitoring_docker_tag_timer_persistent: true

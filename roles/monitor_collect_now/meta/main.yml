@@ -1,7 +1,0 @@
----
-galaxy_info:
-  author: tatbyte
-  description: Trigger the monitor_collect oneshot service immediately and validate the aggregated output
-  license: MIT
-  min_ansible_version: "2.16"
-dependencies: []
