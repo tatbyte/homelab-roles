@@ -25,6 +25,7 @@ REGISTRY_INSECURE = {{ monitoring_docker_tag_registry_insecure | ternary('True',
 REGISTRY_TIMEOUT_SECONDS = {{ monitoring_docker_tag_registry_timeout_seconds | int | to_json }}
 TRACK_STOPPED_CONTAINERS = {{ monitoring_docker_tag_track_stopped_containers | ternary('True', 'False') }}
 SKIP_PRERELEASE_TAGS = {{ monitoring_docker_tag_skip_prerelease_tags | ternary('True', 'False') }}
+URL_OVERRIDES = {{ monitoring_docker_tag_url_overrides | to_json }}
 FLOATING_TAGS = set({{ monitoring_docker_tag_floating_tags | map('lower') | list | to_json }})
 BACKUP_ENABLED = {{ monitoring_docker_tag_backup_enabled | bool | ternary('True', 'False') }}
 BACKUP_STOP_CONTAINERS = set({{ monitoring_docker_tag_backup_stop_containers | to_json }})
@@ -258,6 +259,61 @@ def parse_image_reference(image):
     }
 
 
+def normalize_override_key(value):
+    return str(value or "").strip().lower()
+
+
+def matching_override_entry(name, image_ref):
+    candidate_keys = [
+        image_ref.get("normalized_repository"),
+        image_ref.get("repository"),
+        image_ref.get("image"),
+        name,
+    ]
+    for candidate in candidate_keys:
+        key = normalize_override_key(candidate)
+        if not key:
+            continue
+        if key in URL_OVERRIDES and isinstance(URL_OVERRIDES[key], dict):
+            return URL_OVERRIDES[key]
+    return {}
+
+
+def build_default_review_url(image_ref):
+    registry = str(image_ref.get("registry") or "").strip().lower()
+    repository_path = str(image_ref.get("repository_path") or "").strip("/")
+    if not registry or not repository_path:
+        return ""
+
+    if registry in {"docker.io", "registry-1.docker.io", "index.docker.io"}:
+        if repository_path.startswith("library/"):
+            return f"https://hub.docker.com/_/{repository_path.split('/', 1)[1]}/tags"
+        return f"https://hub.docker.com/r/{repository_path}/tags"
+
+    if registry == "lscr.io":
+        return f"https://hub.docker.com/r/{repository_path}/tags"
+
+    if registry == "ghcr.io":
+        path_parts = [part for part in repository_path.split("/") if part]
+        if len(path_parts) >= 2:
+            owner = path_parts[0]
+            repository_name = path_parts[1]
+            package_name = path_parts[-1]
+            return f"https://github.com/{owner}/{repository_name}/pkgs/container/{package_name}"
+
+    return ""
+
+
+def resolve_review_urls(name, image_ref):
+    overrides = matching_override_entry(name, image_ref)
+    override_review_url = str(overrides.get("review_url") or "").strip()
+    override_changelog_url = str(overrides.get("changelog_url") or "").strip()
+    return {
+        "review_url": override_review_url or build_default_review_url(image_ref),
+        "changelog_url": override_changelog_url,
+    }
+
+
 def should_have_backup(mounts):
     for mount in mounts:
         if not mount.get("rw", False):
@@ -440,6 +496,7 @@ def classify_container(container):
     should_backup = should_have_backup(normalized_mounts)
     backup_stop_configured = name in BACKUP_STOP_CONTAINERS
     family_constraints = tag_family_constraints(current_tag, current_version or {})
+    review_urls = resolve_review_urls(name, image_ref)
     base_item = {
         "name": name,
         "image": image_ref["image"],
@@ -460,6 +517,8 @@ def classify_container(container):
         "backup_host_enabled": BACKUP_ENABLED,
         "backup_stop_configured": backup_stop_configured,
         "backup_recommended": False,
+        "review_url": review_urls["review_url"],
+        "changelog_url": review_urls["changelog_url"],
         "notes": [],
         "mounts": normalized_mounts,
     }

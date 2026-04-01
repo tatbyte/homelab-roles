@@ -30,6 +30,7 @@ surface.
 | `monitoring_docker_tag_track_stopped_containers` | `false` | no | Whether to inspect all containers instead of only currently running ones |
 | `monitoring_docker_tag_backup_enabled` | `{{ backup_include_restic | default(false) }}` | no | Whether the host already has recurring backups enabled |
 | `monitoring_docker_tag_backup_stop_containers` | `{{ backup_restic_docker_stop_containers | default([]) }}` | no | Container names that are already stopped before backup runs |
+| `monitoring_docker_tag_url_overrides` | `{}` | no | Optional per-image or per-container review/changelog URL overrides |
 | `monitoring_docker_tag_floating_tags` | see defaults | no | Tags treated as floating and skipped for semantic update guidance |
 | `monitoring_docker_tag_registry_auth_file` | `/root/.docker/config.json` | no | Docker auth file passed to `skopeo` when it exists |
 | `monitoring_docker_tag_timer_on_calendar` | `*-*-* 09:15:00` | no | systemd calendar expression for the recurring timer |
@@ -49,6 +50,9 @@ surface.
   same flavor family.
 - Candidate tags are validated with `skopeo inspect` on the monitored host, so
   only tags that resolve for that host platform are considered update targets.
+- The JSON contract exposes an automatic `review_url` per container when the
+  registry is recognized, and also supports an optional inventory-driven
+  `changelog_url` override through `monitoring_docker_tag_url_overrides`.
 - Backup guidance is heuristic. The role marks containers with writable bind
   mounts or volumes as likely stateful, then combines that with the existing
   backup-role inputs to show whether backup review is recommended before an
