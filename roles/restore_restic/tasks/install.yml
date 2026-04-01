@@ -1,0 +1,10 @@
+---
+# roles/restore_restic/tasks/install.yml
+# Install phase tasks for the `restore_restic` role.
+# Ensures the Restic CLI is present before a manual restore run.
+
+- name: "Install | Ensure restore_restic packages are present"
+  ansible.builtin.package:
+    name: "{{ restore_restic_packages }}"
+    state: present
+  when: restore_restic_enabled

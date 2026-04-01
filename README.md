@@ -16,8 +16,8 @@ The `examples/` directory is the local validation harness for the shared roles.
 - `docker`: Docker engine plus optional service roles.
 - `backup`: aggregate backup layer for recurring Restic configuration plus repository init.
 - `backup_restic` and companions: focused recurring backup, repository-init,
-  prune, repository-check, and validation helpers used directly or through
-  `backup`.
+  prune, repository-check, restore, and validation helpers used directly or
+  through `backup`.
 - `monitoring` and focused standalone roles: aggregate host monitoring plus
   focused access and status-generation capabilities consumed directly or
   through aggregates.
@@ -111,6 +111,9 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/boot
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/recurring/site.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/base_maintenance.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/backup_restic_now.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/restore_restic.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/restore_restic.yml -e restore_restic_mode=in_place
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/restore_restic.yml -e restore_restic_mode=repair_path -e restore_restic_only_path=/srv/wireguard/data
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/monitoring_ops.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/monitoring_docker_tag_now.yml
 ```
@@ -121,6 +124,7 @@ Dedicated maintenance stays separate:
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/base_maintenance.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/recurring/monitoring.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/backup_restic_now.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/restore_restic.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/monitoring_ops.yml
 ```
 
@@ -137,6 +141,7 @@ ansible-playbook playbooks/ops/bootstrap.yml
 ansible-playbook playbooks/recurring/site.yml
 ansible-playbook playbooks/ops/base_maintenance.yml
 ansible-playbook playbooks/ops/backup_restic_now.yml
+ansible-playbook playbooks/ops/restore_restic.yml
 ansible-playbook playbooks/ops/monitoring_ops.yml
 ```
 

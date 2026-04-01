@@ -1,0 +1,48 @@
+---
+# examples/inventory/group_vars/backup/restore_restic.yml
+# Shared Restic restore variables for the example lab.
+# Reuses the same repository and backend credentials as `backup_restic`, while
+# keeping the restore mode and selectable restore paths explicit in example
+# inventory.
+#
+# Quick variable guide:
+# - `restore_restic_mode`: choose `sandbox`, `in_place`, or `repair_path`
+# - `restore_restic_sandbox_target_path`: destination used only in `sandbox`
+#   mode; keeps restored files away from the live filesystem
+# - `restore_restic_paths`: full restore scope used by `sandbox` and
+#   `in_place`; default is the same path set as `backup_restic`
+# - `restore_restic_only_path`: single absolute path used only in
+#   `repair_path`, for example `/srv/wireguard/data`
+# - `restore_restic_snapshot`: snapshot ref to restore, usually `latest`
+# - `restore_restic_restore_overwrite`: Restic overwrite policy during restore
+# - `restore_restic_restore_delete`: optionally remove files under the target
+#   that are not present in the selected restore scope
+# - `restore_restic_restore_dry_run`: preview the restore without writing files
+# - `restore_restic_extra_args`: optional extra `restic restore` CLI flags
+
+# Keep the restore helper enabled so the example lab can exercise the manual
+# restore path without introducing separate secret values.
+restore_restic_enabled: true
+
+# Reuse the same repository and password inputs as the recurring backup role.
+restore_restic_repository: "{{ backup_restic_repository }}"
+restore_restic_password: "{{ backup_restic_password }}"
+restore_restic_extra_environment: "{{ backup_restic_extra_environment }}"
+
+# Restore the latest snapshot in safe sandbox mode by default so example runs
+# do not overwrite the live host filesystem accidentally.
+restore_restic_snapshot: latest
+restore_restic_mode: sandbox
+restore_restic_sandbox_target_path: /backup
+
+# Mirror the recurring backup scope by default so a full restore replays the
+# same paths that the backup role protects.
+restore_restic_paths: "{{ backup_restic_paths }}"
+
+# `repair_path` mode requires one absolute path here, such as
+# `/srv/wireguard/data`, when you only want to repair one subtree in place.
+restore_restic_only_path: ""
+
+# Keep the overwrite behavior explicit in inventory so operators can override
+# it per run with extra vars when needed.
+restore_restic_restore_overwrite: always

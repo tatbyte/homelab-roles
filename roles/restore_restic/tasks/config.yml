@@ -1,0 +1,14 @@
+---
+# roles/restore_restic/tasks/config.yml
+# Config phase tasks for the `restore_restic` role.
+# Ensures the requested restore target directory exists before the restore
+# command runs.
+
+- name: "Config | Ensure restore_restic target directory exists"
+  ansible.builtin.file:
+    path: "{{ restore_restic_effective_target_path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: restore_restic_enabled

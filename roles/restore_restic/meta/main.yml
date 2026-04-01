@@ -1,0 +1,7 @@
+---
+# roles/restore_restic/meta/main.yml
+# Role metadata for `restore_restic`.
+# Leaves dependencies empty because the caller decides when restore work should
+# run and which backup inventory vars it should reuse.
+
+dependencies: []

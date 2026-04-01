@@ -1,0 +1,62 @@
+---
+# roles/restore_restic/tasks/validate.yml
+# Validate phase tasks for the `restore_restic` role.
+# Verifies the Restic binary, runs the manual restore command, prints a short
+# summary, and fails when the restore does not succeed.
+
+- name: "Validate | Check restic binary version"
+  ansible.builtin.command:
+    cmd: restic version
+  register: restore_restic_version
+  changed_when: false
+  when: restore_restic_enabled
+
+- name: "Validate | Run restore_restic command"
+  ansible.builtin.command:
+    cmd: >-
+      restic restore {{ restore_restic_snapshot | quote }}
+      --target {{ restore_restic_effective_target_path | quote }}
+      --overwrite {{ restore_restic_restore_overwrite | quote }}
+      {% if restore_restic_restore_delete %}--delete {% endif %}
+      {% if restore_restic_restore_dry_run %}--dry-run {% endif %}
+      {% for arg in restore_restic_extra_args %}{{ arg | quote }} {% endfor %}
+      {% for path in restore_restic_effective_paths %}--include {{ path | quote }} {% endfor %}
+  environment: >-
+    {{
+      {
+        'RESTIC_REPOSITORY': restore_restic_repository,
+        'RESTIC_PASSWORD': restore_restic_password
+      } | combine(restore_restic_extra_environment)
+    }}
+  register: restore_restic_command
+  changed_when: >-
+    (not restore_restic_restore_dry_run)
+    and ((restore_restic_command.rc | default(1)) == 0)
+  failed_when: false
+  when: restore_restic_enabled
+
+- name: "Validate | Print restore_restic run summary"
+  ansible.builtin.debug:
+    msg: >-
+      [restore_restic] host={{ inventory_hostname }}
+      | mode={{ restore_restic_mode }}
+      | snapshot={{ restore_restic_snapshot }}
+      | target={{ restore_restic_effective_target_path }}
+      | paths={{ restore_restic_effective_paths | join(',') }}
+      | dry_run={{ restore_restic_restore_dry_run }}
+      | overwrite={{ restore_restic_restore_overwrite }}
+      | rc={{ restore_restic_command.rc | default('n/a') }}
+  when: restore_restic_enabled
+
+- name: "Validate | Assert restore_restic final state"
+  ansible.builtin.assert:
+    that:
+      - restore_restic_version.rc == 0
+      - restore_restic_command.rc == 0
+    fail_msg: >-
+      restore_restic failed.
+      rc={{ restore_restic_command.rc | default('n/a') }}
+      stdout={{ restore_restic_command.stdout | default('') | trim }}
+      stderr={{ restore_restic_command.stderr | default('') | trim }}
+    quiet: true
+  when: restore_restic_enabled

@@ -3,6 +3,13 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v2.11.2]
+### Added
+- Added standalone `restore_restic`, plus example inventory wiring and a dedicated `examples/playbooks/ops/restore_restic.yml` helper so downstream repos can restore the full Restic backup scope by default or override one specific path for targeted repair work.
+
+### Documentation
+- Updated repository, example, and Vault documentation to cover the new manual restore helper, the safe `/backup` sandbox default, and the explicit in-place versus repair-path restore modes.
+
 ## [v2.11.1]
 ### Added
 - Added automatic per-container `review_url` generation to `monitoring_docker_tag`, plus optional inventory-driven `changelog_url` overrides that the dashboard host pages can render as direct review links beside each update candidate.

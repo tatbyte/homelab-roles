@@ -179,6 +179,10 @@ those derived hostnames resolve correctly.
   password hashes in Vault. The shared dashboard domain suffix also lives in
   Vault, while the final Traefik and AdGuard hostnames stay derived in normal
   vars files from `alias`.
+- For the Restic backup and restore workflow, keep the repository location,
+  password, and backend-specific environment values in Vault-backed vars and
+  keep the restore mode, sandbox target path, and optional repair-path
+  selection in normal tracked inventory vars.
 - For `adguardhome-sync`, keep the sync UI host, direct AdGuard LAN IPs or
   URLs, and plaintext API passwords in Vault-backed vars because the sync tool
   needs live login input rather than the bcrypt hash used by AdGuard Home
