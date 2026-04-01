@@ -262,6 +262,24 @@
     .note-list li + li {
       margin-top: 0.2rem;
     }
+    .item-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.6rem;
+    }
+    .item-links a {
+      color: var(--accent-2);
+      text-decoration: none;
+      font-size: 0.8rem;
+      padding: 0.42rem 0.68rem;
+      border-radius: 999px;
+      border: 1px solid rgba(110, 247, 210, 0.2);
+      background: rgba(110, 247, 210, 0.06);
+    }
+    .item-links a:hover {
+      border-color: rgba(110, 247, 210, 0.38);
+    }
     .error {
       margin-top: 0.75rem;
       padding: 0.75rem;
@@ -530,6 +548,13 @@
     function updateItem(item) {
       const notes = safeArray(item.notes);
       const latest = item.latest_tag || 'n/a';
+      const links = [];
+      if (item.review_url) {
+        links.push(`<a href="${item.review_url}" target="_blank" rel="noopener noreferrer">Review tags</a>`);
+      }
+      if (item.changelog_url) {
+        links.push(`<a href="${item.changelog_url}" target="_blank" rel="noopener noreferrer">Changelog</a>`);
+      }
       const backupLine = item.should_have_backup
         ? (item.backup_host_enabled
           ? `Host backup enabled${item.backup_stop_configured ? ' | stop-before-backup configured' : ''}`
@@ -538,6 +563,7 @@
       const notesHtml = notes.length
         ? `<ul class="note-list">${notes.map((note) => `<li>${note}</li>`).join('')}</ul>`
         : '';
+      const linksHtml = links.length ? `<div class="item-links">${links.join('')}</div>` : '';
       return `
         <div class="list-item">
           <strong>${item.name || 'container'} <span class="${dockerTagItemClass(item)}">${updateDecisionLabel(item)}</span></strong>
@@ -547,6 +573,7 @@
           <span>Update type: ${item.bump_type || 'none'} | Tracking: ${trackingLabel(item)}</span>
           <span>Platform: ${item.target_platform || 'n/a'}${item.resolved_platform ? ` | resolved ${item.resolved_platform}` : ''}</span>
           <span>Backup note: ${backupLine}${item.backup_recommended ? ' | backup review recommended' : ''}</span>
+          ${linksHtml}
           ${notesHtml}
         </div>
       `;

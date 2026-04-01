@@ -41,10 +41,13 @@
 - name: "Discover | Reuse existing monitoring_web host and auth settings when missing"
   ansible.builtin.set_fact:
     monitoring_web_discovered_host: |-
-      {{ monitoring_web_existing_labels |
-      join('\n') |
-      regex_findall('Host\\(`([^`]+)`\\)') |
-      first | default('') }}
+      {{ (
+      monitoring_web_existing_labels |
+      select('search', 'rule=Host') |
+      list | first | default('') |
+      split('Host(`') | last |
+      split('`)') | first
+      ) }}
     monitoring_web_discovered_basic_auth_users: |-
       {{ ((monitoring_web_existing_labels |
       join('\n') |

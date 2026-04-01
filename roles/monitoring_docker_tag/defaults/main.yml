@@ -36,6 +36,7 @@ monitoring_docker_tag_registry_insecure: false
 monitoring_docker_tag_registry_timeout_seconds: 30
 monitoring_docker_tag_track_stopped_containers: false
 monitoring_docker_tag_skip_prerelease_tags: true
+monitoring_docker_tag_url_overrides: {}
 monitoring_docker_tag_floating_tags:
   - latest
   - stable

@@ -9,3 +9,10 @@ monitoring_docker_tag_status_dir: /var/lib/monitor
 monitoring_docker_tag_status_path: "{{ monitoring_docker_tag_status_dir }}/docker-tag.json"
 monitoring_docker_tag_timer_on_calendar: "*-*-* 09:15:00"
 monitoring_docker_tag_timer_randomized_delay_sec: 0
+
+# Optional review/changelog link overrides shown on the host detail page.
+# The role already auto-builds registry tag review links when it recognizes the
+# image registry, so example overrides only need to cover release-note pages.
+monitoring_docker_tag_url_overrides:
+  docker.io/library/nginx:
+    changelog_url: "https://nginx.org/en/CHANGES"

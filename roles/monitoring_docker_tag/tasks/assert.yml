@@ -39,6 +39,7 @@
       - monitoring_docker_tag_registry_timeout_seconds >= 1
       - monitoring_docker_tag_track_stopped_containers is boolean
       - monitoring_docker_tag_skip_prerelease_tags is boolean
+      - monitoring_docker_tag_url_overrides is mapping
       - monitoring_docker_tag_floating_tags is sequence
       - monitoring_docker_tag_floating_tags is not string
       - monitoring_docker_tag_floating_tags | select('string') | list | length == monitoring_docker_tag_floating_tags | length
