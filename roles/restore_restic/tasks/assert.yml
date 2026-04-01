@@ -1,0 +1,87 @@
+---
+# roles/restore_restic/tasks/assert.yml
+# Assert phase tasks for the `restore_restic` role.
+# Validates the repository, selected restore mode, and effective restore
+# target/path set before the manual Restic restore command is run.
+
+- name: "Assert | Derive restore_restic effective target path"
+  ansible.builtin.set_fact:
+    restore_restic_effective_target_path: >-
+      {{
+        restore_restic_sandbox_target_path | trim
+        if (restore_restic_mode == 'sandbox')
+        else '/'
+      }}
+  changed_when: false
+  when: restore_restic_enabled
+
+- name: "Assert | Derive restore_restic effective restore paths"
+  ansible.builtin.set_fact:
+    restore_restic_effective_paths: >-
+      {{
+        [restore_restic_only_path | trim]
+        if (restore_restic_mode == 'repair_path')
+        else (
+          restore_restic_paths
+          | map('string')
+          | map('trim')
+          | reject('equalto', '')
+          | list
+        )
+      }}
+  changed_when: false
+  when: restore_restic_enabled
+
+- name: "Assert | Validate restore_restic variables when enabled"
+  ansible.builtin.assert:
+    that:
+      - restore_restic_enabled is boolean
+      - restore_restic_packages is sequence
+      - restore_restic_packages | length > 0
+      - restore_restic_packages | select('string') | list | length == restore_restic_packages | length
+      - restore_restic_repository is string
+      - restore_restic_repository | length > 0
+      - restore_restic_password is string
+      - restore_restic_password | length > 0
+      - restore_restic_extra_environment is mapping
+      - restore_restic_snapshot is string
+      - restore_restic_snapshot | length > 0
+      - restore_restic_mode in ['sandbox', 'in_place', 'repair_path']
+      - restore_restic_sandbox_target_path is string
+      - restore_restic_sandbox_target_path | length > 0
+      - restore_restic_sandbox_target_path is match('^/')
+      - restore_restic_paths is sequence
+      - restore_restic_paths | select('string') | list | length == restore_restic_paths | length
+      - restore_restic_only_path is string
+      - >-
+        (restore_restic_mode != 'repair_path')
+        or (restore_restic_only_path | trim | length > 0)
+      - >-
+        (restore_restic_mode != 'repair_path')
+        or ((restore_restic_only_path | trim) is match('^/'))
+      - restore_restic_restore_overwrite in ['always', 'if-changed', 'if-newer', 'never']
+      - restore_restic_restore_delete is boolean
+      - restore_restic_restore_dry_run is boolean
+      - restore_restic_extra_args is sequence
+      - restore_restic_extra_args | select('string') | list | length == restore_restic_extra_args | length
+      - restore_restic_effective_target_path is string
+      - restore_restic_effective_target_path | length > 0
+      - restore_restic_effective_target_path is match('^/')
+      - restore_restic_effective_paths is sequence
+      - restore_restic_effective_paths | length > 0
+      - restore_restic_effective_paths | select('match', '^/') | list | length == restore_restic_effective_paths | length
+    fail_msg: >-
+      restore_restic requires a non-empty repository, password, valid restore
+      mode, safe sandbox target path, and at least one absolute restore path
+      when the role is enabled. `repair_path` mode also requires a non-empty
+      absolute `restore_restic_only_path`.
+    quiet: true
+  when: restore_restic_enabled
+
+- name: "Assert | Validate restore_restic variables when disabled"
+  ansible.builtin.assert:
+    that:
+      - restore_restic_enabled is boolean
+    fail_msg: "restore_restic_enabled must be a boolean"
+    quiet: true
+  when: not restore_restic_enabled

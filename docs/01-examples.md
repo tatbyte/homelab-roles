@@ -43,7 +43,8 @@ The example assumes Debian-family hosts.
 - Keep non-monitoring manual-run entrypoints explicit, such as
   `examples/playbooks/ops/bootstrap.yml`,
   `examples/playbooks/ops/base_maintenance.yml` and
-  `examples/playbooks/ops/backup_restic_now.yml`, instead of reintroducing an
+  `examples/playbooks/ops/backup_restic_now.yml` plus
+  `examples/playbooks/ops/restore_restic.yml`, instead of reintroducing an
   aggregate ops playbook.
 - Keep `examples/playbooks/recurring/base.yml` for the non-maintenance baseline and
   `examples/playbooks/ops/base_maintenance.yml` for one-host-at-a-time package

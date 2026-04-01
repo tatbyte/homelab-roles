@@ -1,0 +1,25 @@
+---
+# roles/restore_restic/defaults/main.yml
+# Default variables for the `restore_restic` role.
+# Defines the package, repository, restore mode, target-path behavior, and
+# overwrite behavior used for manual Restic restore runs.
+
+restore_restic_enabled: true
+
+restore_restic_packages:
+  - restic
+
+restore_restic_repository: "{{ backup_restic_repository | default('') }}"
+restore_restic_password: "{{ backup_restic_password | default('') }}"
+restore_restic_extra_environment: "{{ backup_restic_extra_environment | default({}) }}"
+
+restore_restic_snapshot: latest
+restore_restic_mode: sandbox
+restore_restic_sandbox_target_path: /backup
+restore_restic_paths: "{{ backup_restic_paths | default([]) }}"
+restore_restic_only_path: ""
+
+restore_restic_restore_overwrite: always
+restore_restic_restore_delete: false
+restore_restic_restore_dry_run: false
+restore_restic_extra_args: []

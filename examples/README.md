@@ -21,6 +21,9 @@ Values are intentionally simple and should be replaced before production use.
 - `playbooks/ops/monitoring_ops.yml`: operator-only aggregate entrypoint for
   the monitoring helper playbooks.
 - `playbooks/ops/backup_restic_now.yml`: validation-only backup helper.
+- `playbooks/ops/restore_restic.yml`: manual restore helper with an explicit
+  safe-by-default sandbox mode, optional full in-place restore mode, and
+  optional single-path repair mode.
 - `playbooks/ops/monitoring_status_now.yml`,
   `playbooks/ops/monitoring_storage_health_now.yml`,
   `playbooks/ops/monitoring_docker_tag_now.yml`,
@@ -42,6 +45,9 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/boot
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/recurring/site.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/base_maintenance.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/backup_restic_now.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/restore_restic.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/restore_restic.yml -e restore_restic_mode=in_place
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/restore_restic.yml -e restore_restic_mode=repair_path -e restore_restic_only_path=/srv/wireguard/data
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/monitoring_ops.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/monitoring_docker_tag_now.yml
 ```
@@ -61,6 +67,7 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/recurrin
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/recurring/backup.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/recurring/monitoring.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/backup_restic_now.yml
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/restore_restic.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/monitoring_ops.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/monitoring_status_now.yml
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/monitoring_docker_tag_now.yml
@@ -76,6 +83,7 @@ ansible-playbook playbooks/recurring/backup.yml
 ansible-playbook playbooks/recurring/monitoring.yml
 ansible-playbook playbooks/ops/base_maintenance.yml
 ansible-playbook playbooks/ops/backup_restic_now.yml
+ansible-playbook playbooks/ops/restore_restic.yml
 ansible-playbook playbooks/ops/monitoring_ops.yml
 ansible-playbook playbooks/ops/monitoring_status_now.yml
 ansible-playbook playbooks/ops/monitoring_docker_tag_now.yml
@@ -96,6 +104,10 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/<t
 - `backup.yml` now runs the aggregate `backup` role, which applies the
   recurring Restic setup, initializes a missing repository, and manages the
   separate prune/check timers in the same steady-state path.
+- `restore_restic.yml` is intentionally separate from the aggregate backup flow
+  because restores are manual operator actions, not part of recurring
+  convergence. It defaults to restoring into `/backup` so operators can review
+  content safely before choosing an explicit in-place mode.
 - `monitoring.yml` now runs the aggregate `monitoring` role, which currently
   applies host-local status generation through `monitoring_status`, dedicated
   storage checks through `monitoring_storage_health`, and Docker image-tag
