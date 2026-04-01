@@ -3,6 +3,16 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v2.11.1]
+### Added
+- Added automatic per-container `review_url` generation to `monitoring_docker_tag`, plus optional inventory-driven `changelog_url` overrides that the dashboard host pages can render as direct review links beside each update candidate.
+
+### Fixed
+- Fixed the `monitoring_web` existing-install discovery path so reused Traefik host labels are parsed safely again, preventing invalid router rules and dashboard-wide 404 responses when downstream repos rely on the existing-install fallback.
+
+### Documentation
+- Updated the `monitoring_docker_tag` role and example inventory docs to cover the new review-link and changelog-override variables.
+
 ## [v2.11.0]
 ### Added
 - Added standalone `monitoring_docker_tag` plus `monitoring_docker_tag_now`, including a managed host-local tag-check script, systemd service/timer, architecture-aware registry matching, advisory update classification, and example inventory/playbook wiring.
