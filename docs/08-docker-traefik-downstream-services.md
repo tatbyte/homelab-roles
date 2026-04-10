@@ -71,6 +71,8 @@ docker_public_host_alias: "{{ alias | default(inventory_hostname) }}"
 docker_public_domain_suffix: "{{ vault_docker_public_domain_suffix }}"
 docker_traefik_dashboard_host: "traefik.{{ docker_public_host_alias }}.{{ docker_public_domain_suffix }}"
 docker_adguard_host: "adguard.{{ docker_public_host_alias }}.{{ docker_public_domain_suffix }}"
+docker_adguard_sync_host: "adguard-sync.{{ docker_public_host_alias }}.{{ docker_public_domain_suffix }}"
+docker_wireguard_host: "wireguard.{{ docker_public_host_alias }}.{{ docker_public_domain_suffix }}"
 ```
 
 This keeps host-specific dashboard names predictable while storing only the
@@ -80,6 +82,8 @@ For a host with `alias=proxy1`, this produces:
 
 - `traefik.proxy1.example.com`
 - `adguard.proxy1.example.com`
+- `adguard-sync.proxy1.example.com`
+- `wireguard.proxy1.example.com`
 
 If you adopt this pattern, keep DNS aligned with it through either:
 

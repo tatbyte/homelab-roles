@@ -5,6 +5,8 @@
 
 # Base layer role overrides for this host.
 base_packages_enabled: true
+# Add host-only packages here without replacing the shared baseline list.
+base_packages_additional: []
 base_locale_enabled: true
 base_timezone_enabled: true
 base_ntp_enabled: true

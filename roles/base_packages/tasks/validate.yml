@@ -10,10 +10,10 @@
 - name: "Validate | Assert requested install packages are present"
   ansible.builtin.assert:
     that:
-      - (base_packages_install | difference(ansible_facts.packages.keys() | list) | length) == 0
+      - (base_packages_effective_install | difference(ansible_facts.packages.keys() | list) | length) == 0
     fail_msg: >-
       Missing packages after install phase:
-      {{ base_packages_install | difference(ansible_facts.packages.keys() | list) | join(', ') }}
+      {{ base_packages_effective_install | difference(ansible_facts.packages.keys() | list) | join(', ') }}
     quiet: true
 
 - name: "Validate | Assert requested removed packages are absent"

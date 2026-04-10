@@ -1,0 +1,22 @@
+---
+# roles/base_packages/tasks/derive_effective.yml
+# Helper tasks for the `base_packages` role.
+# Resolves the effective install list from the default/additional pattern.
+
+- name: "Derive | Resolve effective install package list"
+  ansible.builtin.set_fact:
+    base_packages_effective_install: >-
+      {{
+        (
+          base_packages_install
+          if (base_packages_install | length) > 0
+          else (
+            (
+              base_packages_default
+              + base_packages_additional
+            )
+            | unique
+          )
+        )
+      }}
+  changed_when: false

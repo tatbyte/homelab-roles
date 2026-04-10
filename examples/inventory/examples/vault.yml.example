@@ -29,8 +29,10 @@ vault_user_password_hash: "$6$replace-me"
 # Example ACME contact email used by Traefik for Let's Encrypt registration.
 vault_docker_traefik_acme_email: "admin@example.com"
 
-# Shared public domain suffix used to build Traefik and AdGuard dashboard
-# hostnames from the inventory `alias`.
+# Shared public domain suffix used to build all Traefik-published service
+# hostnames from the inventory `alias`.  The inventory derives each service
+# host as `<service>.<alias>.<suffix>`, for example
+# `adguard.lab.example.com` or `wireguard.lab.example.com`.
 vault_docker_public_domain_suffix: "example.com"
 
 # Example DNS provider credential used by Traefik for ACME DNS-01.
@@ -54,8 +56,9 @@ vault_docker_adguard_admin_credentials: "admin:$2a$10$replace-me"
 # docker_adguard_sync
 # ---------------------------------------------------------------------------
 
-# Example public host name used by Traefik for the AdGuard Sync dashboard.
-vault_docker_adguard_sync_host: "adguard-sync.example.com"
+# The AdGuard Sync dashboard host is now derived automatically from the
+# inventory alias and `vault_docker_public_domain_suffix`, so no separate
+# vault host variable is needed.
 
 # Example direct LAN IP for the origin AdGuard instance.
 vault_docker_adguard_sync_origin_ip: "192.168.1.53"
@@ -80,14 +83,15 @@ vault_docker_adguard_sync_api_password: ""
 # docker_wireguard
 # ---------------------------------------------------------------------------
 
-# Example public host name used by both the wg-easy initial setup and the
-# Traefik router for the WireGuard dashboard.
-vault_docker_wireguard_host: "wireguard.example.com"
+# The WireGuard dashboard host is now derived automatically from the inventory
+# alias and `vault_docker_public_domain_suffix`, so no separate vault host
+# variable is needed.
 
 # Optional separate VPN endpoint host name passed to wg-easy as `INIT_HOST`.
 # Set this when WireGuard clients should connect through DuckDNS or another
-# DDNS name while the dashboard stays on `vault_docker_wireguard_host`.
-# Omit this key entirely to reuse `vault_docker_wireguard_host`.
+# DDNS name while the dashboard stays on the derived
+# `wireguard.<alias>.<domain>` host.
+# Omit this key entirely to reuse the derived dashboard host.
 vault_docker_wireguard_duckdns_host: "myhomelabvpn.duckdns.org"
 
 # Example initial admin username for the wg-easy dashboard.

@@ -6,20 +6,28 @@
 - name: "Assert | Validate base_packages variable structure"
   ansible.builtin.assert:
     that:
+      - base_packages_default is sequence
+      - base_packages_additional is sequence
       - base_packages_install is sequence
       - base_packages_remove is sequence
+      - base_packages_default is not string
+      - base_packages_additional is not string
       - base_packages_install is not string
       - base_packages_remove is not string
+      - (base_packages_default | map('string') | list | length) == (base_packages_default | length)
+      - (base_packages_additional | map('string') | list | length) == (base_packages_additional | length)
       - (base_packages_install | map('string') | list | length) == (base_packages_install | length)
       - (base_packages_remove | map('string') | list | length) == (base_packages_remove | length)
+      - (base_packages_default | map('trim') | reject('equalto', '') | list | length) == (base_packages_default | length)
+      - (base_packages_additional | map('trim') | reject('equalto', '') | list | length) == (base_packages_additional | length)
       - (base_packages_install | map('trim') | reject('equalto', '') | list | length) == (base_packages_install | length)
       - (base_packages_remove | map('trim') | reject('equalto', '') | list | length) == (base_packages_remove | length)
-    fail_msg: "base_packages_install and base_packages_remove must be lists of non-empty strings"
+    fail_msg: "base_packages_default, base_packages_additional, base_packages_install, and base_packages_remove must be lists of non-empty strings"
     quiet: true
 
 - name: "Assert | Ensure install and remove lists do not overlap"
   ansible.builtin.assert:
     that:
-      - (base_packages_install | intersect(base_packages_remove) | length) == 0
-    fail_msg: "base_packages_install and base_packages_remove cannot contain the same package names"
+      - (base_packages_effective_install | intersect(base_packages_remove) | length) == 0
+    fail_msg: "base_packages_effective_install and base_packages_remove cannot contain the same package names"
     quiet: true

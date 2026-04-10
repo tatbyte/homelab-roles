@@ -81,7 +81,7 @@ docker_wireguard_access_group_members: >-
     | list
   }}
 docker_wireguard_proxy_network_name: "{{ docker_traefik_network_name }}"
-docker_wireguard_host: "{{ vault_docker_wireguard_host }}"
+docker_wireguard_host: "wireguard.{{ docker_public_host_alias }}.{{ docker_public_domain_suffix }}"
 docker_wireguard_init_host: "{{ vault_docker_wireguard_duckdns_host | default(docker_wireguard_host) }}"
 docker_wireguard_web_ui_enabled: true
 docker_wireguard_admin_username: "{{ vault_docker_wireguard_admin_username }}"

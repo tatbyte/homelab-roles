@@ -3,6 +3,14 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [v2.11.3]
+### Changed
+- Added the additive `base_packages_default` plus `base_packages_additional` pattern to `base_packages`, with derived effective install handling so inventories can extend the shared baseline without replacing it.
+- Updated the example inventory and downstream role docs so Traefik-published service hostnames now derive from `docker_public_host_alias` plus `docker_public_domain_suffix` for AdGuard Sync, WireGuard, Plex, Rustatio, Radarr, and Sonarr.
+
+### Documentation
+- Fixed the Vault guidance and example inventory comments so they no longer point maintainers at the removed host-specific public-host vault keys.
+
 ## [v2.11.2]
 ### Added
 - Added standalone `restore_restic`, plus example inventory wiring and a dedicated `examples/playbooks/ops/restore_restic.yml` helper so downstream repos can restore the full Restic backup scope by default or override one specific path for targeted repair work.
