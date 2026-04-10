@@ -58,7 +58,6 @@ repos:
     hooks:
       - id: ansible-lint
         name: ansible-lint (pipx)
-        entry: ansible-lint -q
+        entry: bash -lc 'ansible-lint -q "$@"' --
         language: system
-        pass_filenames: false
         files: \.ya?ml$

@@ -1,7 +1,11 @@
 ---
 # roles/base_packages/tasks/main.yml
 # Task entrypoint for the `base_packages` role.
-# Imports the assert, install, config, and validate phase files in order.
+# Imports the derive, assert, install, config, and validate phase files in order.
+
+- name: Derive effective packages
+  ansible.builtin.import_tasks: derive_effective.yml
+  tags: [assert, install, validate, base_packages_assert, base_packages_install, base_packages_validate]
 
 - name: Assert
   ansible.builtin.import_tasks: assert.yml

@@ -69,7 +69,7 @@ docker_adguard_sync_service_user: "{{ docker_adguard_service_user }}"
 docker_adguard_sync_access_group: "{{ docker_adguard_access_group }}"
 docker_adguard_sync_access_group_members: "{{ docker_adguard_access_group_members }}"
 docker_adguard_sync_proxy_network_name: "{{ docker_traefik_network_name }}"
-docker_adguard_sync_host: "{{ vault_docker_adguard_sync_host }}"
+docker_adguard_sync_host: "adguard-sync.{{ docker_public_host_alias }}.{{ docker_public_domain_suffix }}"
 docker_adguard_sync_origin:
   url: "http://{{ vault_docker_adguard_sync_origin_ip }}:{{ docker_adguard_http_bind_port }}"
   username: "{{ docker_adguard_admin_credentials.split(':', 1)[0] }}"

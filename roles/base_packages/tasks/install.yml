@@ -5,8 +5,8 @@
 
 - name: "Install | Ensure requested packages are present"
   ansible.builtin.apt:
-    name: "{{ base_packages_install }}"
+    name: "{{ base_packages_effective_install }}"
     state: present
     update_cache: true
     cache_valid_time: 3600
-  when: base_packages_install | length > 0
+  when: base_packages_effective_install | length > 0

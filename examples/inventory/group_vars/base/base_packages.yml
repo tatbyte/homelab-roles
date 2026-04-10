@@ -6,7 +6,7 @@
 base_packages_enabled: true
 # Packages that should exist on almost every homelab host.
 # Keep this role generic: only "common everywhere" packages belong here.
-base_packages_install:
+base_packages_default:
   # HTTPS / repo / package trust
   - ca-certificates   # trusted CA bundle for HTTPS downloads and APT repos
   - curl              # download files / test HTTP endpoints
@@ -52,6 +52,10 @@ base_packages_install:
   # Ansible-managed host requirements
   - python3           # required on most hosts for Ansible modules
   - python3-apt       # lets Ansible manage apt packages properly on Debian/Ubuntu
+
+# Host-specific additions belong in host_vars or more specific group_vars.
+# Leave empty here so the shared baseline stays authoritative.
+base_packages_additional: []
 
 # Packages to remove from all hosts if you want to enforce absence.
 # Leave empty until you have a clear reason to remove something globally.

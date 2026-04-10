@@ -1,7 +1,15 @@
 ---
 # roles/base_packages/defaults/main.yml
 # Default variables for the `base_packages` role.
-# Defines package lists to install everywhere and packages to enforce as absent.
+# Defines default and host-additive package lists plus packages to enforce as absent.
 
+# Shared baseline packages for all hosts using the role.
+base_packages_default: []
+
+# Host- or group-specific additions layered on top of the shared baseline.
+base_packages_additional: []
+
+# Legacy full-override install list. When non-empty, the role uses this list
+# instead of combining `base_packages_default` and `base_packages_additional`.
 base_packages_install: []
 base_packages_remove: []
