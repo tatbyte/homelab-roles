@@ -1,0 +1,13 @@
+---
+# examples/inventory/group_vars/backup/vault.vars.example
+# Copy needed values to `vault.vars` in this directory, encrypt that file with
+# ansible-vault, and keep the encrypted `vault.vars` untracked.
+
+# Restic repository target and backend credentials for the example S3 repo.
+vault_backup_restic_repository: "s3:https://s3.example.com/example-lab/restic"
+vault_backup_restic_region: "example-region-1"
+vault_backup_restic_access_key_id: "replace-me"
+vault_backup_restic_secret_access_key: "replace-me"
+
+# Restic repository password.
+vault_backup_restic_password: "replace-me"

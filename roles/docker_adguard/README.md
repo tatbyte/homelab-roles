@@ -32,7 +32,7 @@ Traefik-connected proxy-network deployment, role-owned access identities, and
 | `docker_adguard_access_group` | `access_adguard` | no | Role-owned feature access group used for AdGuard host access |
 | `docker_adguard_access_group_members` | de-duplicated `bootstrap_user` / `user_account_name` list with `admin` fallback | no | Existing admin users that should receive AdGuard host access when present |
 | `docker_adguard_proxy_network_name` | `docker_traefik_network_name` or `traefik_proxy` fallback | no | External Docker network name created by Traefik and joined by AdGuard |
-| `docker_adguard_host` | `adguard.example.com` | yes | Host name used by the Traefik router labels for the AdGuard web UI; examples can derive this from the inventory `alias` plus a Vault-backed shared domain suffix |
+| `docker_adguard_host` | `adguard.example.com` | yes | Host name used by the Traefik router labels for the AdGuard web UI |
 | `docker_adguard_http_bind_port` | `0` | no | Optional direct host HTTP port published to AdGuard's internal web listener; keep `0` to expose the web UI only through Traefik HTTPS |
 | `docker_adguard_admin_credentials` | `''` | no | Preferred combined admin credential in `username:bcrypt-hash` form; when set, the role derives the effective managed admin user and password hash from it |
 | `docker_adguard_admin_user` | `admin` | no | Legacy separate admin account name used when `docker_adguard_admin_credentials` is empty |
@@ -77,9 +77,7 @@ docker_adguard_access_group_members: >-
     | list
   }}
 docker_adguard_proxy_network_name: "{{ docker_traefik_network_name }}"
-docker_public_host_alias: "{{ alias | default(inventory_hostname) }}"
-docker_public_domain_suffix: "{{ vault_docker_public_domain_suffix }}"
-docker_adguard_host: "adguard.{{ docker_public_host_alias }}.{{ docker_public_domain_suffix }}"
+docker_adguard_host: "adguard.lab.example.com"
 docker_adguard_http_bind_port: 3000
 docker_adguard_admin_credentials: "{{ vault_docker_adguard_admin_credentials }}"
 docker_adguard_dns_bind_port: 53

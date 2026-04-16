@@ -35,10 +35,11 @@ docker_wireguard_access_group_members:
 # Join the Traefik-owned proxy network and publish the `wg-easy` web UI
 # through Compose labels instead of exposing the dashboard directly on the
 # host.
-# Build the dashboard host from the inventory alias so each host gets a stable
-# URL such as `wireguard.lab.example.com` in the example lab.
+# Set the published hostname explicitly so the example does not depend on an
+# alias-derived domain suffix.
 docker_wireguard_proxy_network_name: "{{ docker_traefik_network_name }}"
-docker_wireguard_host: "wireguard.{{ docker_public_host_alias }}.{{ docker_public_domain_suffix }}"
+docker_wireguard_host: wireguard.lab.example.com
+docker_wireguard_init_host: "{{ vault_docker_wireguard_duckdns_host | default(docker_wireguard_host) }}"
 docker_wireguard_web_ui_enabled: true
 docker_wireguard_router_name: wireguard
 docker_wireguard_router_entrypoints:

@@ -1,0 +1,21 @@
+---
+# examples/inventory/group_vars/monitoring/vault.vars.example
+# Copy needed values to `vault.vars` in this directory, encrypt that file with
+# ansible-vault, and keep the encrypted `vault.vars` untracked.
+
+# Optional dedicated SSH private key used by the collector host.
+vault_monitoring_collect_ssh_private_key: |
+  replace-me-with-your-monitor-collect-private-key
+
+# Matching public key installed on remote monitored hosts.
+vault_monitoring_collect_ssh_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleMonitorCollectPublicKey collector@example.invalid"
+
+# Optional monitoring dashboard publication and display settings.
+vault_monitoring_collect_web_host: "monitor.example.com"
+vault_monitoring_collect_web_title: "Lab Monitor"
+vault_monitoring_collect_web_short_title: "Monitor"
+vault_monitoring_collect_web_basic_auth_users:
+  - "monitor:replace-me-with-htpasswd-hash"
+
+# Optional ntfy topic URL used by the collector host for notifications.
+vault_monitoring_notify_ntfy_url: "https://ntfy.sh/example-lab-monitor"

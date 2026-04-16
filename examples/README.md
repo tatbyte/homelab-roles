@@ -10,7 +10,7 @@ Values are intentionally simple and should be replaced before production use.
 
 ## Layout
 
-- `inventory/group_vars/all/`: shared switches, non-base aggregate toggles, backup opt-in, and secret-source settings.
+- `inventory/group_vars/all/`: shared switches, non-base aggregate toggles, and backup opt-in.
 - `inventory/group_vars/base/`: `base_<role>_enabled` values plus base-role inputs.
 - `inventory/group_vars/bootstrap/`, `user/`, `docker/`, `backup/`, `monitoring/`: layer-specific role inputs.
 - `inventory/host_vars/lab/vars.yml`: host-level opt-in for optional `user_*`, `docker_*`, and `monitoring_*` child roles.
@@ -30,7 +30,7 @@ Values are intentionally simple and should be replaced before production use.
   `playbooks/ops/monitoring_collect_now.yml`,
   `playbooks/ops/monitoring_notify_now.yml`: validation-only monitoring helpers,
   with the notify helper able to reuse an already-installed service even when
-  the current local Vault file omits the ntfy URL toggle.
+  the current inventory-local Vault vars omit the ntfy URL toggle.
 - `playbooks/recurring/site.yml`: post-bootstrap stack (`base`, `user`, `docker`, `backup`, `monitoring`).
 
 For the stable layout rules behind this split, see
@@ -52,11 +52,9 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/moni
 ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/ops/monitoring_docker_tag_now.yml
 ```
 
-The example bootstrap flow expects secrets in
-`~/.config/ansible/lab_vault.yml`, with `examples/ansible.cfg` pointing at
+The example bootstrap flow expects encrypted `vault.vars` files beside the
+layer vars that consume them, with `examples/ansible.cfg` pointing at
 `~/.config/ansible/vault.pass`.
-That behavior is controlled by
-`inventory/group_vars/all/secret_sources.yml`.
 
 Direct phase runs:
 
@@ -115,7 +113,8 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/<t
   image-tag selection.
 - There is no aggregate `playbooks/ops/site.yml` anymore. Run the specific ops
   playbook you want directly.
-- The example keeps live secrets out of the repo and derives public Docker hostnames from the inventory `alias` plus `vault_docker_public_domain_suffix`.
+- The example keeps live secrets in ignored encrypted `vault.vars` files and
+  keeps public Docker hostnames as explicit inventory vars.
 - When the example monitoring collector needs SSH transport and the example
   Vault leaves the collector key unset, the inventory can also fall back to a
   local `~/.ssh/monitor_collect_ed25519.pub` public key on the controller.
@@ -127,4 +126,5 @@ ANSIBLE_CONFIG=examples/ansible.cfg ansible-playbook examples/playbooks/tests/<t
 - Add base-role toggles and vars under `inventory/group_vars/base/`.
 - Add other role inputs under the matching `inventory/group_vars/<layer>/` directory.
 - Enable optional child roles per host in `inventory/host_vars/<host>/vars.yml`.
-- Reuse `inventory/group_vars/all/secret_sources.yml` for future playbooks that load controller-local secrets.
+- Add `vault.vars.example` beside any vars file that introduces new
+  secret-bearing inputs.

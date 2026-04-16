@@ -8,17 +8,16 @@
 # shared Restic timer and JSON-status contract.
 backup_restic_enabled: true
 
-# Load the example IDrive e2 repository and password from the
-# controller-local Vault file.
-backup_restic_repository: "{{ vault_backup_restic_idrive_e2_repository }}/{{ alias | default(inventory_hostname) }}"
+# Load the example repository and password from inventory-local Vault vars.
+backup_restic_repository: "{{ vault_backup_restic_repository }}/{{ alias | default(inventory_hostname) }}"
 backup_restic_password: "{{ vault_backup_restic_password }}"
 
-# IDrive e2 S3-compatible settings for the Restic S3 backend.
+# Example S3-compatible settings for the Restic backend.
 backup_restic_extra_environment:
   AWS_S3_FORCE_PATH_STYLE: "true"
-  AWS_DEFAULT_REGION: "{{ vault_backup_restic_idrive_e2_region }}"
-  AWS_ACCESS_KEY_ID: "{{ vault_backup_restic_idrive_e2_access_key_id }}"
-  AWS_SECRET_ACCESS_KEY: "{{ vault_backup_restic_idrive_e2_secret_access_key }}"
+  AWS_DEFAULT_REGION: "{{ vault_backup_restic_region }}"
+  AWS_ACCESS_KEY_ID: "{{ vault_backup_restic_access_key_id }}"
+  AWS_SECRET_ACCESS_KEY: "{{ vault_backup_restic_secret_access_key }}"
 
 # Tag snapshots so example-lab data stays easy to filter from other backup
 # sources that may share the same repository backend.

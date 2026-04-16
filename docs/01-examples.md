@@ -54,13 +54,14 @@ The example assumes Debian-family hosts.
 
 ## Secret Loading
 
-- Keep live secrets outside the repo in `~/.config/ansible/lab_vault.yml`.
 - Keep the Vault password file at `~/.config/ansible/vault.pass`, which the
   example `ansible.cfg` expects by default.
-- Reuse `examples/inventory/group_vars/all/secret_sources.yml` for playbooks
-  that optionally load controller-local secrets.
-- When a playbook loads that local file, do it from delegated `pre_tasks`
-  inside the target play so `--limit <host>` keeps the same behavior.
+- Keep live secrets in encrypted `vault.vars` files beside the group or host
+  vars that consume them.
+- Track `vault.vars.example` in those same directories so downstream users can
+  see the expected keys without relying on one central example file.
+- Keep public hostnames and other non-secret routing choices in normal
+  `vars.yml`, not in Vault.
 
 ## Adding Or Changing Coverage
 

@@ -35,7 +35,7 @@ Explains how the role manages a Traefik reverse proxy through Docker Compose wit
 | `docker_traefik_acme_email` | `admin@example.com` | yes | Email address used for Let's Encrypt ACME registration |
 | `docker_traefik_dns_challenge_provider` | `cloudflare` | yes | Traefik DNS challenge provider name |
 | `docker_traefik_dns_env` | `{}` | yes | Environment variables passed to Traefik for the DNS provider credentials |
-| `docker_traefik_dashboard_host` | `traefik.example.com` | yes when dashboard enabled | Host name used for the Traefik dashboard router; examples can derive this from the inventory `alias` plus a Vault-backed shared domain suffix |
+| `docker_traefik_dashboard_host` | `traefik.example.com` | yes when dashboard enabled | Host name used for the Traefik dashboard router |
 | `docker_traefik_dashboard_basic_auth_users` | `[]` | yes when dashboard enabled | List of `user:hash` entries used by Traefik basic auth for the dashboard |
 | `docker_traefik_manage_firewall_rules` | `true` | no | Whether to register managed HTTP and HTTPS firewall rules |
 
@@ -75,9 +75,7 @@ docker_traefik_acme_email: "{{ vault_docker_traefik_acme_email }}"
 docker_traefik_dns_challenge_provider: cloudflare
 docker_traefik_dns_env:
   CF_DNS_API_TOKEN: "{{ vault_docker_traefik_dns_api_token }}"
-docker_public_host_alias: "{{ alias | default(inventory_hostname) }}"
-docker_public_domain_suffix: "{{ vault_docker_public_domain_suffix }}"
-docker_traefik_dashboard_host: "traefik.{{ docker_public_host_alias }}.{{ docker_public_domain_suffix }}"
+docker_traefik_dashboard_host: "traefik.lab.example.com"
 docker_traefik_dashboard_basic_auth_users: "{{ vault_docker_traefik_dashboard_basic_auth_users }}"
 docker_traefik_firewall_rules:
   - rule: allow
