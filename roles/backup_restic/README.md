@@ -31,7 +31,7 @@ Missing configured backup paths are skipped at runtime and recorded in the `warn
 |----------|---------|----------|-------------|
 | `backup_restic_repository` | `""` | yes | Restic repository location passed through `RESTIC_REPOSITORY` |
 | `backup_restic_password` | `""` | yes | Repository password passed through `RESTIC_PASSWORD` |
-| `backup_restic_extra_environment` | `{}` | no | Extra backend-specific environment variables such as IDrive e2 S3-compatible settings |
+| `backup_restic_extra_environment` | `{}` | no | Extra backend-specific environment variables such as S3-compatible settings |
 | `backup_restic_paths_file_path` | `/etc/restic/backup.paths` | no | Rendered file path for the managed include-path list |
 | `backup_restic_excludes_file_path` | `/etc/restic/exclude.txt` | no | Rendered file path for the managed exclude list |
 | `backup_restic_paths` | issue #79 baseline | no | Paths the backup script will include when they exist |
@@ -56,13 +56,13 @@ Example inventory vars:
 
 ```yaml
 # group_vars/backup/backup_restic.yml
-backup_restic_repository: "{{ vault_backup_restic_idrive_e2_repository }}"
+backup_restic_repository: "{{ vault_backup_restic_repository }}"
 backup_restic_password: "{{ vault_backup_restic_password }}"
 backup_restic_extra_environment:
   AWS_S3_FORCE_PATH_STYLE: "true"
-  AWS_DEFAULT_REGION: "{{ vault_backup_restic_idrive_e2_region }}"
-  AWS_ACCESS_KEY_ID: "{{ vault_backup_restic_idrive_e2_access_key_id }}"
-  AWS_SECRET_ACCESS_KEY: "{{ vault_backup_restic_idrive_e2_secret_access_key }}"
+  AWS_DEFAULT_REGION: "{{ vault_backup_restic_region }}"
+  AWS_ACCESS_KEY_ID: "{{ vault_backup_restic_access_key_id }}"
+  AWS_SECRET_ACCESS_KEY: "{{ vault_backup_restic_secret_access_key }}"
 backup_restic_tags:
   - ansible-managed
   - "{{ alias | default(inventory_hostname) }}"
@@ -81,7 +81,7 @@ backup_restic_docker_stop_containers:
   instead of folding them into the snapshot timer.
 - The JSON schema name is `restic_backup_status_v1`, matching the backup-state contract described in issue `#96`.
 - `bytes_added` is derived from Restic's `data_added` summary field.
-- The current inventory examples use IDrive e2 through its S3-compatible API, while the role itself stays backend-agnostic.
+- The current inventory examples use a generic S3-compatible API, while the role itself stays backend-agnostic.
 - Prefer listing only stateful containers that benefit from short app-consistent pauses, such as SQLite-heavy apps or control-plane services with writable config under `/srv`. Leave stateless front-end containers like Traefik out unless you have a specific reason to quiesce them.
 - The status JSON now includes a `docker_coordination` object with `configured_containers`, `stopped_containers`, `restarted_containers`, `missing_containers`, `not_running_containers`, `failed_stop_containers`, `failed_restart_containers`, and `ok` so overnight checks can confirm the container pause/resume path worked.
 

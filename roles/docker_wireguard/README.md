@@ -81,8 +81,8 @@ docker_wireguard_access_group_members: >-
     | list
   }}
 docker_wireguard_proxy_network_name: "{{ docker_traefik_network_name }}"
-docker_wireguard_host: "wireguard.{{ docker_public_host_alias }}.{{ docker_public_domain_suffix }}"
-docker_wireguard_init_host: "{{ vault_docker_wireguard_duckdns_host | default(docker_wireguard_host) }}"
+docker_wireguard_host: "wireguard.lab.example.com"
+docker_wireguard_init_host: "{{ docker_wireguard_host }}"
 docker_wireguard_web_ui_enabled: true
 docker_wireguard_admin_username: "{{ vault_docker_wireguard_admin_username }}"
 docker_wireguard_admin_password: "{{ vault_docker_wireguard_admin_password }}"
@@ -97,8 +97,9 @@ docker_wireguard_firewall_rules:
 ```
 
 This role renders `wireguard.env` from role variables, so environment-specific
-and secret-bearing values such as the public host, initial admin username, and
-initial admin password can come from Vault-backed vars cleanly.
+values such as the public host can stay in normal inventory while secret values
+such as the initial admin username and password can come from Vault-backed
+vars cleanly.
 If the VPN endpoint should use DuckDNS while the web UI stays on another host
 name, set `docker_wireguard_init_host` to the DuckDNS name and leave
 `docker_wireguard_host` pointed at the dashboard host.

@@ -1,0 +1,31 @@
+---
+# examples/inventory/group_vars/docker/vault.vars.example
+# Copy needed values to `vault.vars` in this directory, encrypt that file with
+# ansible-vault, and keep the encrypted `vault.vars` untracked.
+
+# Traefik ACME contact email and DNS-01 provider credential.
+vault_docker_traefik_acme_email: "admin@example.com"
+vault_docker_traefik_dns_api_token: "replace-me"
+
+# Traefik dashboard basic-auth entries in `user:hash` format.
+# Generate hashes with `htpasswd -nB <user>`.
+vault_docker_traefik_dashboard_basic_auth_users:
+  - "admin:replace-me-with-htpasswd-hash"
+
+# AdGuard Home admin credential in `user:bcrypt-hash` form.
+vault_docker_adguard_admin_credentials: "admin:$2a$10$replace-me"
+
+# Direct LAN endpoints and credentials used by adguardhome-sync.
+vault_docker_adguard_sync_origin_ip: "192.168.1.53"
+vault_docker_adguard_sync_replica_ip: "192.168.1.54"
+vault_docker_adguard_sync_adguard_password: "replace-me"
+vault_docker_adguard_sync_api_username: ""
+vault_docker_adguard_sync_api_password: ""
+
+# Initial wg-easy dashboard setup values. These are placeholder values only.
+vault_docker_wireguard_admin_username: "example-user"
+vault_docker_wireguard_admin_password: "example-secret"
+vault_docker_wireguard_duckdns_host: "example.duckdns.org"
+vault_docker_wireguard_init_dns:
+  - "192.168.1.53"
+  - "192.168.1.54"

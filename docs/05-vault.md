@@ -1,197 +1,72 @@
 # docs/05-vault.md
 
 Short Vault guidance for this repository.
-Explains where to keep a local Vault password file, how to point Ansible at it, and which current role inputs are the right fit for Vault.
+Explains the inventory-local Vault layout used by the example lab.
 
-## Recommended Local Path
+## Password File
 
-Keep your personal Ansible config and Vault password file under:
-
-- `~/.config/ansible/ansible.cfg`
-- `~/.config/ansible/vault.pass`
-- `~/.config/ansible/lab_vault.yml`
-
-Suggested permissions:
-
-- `~/.config/ansible/`: `0700`
-- `~/.config/ansible/vault.pass`: `0600`
-- `~/.config/ansible/lab_vault.yml`: `0600`
-
-Example:
+Keep the Vault password outside the repo:
 
 ```sh
 mkdir -p ~/.config/ansible
 chmod 700 ~/.config/ansible
 printf '%s\n' 'your-vault-password' > ~/.config/ansible/vault.pass
 chmod 600 ~/.config/ansible/vault.pass
-ansible-vault create ~/.config/ansible/lab_vault.yml
 ```
 
-## Ansible Config
-
-Point Ansible at that file from `~/.config/ansible/ansible.cfg`:
+`examples/ansible.cfg` points at that file and accepts `.vars` as a YAML
+extension:
 
 ```ini
 [defaults]
 vault_password_file = ~/.config/ansible/vault.pass
+yaml_valid_extensions = .yml, .yaml, .json, .vars
 ```
 
-The example lab also sets this directly in `examples/ansible.cfg`, so the
-example playbooks intentionally expect that file to exist at the standard local
-path.
-That default behavior is controlled by
-`examples/inventory/group_vars/all/secret_sources.yml`.
+## File Pattern
 
-## How To Use It
-
-Create or edit an encrypted vars file:
-
-```sh
-ansible-vault create ~/.config/ansible/lab_vault.yml
-ansible-vault edit ~/.config/ansible/lab_vault.yml
-```
-
-Keep the real encrypted secret file outside the repo at
-`~/.config/ansible/lab_vault.yml`.
-Do not keep checked-in example files in `group_vars/all/`, because Ansible
-loads every file it finds there.
-Store checked-in examples elsewhere, for example at
-`inventory/examples/vault.yml.example`.
-
-Because the example `ansible.cfg` points at `~/.config/ansible/vault.pass`,
-create that file before running the example playbooks.
-
-Then store secret values there and reference them from normal vars files:
-
-```yaml
-# ~/.config/ansible/lab_vault.yml
-vault_user_password_hash: "$6$..."
-vault_bootstrap_login_password: "..."
-```
-
-```yaml
-# inventory/group_vars/user/user_password.yml
-user_password_password_hash: "{{ vault_user_password_hash }}"
-```
-
-```yaml
-# inventory/group_vars/bootstrap/bootstrap.yml
-bootstrap_login_user: "admin"
-bootstrap_login_password: "{{ vault_bootstrap_login_password }}"
-```
-
-## How `bootstrap.yml` And The Local Vault File Work Together
-
-The example playbooks load non-secret role inputs from inventory-managed
-`group_vars/` files and load secret values from `~/.config/ansible/lab_vault.yml`
-separately.
-
-Use this split:
-
-- `bootstrap.yml`: non-secret role inputs and references to secret vars
-- `~/.config/ansible/lab_vault.yml`: raw secret values only
-
-Example:
-
-```yaml
-# inventory/group_vars/bootstrap/bootstrap.yml
-bootstrap_login_user: "admin"
-bootstrap_login_password: "{{ vault_bootstrap_login_password }}"
-```
-
-```yaml
-# ~/.config/ansible/lab_vault.yml
-vault_bootstrap_login_password: "admin"
-```
-
-Also make sure `~/.config/ansible/lab_vault.yml` contains YAML, not shell or INI
-syntax, and keep fallback logic in normal vars files rather than inside Vault
-data.
-
-## Shared Secret Source Switch
-
-The example inventory includes a shared secret-source selector at:
-
-```yaml
-examples/inventory/group_vars/all/secret_sources.yml
-```
-
-It controls whether example playbooks load the controller-local Vault file:
-
-```yaml
-secret_sources_use_local_vault_file: true
-secret_sources_local_vault_file: "{{ lookup('env', 'HOME') }}/.config/ansible/lab_vault.yml"
-```
-
-- `true`: keep the default example behavior and load the local Vault file.
-- `false`: skip the controller-local file and rely on inventory-backed vars
-  instead.
-
-For future example playbooks, prefer this pattern:
-
-1. Read the shared `secret_sources_*` vars from `group_vars/all/`.
-2. Load the local file only when the switch is enabled.
-3. Load it from delegated `pre_tasks` inside the target play rather than from
-   a separate `hosts: localhost` pre-play, so `--limit <host>` runs still load
-   the local Vault values.
-4. Override canonical inventory vars such as `bootstrap_login_password`
-   instead of introducing playbook-only secret variable names.
-
-Correct:
-
-```yaml
-vault_bootstrap_login_password: "admin"
-```
-
-Incorrect:
+Secret-bearing example inventory layers have tracked examples beside the vars
+that consume them:
 
 ```text
-vault_bootstrap_login_password=admin
+examples/inventory/group_vars/bootstrap/vault.vars.example
+examples/inventory/group_vars/user/vault.vars.example
+examples/inventory/group_vars/docker/vault.vars.example
+examples/inventory/group_vars/backup/vault.vars.example
+examples/inventory/group_vars/monitoring/vault.vars.example
 ```
 
-## Docker URL Pattern
+Copy only the keys you need into a same-directory `vault.vars`, then encrypt it:
 
-The example Docker inventory no longer keeps full Traefik or AdGuard host
-names in Vault.
-
-Instead, the example derives those URLs from:
-
-- the inventory `alias` host var when present, with `inventory_hostname` as a fallback
-- `vault_docker_public_domain_suffix` from `~/.config/ansible/lab_vault.yml`
-
-Example result for a host with `alias=lab`:
-
-```yaml
-docker_traefik_dashboard_host: "traefik.lab.example.com"
-docker_adguard_host: "adguard.lab.example.com"
+```sh
+cp examples/inventory/group_vars/docker/vault.vars.example examples/inventory/group_vars/docker/vault.vars
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-vault encrypt examples/inventory/group_vars/docker/vault.vars
+ANSIBLE_CONFIG=examples/ansible.cfg ansible-vault edit examples/inventory/group_vars/docker/vault.vars
 ```
 
-Keep the supporting DNS records or rewrite rules aligned with that pattern so
-those derived hostnames resolve correctly.
+`vault.vars` is ignored by git. The `vault.vars.example` files stay tracked as
+shape documentation.
 
-## Which Roles Use Vault Well
+## Current Uses
 
-- Any role input that carries secret-bearing values (password hashes, private
-  keys, API tokens, or credentials) is a good Vault candidate.
-- In this repository today, the most common example is hashed password input
-  for user management.
-- For the example Docker roles, keep API tokens, basic-auth users, and admin
-  password hashes in Vault. The shared dashboard domain suffix also lives in
-  Vault, while the final Traefik and AdGuard hostnames stay derived in normal
-  vars files from `alias`.
-- For the Restic backup and restore workflow, keep the repository location,
-  password, and backend-specific environment values in Vault-backed vars and
-  keep the restore mode, sandbox target path, and optional repair-path
-  selection in normal tracked inventory vars.
-- For `adguardhome-sync`, keep the sync UI host, direct AdGuard LAN IPs or
-  URLs, and plaintext API passwords in Vault-backed vars because the sync tool
-  needs live login input rather than the bcrypt hash used by AdGuard Home
-  itself.
-- Treat role names here as examples, not a fixed list, so new secret-bearing
-  roles can adopt Vault without needing this doc rewritten.
+- `group_vars/bootstrap/vault.vars`: bootstrap login and sudo passwords
+- `group_vars/user/vault.vars`: managed human-admin password hash
+- `group_vars/docker/vault.vars`: ACME, DNS provider, dashboard auth, AdGuard,
+  AdGuard Sync, and WireGuard setup secrets
+- `group_vars/backup/vault.vars`: Restic repository, password, and S3 backend
+  credentials
+- `group_vars/monitoring/vault.vars`: collector SSH key material, monitoring
+  dashboard auth, and ntfy URL
+- `host_vars/<host>/vault.vars`: optional host-only secret overrides
 
-## Why
+Public Traefik hostnames are not Vault values. Keep values such as
+`docker_traefik_dashboard_host`, `docker_adguard_host`,
+`docker_adguard_sync_host`, and `docker_wireguard_host` in tracked inventory
+vars.
 
-Use Vault when a variable is secret-bearing, reusable, and should stay out of normal tracked YAML.
-For this repository today, that mainly means local password hashes and
-bootstrap login credentials used by the example harness.
+## Notes
+
+- Keep raw secret values in Vault and fallback logic in normal inventory vars.
+- Do not add `vault_docker_public_domain_suffix`; service hostnames are
+  explicit role variables now.
+- Use host-local `vault.vars` only when a value truly differs for one host.

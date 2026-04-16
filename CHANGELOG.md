@@ -6,10 +6,11 @@ Documents notable changes across repository structure, roles, examples, and docu
 ## [v2.11.3]
 ### Changed
 - Added the additive `base_packages_default` plus `base_packages_additional` pattern to `base_packages`, with derived effective install handling so inventories can extend the shared baseline without replacing it.
-- Updated the example inventory and downstream role docs so Traefik-published service hostnames now derive from `docker_public_host_alias` plus `docker_public_domain_suffix` for AdGuard Sync, WireGuard, Plex, Rustatio, Radarr, and Sonarr.
+- Replaced alias/domain-suffix hostname derivation with explicit Traefik host vars in the example inventory and downstream role docs.
+- Moved Vault examples beside the consuming inventory vars as `vault.vars.example`, auto-load encrypted `vault.vars` files through normal inventory loading, and removed the old controller-local `secret_sources.yml` flow.
 
 ### Documentation
-- Fixed the Vault guidance and example inventory comments so they no longer point maintainers at the removed host-specific public-host vault keys.
+- Fixed the Vault guidance and example inventory comments so public hostnames stay in normal vars instead of Vault.
 
 ## [v2.11.2]
 ### Added

@@ -4,6 +4,7 @@
 # Ansible local artifacts
 .ansible/
 *.retry
+vault.vars
 
 # Python virtual environments and caches
 .venv/

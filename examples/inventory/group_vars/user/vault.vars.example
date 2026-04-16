@@ -1,0 +1,7 @@
+---
+# examples/inventory/group_vars/user/vault.vars.example
+# Copy needed values to `vault.vars` in this directory, encrypt that file with
+# ansible-vault, and keep the encrypted `vault.vars` untracked.
+
+# Hashed password input for the managed human admin account.
+vault_user_password_hash: "$6$replace-me"

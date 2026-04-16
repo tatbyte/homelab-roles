@@ -1,0 +1,11 @@
+---
+# examples/inventory/group_vars/bootstrap/vault.vars.example
+# Copy needed values to `vault.vars` in this directory, encrypt that file with
+# ansible-vault, and keep the encrypted `vault.vars` untracked.
+
+# Password used for the initial bootstrap SSH login.
+vault_bootstrap_login_password: "replace-me"
+
+# Optional separate sudo password for the bootstrap login account.
+# Omit this key entirely when SSH and sudo share the same password.
+vault_bootstrap_login_become_password: "replace-me"

@@ -26,12 +26,6 @@ docker_include_adguard_sync: false
 # a `wg-easy` dashboard behind Traefik plus a direct UDP VPN listener.
 docker_include_wireguard: false
 
-# Inventory alias used to build per-host dashboard URLs in the example lab.
-# Keep `alias` in `inventory/hosts.ini` when you want host-specific public
-# names such as `traefik.proxy1.example.com`.
-# Keep the alias DNS-safe and limited to one label such as `proxy1` or `lab`.
-docker_public_host_alias: "{{ alias | default(inventory_hostname) }}"
-
-# Shared public DNS suffix loaded from Vault for example Docker services that
-# publish web UIs through Traefik.
-docker_public_domain_suffix: "{{ vault_docker_public_domain_suffix }}"
+# Public Traefik hostnames are set explicitly by the service group vars and can
+# be overridden per host in `host_vars/<host>/vars.yml`. Do not derive them from
+# inventory aliases or Vault domain suffixes.
