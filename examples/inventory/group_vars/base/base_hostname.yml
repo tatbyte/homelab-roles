@@ -3,7 +3,6 @@
 # Shared hostname variables for the example lab.
 # Defines the hostname enforced during the base phase.
 
-base_hostname_enabled: true
 # Hostname enforced during the base phase.
 # Use the final host name or FQDN you want written to /etc/hostname.
 # The current short hostname is expected to match the first label.

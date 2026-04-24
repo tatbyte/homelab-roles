@@ -1,0 +1,11 @@
+---
+# examples/playbooks/ops/base_firewall_repair.yml
+# Manual UFW/backend repair helper for hosts where normal firewall convergence
+# is blocked by service masking or iptables backend drift.
+
+- name: Repair UFW backend state on example base hosts
+  hosts: base
+  become: true
+  roles:
+    - role: base_firewall_repair
+      tags: [base_firewall_repair]

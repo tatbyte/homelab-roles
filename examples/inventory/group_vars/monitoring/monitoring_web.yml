@@ -2,7 +2,6 @@
 # examples/inventory/group_vars/monitoring/monitoring_web.yml
 # Shared dashboard web variables for the example monitoring hosts.
 
-monitoring_web_enabled: true
 monitoring_web_image_repository: nginx
 monitoring_web_image_tag: "1.27-alpine"
 monitoring_web_image: "{{ monitoring_web_image_repository }}:{{ monitoring_web_image_tag }}"

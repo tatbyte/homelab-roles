@@ -69,9 +69,9 @@
         'ufw '
         ~ item.rule
         ~ ' '
-        ~ (item.direction | default('in'))
-        ~ (' log' if (item.log | default(false)) else '')
-        ~ ' from '
+        ~ ((((item.direction | default('in')) ~ ' ') if ((item.direction | default('in')) != 'in') else ''))
+        ~ ('log ' if (item.log | default(false)) else '')
+        ~ 'from '
         ~ (item.from_ip | default('any'))
         ~ ' to '
         ~ (item.to_ip | default('any'))
@@ -136,9 +136,9 @@
         'ufw '
         ~ item.rule
         ~ ' '
-        ~ (item.direction | default('in'))
-        ~ (' log' if (item.log | default(false)) else '')
-        ~ ' from '
+        ~ ((((item.direction | default('in')) ~ ' ') if ((item.direction | default('in')) != 'in') else ''))
+        ~ ('log ' if (item.log | default(false)) else '')
+        ~ 'from '
         ~ (item.from_ip | default('any'))
         ~ ' to '
         ~ (item.to_ip | default('any'))
@@ -241,9 +241,9 @@
         'ufw '
         ~ item.rule
         ~ ' '
-        ~ (item.direction | default('in'))
-        ~ (' log' if (item.log | default(false)) else '')
-        ~ ' from '
+        ~ ((((item.direction | default('in')) ~ ' ') if ((item.direction | default('in')) != 'in') else ''))
+        ~ ('log ' if (item.log | default(false)) else '')
+        ~ 'from '
         ~ (item.from_ip | default('any'))
         ~ ' to '
         ~ (item.to_ip | default('any'))

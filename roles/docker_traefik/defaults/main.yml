@@ -32,7 +32,7 @@ docker_traefik_data_dir: "{{ docker_traefik_project_dir }}/data"
 docker_traefik_compose_project_name: traefik
 docker_traefik_compose_service_name: traefik
 docker_traefik_container_name: traefik
-docker_traefik_image: traefik:v3.0
+docker_traefik_image: traefik:v3.6.13
 docker_traefik_docker_service_name: "{{ docker_engine_service_name | default('docker') }}"
 docker_traefik_service_user: srv_traefik
 docker_traefik_service_uid: 1150

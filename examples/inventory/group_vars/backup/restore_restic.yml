@@ -22,7 +22,6 @@
 
 # Keep the restore helper enabled so the example lab can exercise the manual
 # restore path without introducing separate secret values.
-restore_restic_enabled: true
 
 # Reuse the same repository and password inputs as the recurring backup role.
 restore_restic_repository: "{{ backup_restic_repository }}"

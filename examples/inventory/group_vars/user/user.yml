@@ -1,0 +1,20 @@
+---
+# examples/inventory/group_vars/user/user.yml
+# User-layer switchboard for hosts in the example `user` inventory group.
+# `group_vars/all/user.yml` keeps optional user subroles disabled by default.
+# This file enables the complete example human-admin account workflow.
+
+user_include_groups: true
+user_include_sudo: true
+
+# If you later disable `user_include_sudo`, set this to true for one cleanup
+# run so the previously managed example sudoers drop-in is removed explicitly.
+user_cleanup_disabled_sudo_drop_in: false
+
+user_include_password: true
+user_include_ssh: true
+user_include_zshell: true
+user_include_profile: true
+user_include_directories: true
+user_include_git: true
+user_include_vim: true

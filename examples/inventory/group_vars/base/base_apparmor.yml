@@ -16,4 +16,3 @@ base_apparmor_service_name: apparmor
 # the kernel and policy baseline are ready there.
 # Set this to false when you explicitly want the package baseline installed
 # without the service being active.
-base_apparmor_enabled: false

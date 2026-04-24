@@ -2,6 +2,8 @@
 # roles/base_firewall/tasks/main.yml
 # Task entrypoint for the `base_firewall` role.
 # Imports the assert, install, config, and validate phase files in order.
+# Destructive firewall recovery work lives in the separate
+# `base_firewall_repair` role and its dedicated ops playbook.
 
 - name: Assert
   ansible.builtin.import_tasks: assert.yml

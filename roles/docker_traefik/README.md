@@ -30,7 +30,7 @@ Explains how the role manages a Traefik reverse proxy through Docker Compose wit
 | `docker_traefik_service_user` | `srv_traefik` | no | Role-owned service user that owns Traefik data paths on the host |
 | `docker_traefik_access_group` | `access_traefik` | no | Role-owned feature access group used for Traefik host access |
 | `docker_traefik_access_group_members` | de-duplicated `bootstrap_user` / `user_account_name` list with `admin` fallback | no | Existing admin users that should receive Traefik host access when present |
-| `docker_traefik_image` | `traefik:v3.0` | no | Container image used for the managed Traefik service |
+| `docker_traefik_image` | `traefik:v3.6.13` | no | Container image used for the managed Traefik service |
 | `docker_traefik_network_name` | `traefik_proxy` | no | Stable Docker network name other Compose projects can join |
 | `docker_traefik_acme_email` | `admin@example.com` | yes | Email address used for Let's Encrypt ACME registration |
 | `docker_traefik_dns_challenge_provider` | `cloudflare` | yes | Traefik DNS challenge provider name |

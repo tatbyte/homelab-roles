@@ -9,7 +9,6 @@ base_firewall_packages:
 
 # Keep the firewall disabled in shared example vars, then enable it per host
 # when the base layer should manage UFW state there.
-base_firewall_enabled: false
 
 # Logging level configured through UFW.
 base_firewall_logging: low

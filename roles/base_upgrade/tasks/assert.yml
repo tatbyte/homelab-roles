@@ -13,9 +13,26 @@
       - base_upgrade_autoremove is boolean
       - base_upgrade_allow_reboot is boolean
       - base_upgrade_fail_if_reboot_required is boolean
+      - base_upgrade_lock_timeout is integer
+      - (base_upgrade_lock_timeout | int) >= 0
+      - base_upgrade_lock_check_delay is integer
+      - (base_upgrade_lock_check_delay | int) > 0
+      - base_upgrade_reboot_timeout is integer
+      - (base_upgrade_reboot_timeout | int) > 0
+      - base_upgrade_reboot_connect_timeout is integer
+      - (base_upgrade_reboot_connect_timeout | int) > 0
+      - base_upgrade_reboot_post_reboot_delay is integer
+      - (base_upgrade_reboot_post_reboot_delay | int) >= 0
+      - base_upgrade_reboot_test_command is string
+      - (base_upgrade_reboot_test_command | trim | length) > 0
     fail_msg: >-
       base_upgrade_cache_valid_time must be a non-negative integer,
       base_upgrade_mode must be safe or full, and
       base_upgrade_autoremove, base_upgrade_allow_reboot, and
-      base_upgrade_fail_if_reboot_required must be booleans
+      base_upgrade_fail_if_reboot_required must be booleans while
+      base_upgrade_lock_timeout must be a non-negative integer,
+      base_upgrade_lock_check_delay must be a positive integer,
+      reboot timeout/connect timeout must be positive integers,
+      reboot post delay must be a non-negative integer, and
+      reboot test command must be a non-empty string
     quiet: true

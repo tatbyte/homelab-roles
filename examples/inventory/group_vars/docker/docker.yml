@@ -1,0 +1,18 @@
+---
+# examples/inventory/group_vars/docker/docker.yml
+# Docker-layer switchboard for hosts in the example `docker` inventory group.
+# `group_vars/all/docker.yml` keeps Docker features disabled by default. This
+# file enables the full example Docker stack, while each `docker_*.yml` file
+# keeps only that service's configuration.
+
+docker_include_engine: true
+docker_include_traefik: true
+docker_include_adguard: true
+docker_include_adguard_sync: true
+docker_include_wireguard: true
+
+docker_engine_enabled: true
+docker_traefik_enabled: true
+docker_adguard_enabled: true
+docker_adguard_sync_enabled: true
+docker_wireguard_enabled: true

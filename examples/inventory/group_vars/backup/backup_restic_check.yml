@@ -6,7 +6,6 @@
 
 # Keep the example check role enabled so the example lab also exercises the
 # recurring repository-health path and its separate JSON-status contract.
-backup_restic_check_enabled: true
 
 # Keep the check JSON status output explicit in inventory so monitoring and
 # validation consumers can see and override it without opening the shared role

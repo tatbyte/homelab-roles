@@ -3,7 +3,6 @@
 # Shared needrestart variables for the example lab.
 # Defines the non-interactive restart-check behavior exposed during the base phase.
 
-base_needrestart_enabled: false
 # Package list installed with APT to provide the needrestart restart-check
 # command used by the example lab.
 base_needrestart_packages:

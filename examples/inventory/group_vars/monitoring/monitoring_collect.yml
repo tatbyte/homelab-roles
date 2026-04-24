@@ -2,7 +2,6 @@
 # examples/inventory/group_vars/monitoring/monitoring_collect.yml
 # Shared collector variables for the example lab.
 
-monitoring_collect_enabled: true
 monitoring_collect_output_dir: /var/lib/monitor/collect
 monitoring_collect_hosts_dir: "{{ monitoring_collect_output_dir }}/hosts"
 monitoring_collect_index_path: "{{ monitoring_collect_output_dir }}/index.json"

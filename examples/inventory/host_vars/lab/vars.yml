@@ -1,56 +1,18 @@
 ---
 # examples/inventory/host_vars/lab/vars.yml
 # Host-specific variables for the `lab` example host.
-# Enables the optional aggregate-role features exercised by the example stack.
+# Group switchboard files decide which layers and subroles are enabled. This
+# file keeps only host-specific inputs and small per-host overrides.
 
-# Base layer role overrides for this host.
-base_packages_enabled: true
 # Add host-only packages here without replacing the shared baseline list.
 base_packages_additional: []
-base_locale_enabled: true
-base_timezone_enabled: true
-base_ntp_enabled: true
-base_hostname_enabled: true
-base_hosts_enabled: true
-base_dns_enabled: true
-base_sudo_enabled: true
-base_sshd_enabled: true
-base_firewall_enabled: true
-base_fail2ban_enabled: true
-base_logging_enabled: true
-base_updates_enabled: true
-base_apparmor_enabled: true
-base_auditd_enabled: true
-base_upgrade_enabled: true
-base_needrestart_enabled: true
 
 # This example host keeps the shared `systemd_resolved` DNS default.
 # The role removes any old role-managed NetworkManager DNS override here so
 # `systemd-resolved` remains the single DNS owner for the example lab host.
 
-# Optional user layer roles enabled for this host.
-user_include_groups: true
-user_include_sudo: true
-user_include_password: true
-user_include_ssh: true
-user_include_zshell: true
-user_include_profile: true
-user_include_directories: true
-user_include_git: true
-user_include_vim: true
+# Optional host-specific user layer additions.
 user_zshell_additional_aliases: {}
-
-# Optional Docker layer roles enabled for this host.
-docker_include_engine: true
-docker_include_traefik: true
-docker_include_adguard: true
-docker_include_adguard_sync: true
-docker_include_wireguard: true
-
-# Optional backup layer roles enabled for this host.
-backup_include_restic: true
-backup_include_restic_prune: true
-backup_include_restic_check: true
 
 # Stop only the shared example containers with writable application state
 # before the Restic backup runs. Traefik stays up because its state is
@@ -65,17 +27,8 @@ backup_restic_docker_stop_containers:
 backup_restic_timer_on_calendar: "*-*-* 03:30:00"
 backup_restic_timer_randomized_delay_sec: 0
 
-# Optional monitoring layer roles enabled for this host.
-monitoring_include_authorized_key: false
-monitoring_include_status: true
-monitoring_include_storage_health: true
-monitoring_include_collect: true
+# Host-specific monitoring inputs for the example lab host.
 monitoring_notify_manage_existing_install: false
-monitoring_include_notify: >-
-  {{
-    (vault_monitoring_notify_ntfy_url | default('') | trim | length) > 0
-    or (monitoring_notify_manage_existing_install | bool)
-  }}
 monitoring_status_storage_additional_mounts: []
 monitoring_storage_health_devices:
   - label: root_disk
@@ -83,12 +36,6 @@ monitoring_storage_health_devices:
     type: smart
 monitoring_web_host: "{{ vault_monitoring_collect_web_host | default('') }}"
 monitoring_web_manage_existing_install: false
-monitoring_include_web: >-
-  {{
-    (monitoring_web_host | trim | length) > 0
-    or (monitoring_web_manage_existing_install | bool)
-  }}
-monitoring_web_enabled: "{{ monitoring_include_web | bool }}"
 monitoring_collect_sources:
   - name: lab
     display_name: lab

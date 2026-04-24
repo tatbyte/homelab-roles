@@ -3,7 +3,6 @@
 # Shared Fail2ban variables for the example lab.
 # Defines the Fail2ban package, service, and SSH jail baseline enforced during the base phase.
 
-base_fail2ban_enabled: false
 # Package list installed with APT to provide the Fail2ban baseline.
 base_fail2ban_packages:
   - fail2ban

@@ -1,31 +1,30 @@
 ---
 # examples/inventory/group_vars/all/docker.yml
 # Shared aggregate Docker-role variables for the example lab.
-# Defines the optional aggregate-role toggles for the example Docker layer.
-# Keep these disabled by default here, then enable them per host in
-# `examples/inventory/host_vars/<host>/vars.yml`.
+# Defines default-off aggregate-role toggles for the example Docker layer.
+# `examples/inventory/group_vars/docker/docker.yml` enables the normal example
+# Docker stack for hosts in the `docker` inventory group.
 
-# Keep Docker engine enabled in the example lab so the Docker role installs
-# and configures the engine plus Docker supplementary-group access.
+# Disabled here because this file is the broad default layer.
 docker_include_engine: false
 
-# Keep the Traefik reverse proxy enabled in the example lab so the Docker role
-# also exercises a Compose-managed service workload.
+# Disabled here because this file is the broad default layer.
 docker_include_traefik: false
 
-# Keep AdGuard enabled in the example lab so the Docker layer also exercises a
-# Traefik-connected downstream service that binds the host DNS port and joins
-# the shared proxy network after Traefik.
+# Disabled here because this file is the broad default layer.
 docker_include_adguard: false
 
-# Keep AdGuard Sync disabled by default here, then enable it only on the host
-# that should push AdGuard config to replicas.
+# Disabled here because this file is the broad default layer.
 docker_include_adguard_sync: false
 
-# Keep WireGuard enabled in the example lab so the Docker layer also exercises
-# a `wg-easy` dashboard behind Traefik plus a direct UDP VPN listener.
+# Disabled here because this file is the broad default layer.
 docker_include_wireguard: false
 
-# Public Traefik hostnames are set explicitly by the service group vars and can
-# be overridden per host in `host_vars/<host>/vars.yml`. Do not derive them from
-# inventory aliases or Vault domain suffixes.
+docker_engine_enabled: false
+docker_traefik_enabled: false
+docker_adguard_enabled: false
+docker_adguard_sync_enabled: false
+docker_wireguard_enabled: false
+
+# Public Traefik hostnames are set explicitly by the service group vars. Do not
+# derive them from inventory aliases or Vault domain suffixes.

@@ -1,0 +1,43 @@
+---
+# roles/base_firewall_repair/tasks/validate.yml
+# Report enough state for an operator to verify the repair path.
+
+- name: "Validate | Read UFW status"
+  ansible.builtin.command:
+    argv:
+      - ufw
+      - status
+      - verbose
+  register: base_firewall_repair_ufw_status
+  changed_when: false
+  failed_when: false
+
+- name: "Validate | Read iptables backend"
+  ansible.builtin.command:
+    argv:
+      - update-alternatives
+      - --query
+      - iptables
+  register: base_firewall_repair_iptables_backend
+  changed_when: false
+  failed_when: false
+
+- name: "Validate | Show repair status"
+  ansible.builtin.debug:
+    msg:
+      - "{{ base_firewall_repair_ufw_status.stdout_lines | default([]) }}"
+      - "{{ base_firewall_repair_iptables_backend.stdout_lines | default([]) }}"
+      - >-
+        Safety timer:
+        {{ base_firewall_repair_safety_net_service_name }}.timer
+        {{ 'started' if base_firewall_repair_safety_net_enabled else 'not installed' }}
+
+- name: "Validate | Remind operator about safety timer cleanup"
+  ansible.builtin.debug:
+    msg: >-
+      Safety timer is still enabled. Stop it when you are done verifying SSH:
+      systemctl stop {{ base_firewall_repair_safety_net_service_name }}.timer &&
+      systemctl disable {{ base_firewall_repair_safety_net_service_name }}.timer
+  when:
+    - base_firewall_repair_safety_net_enabled | bool
+    - not base_firewall_repair_safety_net_cleanup | bool

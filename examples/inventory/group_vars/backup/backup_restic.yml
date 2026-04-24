@@ -6,7 +6,6 @@
 
 # Keep the example backup role enabled so the example lab also exercises the
 # shared Restic timer and JSON-status contract.
-backup_restic_enabled: true
 
 # Load the example repository and password from inventory-local Vault vars.
 backup_restic_repository: "{{ vault_backup_restic_repository }}/{{ alias | default(inventory_hostname) }}"

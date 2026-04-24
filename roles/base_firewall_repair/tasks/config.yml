@@ -1,0 +1,159 @@
+---
+# roles/base_firewall_repair/tasks/config.yml
+# Manual repair tasks for UFW service state and iptables/nft backend drift.
+
+- name: "Config | Gather service state before repair"
+  ansible.builtin.service_facts:
+  when: base_firewall_repair_start_docker_after | bool
+
+- name: "Config | Record whether Docker was running before repair"
+  ansible.builtin.set_fact:
+    base_firewall_repair_docker_was_running: >-
+      {{
+        (
+          (
+            'docker.service' in ansible_facts.services
+            and ansible_facts.services['docker.service'].state == 'running'
+          )
+          or (
+            'docker' in ansible_facts.services
+            and ansible_facts.services['docker'].state == 'running'
+          )
+        )
+      }}
+  when: base_firewall_repair_start_docker_after | bool
+
+- name: "Config | Stop Docker before firewall backend repair"
+  ansible.builtin.systemd:
+    name: docker
+    state: stopped
+  changed_when: false
+  failed_when: false
+  when: base_firewall_repair_stop_docker | bool
+
+- name: "Config | Unmask ufw.service"
+  ansible.builtin.systemd:
+    name: ufw
+    masked: false
+  when: base_firewall_repair_manage_ufw_service | bool
+
+- name: "Config | Ensure ufw.service is enabled"
+  ansible.builtin.systemd:
+    name: ufw
+    enabled: true
+  when: base_firewall_repair_manage_ufw_service | bool
+
+- name: "Config | Ensure iptables uses nft backend"
+  ansible.builtin.command:
+    argv:
+      - update-alternatives
+      - --query
+      - iptables
+  register: base_firewall_repair_iptables_query
+  changed_when: false
+  failed_when: false
+  when: base_firewall_repair_pin_nft_backend | bool
+
+- name: "Config | Pin iptables to nft backend"
+  ansible.builtin.command:
+    argv:
+      - update-alternatives
+      - --set
+      - iptables
+      - /usr/sbin/iptables-nft
+  changed_when: true
+  when:
+    - base_firewall_repair_pin_nft_backend | bool
+    - >-
+      base_firewall_repair_iptables_query.stdout is not defined
+      or
+      (base_firewall_repair_iptables_query.stdout is not search('Value: /usr/sbin/iptables-nft'))
+
+- name: "Config | Query ip6tables alternative"
+  ansible.builtin.command:
+    argv:
+      - update-alternatives
+      - --query
+      - ip6tables
+  register: base_firewall_repair_ip6tables_query
+  changed_when: false
+  failed_when: false
+  when: base_firewall_repair_pin_nft_backend | bool
+
+- name: "Config | Pin ip6tables to nft backend"
+  ansible.builtin.command:
+    argv:
+      - update-alternatives
+      - --set
+      - ip6tables
+      - /usr/sbin/ip6tables-nft
+  changed_when: true
+  when:
+    - base_firewall_repair_pin_nft_backend | bool
+    - >-
+      base_firewall_repair_ip6tables_query.stdout is not defined
+      or
+      (base_firewall_repair_ip6tables_query.stdout is not search('Value: /usr/sbin/ip6tables-nft'))
+
+- name: "Config | Check if iptables-legacy is available"
+  ansible.builtin.command:
+    argv:
+      - which
+      - iptables-legacy
+  register: base_firewall_repair_legacy_available
+  changed_when: false
+  failed_when: false
+  when: base_firewall_repair_flush_legacy_tables | bool
+
+- name: "Config | Flush iptables-legacy tables"
+  ansible.builtin.command:
+    argv: "{{ ['iptables-legacy'] + (['-t', item] if item != 'filter' else []) + ['-F'] }}"
+  changed_when: true
+  failed_when: false
+  loop: "{{ base_firewall_repair_legacy_tables }}"
+  when:
+    - base_firewall_repair_flush_legacy_tables | bool
+    - base_firewall_repair_legacy_available.rc == 0
+
+- name: "Config | Delete iptables-legacy chains"
+  ansible.builtin.command:
+    argv: "{{ ['iptables-legacy'] + (['-t', item] if item != 'filter' else []) + ['-X'] }}"
+  changed_when: true
+  failed_when: false
+  loop: "{{ base_firewall_repair_legacy_tables }}"
+  when:
+    - base_firewall_repair_flush_legacy_tables | bool
+    - base_firewall_repair_legacy_available.rc == 0
+
+- name: "Config | Flush nftables ruleset"
+  ansible.builtin.command:
+    argv:
+      - nft
+      - flush
+      - ruleset
+  changed_when: true
+  when: base_firewall_repair_flush_nftables_ruleset | bool
+
+- name: "Config | Reset UFW cached rule state"
+  ansible.builtin.command:
+    argv:
+      - ufw
+      - --force
+      - reset
+  changed_when: true
+  when: base_firewall_repair_reset_ufw | bool
+
+- name: "Config | Re-enable UFW after repair when requested"
+  community.general.ufw:
+    state: enabled
+  when: base_firewall_repair_enable_ufw_after | bool
+
+- name: "Config | Start Docker after firewall backend repair"
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+  changed_when: false
+  failed_when: false
+  when:
+    - base_firewall_repair_start_docker_after | bool
+    - base_firewall_repair_docker_was_running | default(false)

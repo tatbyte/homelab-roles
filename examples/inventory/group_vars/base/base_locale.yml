@@ -3,7 +3,6 @@
 # Shared locale variables for the example lab.
 # Defines the locale packages, generated locales, and default locale categories enforced during the base phase.
 
-base_locale_enabled: true
 # Package list installed with APT to provide locale tools and locale data on the host.
 base_locale_packages:
   - locales           # locale support package used by the base_locale role on Debian-family hosts

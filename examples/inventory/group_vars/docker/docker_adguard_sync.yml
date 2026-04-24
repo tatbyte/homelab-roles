@@ -5,10 +5,6 @@
 # identity, origin/replica endpoints, and Vault-backed sync UI credentials
 # exercised through the aggregate `docker` role.
 
-# Keep the AdGuard Sync role internally enabled when the aggregate toggle turns
-# it on for the example lab.
-docker_adguard_sync_enabled: true
-
 # Reuse the same Docker package family and shared access identities that the
 # AdGuard role already owns on the example host. `docker_adguard_packages`
 # already inherits the engine-level Compose family by default, so sync stays

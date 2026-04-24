@@ -19,6 +19,12 @@
         | to_json
         | hash('sha256')
       }}
+    base_firewall_effective_logging_level: >-
+      {{
+        'low'
+        if base_firewall_logging == 'on'
+        else base_firewall_logging
+      }}
 
 - name: "Config | Read added firewall rules"
   ansible.builtin.command: ufw show added
@@ -41,9 +47,9 @@
         'ufw '
         ~ item.rule
         ~ ' '
-        ~ (item.direction | default('in'))
-        ~ (' log' if (item.log | default(false)) else '')
-        ~ ' from '
+        ~ ((((item.direction | default('in')) ~ ' ') if ((item.direction | default('in')) != 'in') else ''))
+        ~ ('log ' if (item.log | default(false)) else '')
+        ~ 'from '
         ~ (item.from_ip | default('any'))
         ~ ' to '
         ~ (item.to_ip | default('any'))
@@ -101,9 +107,9 @@
         'ufw '
         ~ item.rule
         ~ ' '
-        ~ (item.direction | default('in'))
-        ~ (' log' if (item.log | default(false)) else '')
-        ~ ' from '
+        ~ ((((item.direction | default('in')) ~ ' ') if ((item.direction | default('in')) != 'in') else ''))
+        ~ ('log ' if (item.log | default(false)) else '')
+        ~ 'from '
         ~ (item.from_ip | default('any'))
         ~ ' to '
         ~ (item.to_ip | default('any'))
@@ -295,9 +301,14 @@
     - base_firewall_remove_stale_managed_rules
     - (base_firewall_stale_managed_rule_numbers | default([]) | length) > 0
 
-- name: "Config | Set firewall logging level"
-  community.general.ufw:
-    logging: "{{ base_firewall_logging }}"
+- name: "Config | Set persisted firewall logging level"
+  ansible.builtin.lineinfile:
+    path: /etc/ufw/ufw.conf
+    regexp: '^LOGLEVEL='
+    line: "LOGLEVEL={{ base_firewall_effective_logging_level }}"
+    owner: root
+    group: root
+    mode: "0644"
 
 - name: "Config | Set default incoming firewall policy"
   community.general.ufw:
@@ -330,6 +341,11 @@
 - name: "Config | Ensure firewall enabled state"
   community.general.ufw:
     state: "{{ 'enabled' if base_firewall_enabled else 'disabled' }}"
+
+- name: "Config | Apply runtime firewall logging when enabled"
+  community.general.ufw:
+    logging: "{{ base_firewall_logging }}"
+  when: base_firewall_enabled
 
 - name: "Config | Store firewall state checksum"
   ansible.builtin.copy:

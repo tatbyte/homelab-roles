@@ -1,0 +1,24 @@
+---
+# examples/inventory/group_vars/base/base.yml
+# Base-layer switchboard for hosts in the example `base` inventory group.
+# `group_vars/all/base.yml` keeps every base role disabled by default. This
+# file turns on the base roles that a normal base host should run, so component
+# files can focus on role configuration instead of on/off decisions.
+
+base_packages_enabled: true
+base_locale_enabled: true
+base_timezone_enabled: true
+base_ntp_enabled: true
+base_hostname_enabled: true
+base_hosts_enabled: true
+base_dns_enabled: true
+base_sudo_enabled: true
+base_sshd_enabled: true
+base_firewall_enabled: true
+base_fail2ban_enabled: true
+base_logging_enabled: true
+base_updates_enabled: true
+base_apparmor_enabled: true
+base_auditd_enabled: true
+base_upgrade_enabled: true
+base_needrestart_enabled: true

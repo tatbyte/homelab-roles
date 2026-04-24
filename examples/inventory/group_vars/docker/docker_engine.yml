@@ -3,9 +3,6 @@
 # Shared Docker engine variables for the example lab.
 # Defines Docker package, service, daemon, and supplementary-group behavior exercised through the aggregate `docker` role.
 
-# Keep Docker engine management enabled in the example lab.
-docker_engine_enabled: true
-
 # Use Debian-family Docker engine package names.
 docker_engine_packages:
   - docker.io

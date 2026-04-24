@@ -221,6 +221,7 @@
             docker_traefik_compose_file_path,
             'up',
             '--detach',
+            '--force-recreate',
           ]
       }}
   register: docker_traefik_compose_up

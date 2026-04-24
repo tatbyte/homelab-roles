@@ -3,35 +3,51 @@
 # Monitoring-layer toggle variables for hosts in the dedicated example
 # `monitoring` inventory group.
 # Keeps the aggregate monitoring layer disabled by default in `group_vars/all`,
-# then enables the host-status monitor for the example monitoring hosts while
-# leaving host_vars free to override the toggle later.
+# then enables the monitoring workflow for hosts in the `monitoring` group.
 
 # The example monitoring group should exercise the recurring host-status
 # SSH authorized-key helper by default so remote collection stays inside the
-# monitoring layer. A local-only example host can still opt out in host vars.
-monitoring_include_authorized_key: true
+# monitoring layer. The example lab host is local-only, so this switch stays
+# off while the rest of monitoring runs.
+monitoring_include_authorized_key: false
 
 # The example monitoring group should exercise the recurring host-status
-# monitor by default. A specific example host can still opt out with
-# `monitoring_include_status: false` in host vars.
+# monitor by default.
 monitoring_include_status: true
 
 # The example monitoring group should also exercise the dedicated storage
-# health role by default. A specific host can still opt out in host vars.
+# health role by default.
 monitoring_include_storage_health: true
 
 # The example monitoring group should also exercise the Docker image-tag
 # monitor by default so the dashboard shows container update guidance.
 monitoring_include_docker_tag: true
 
-# Keep the collector disabled by default at the group level so only explicit
-# collector hosts opt into it through host vars.
-monitoring_include_collect: false
+# The example monitoring group also acts as the collector.
+monitoring_include_collect: true
 
-# Keep the web publisher disabled by default at the group level so only
-# explicit collector hosts opt into it through host vars.
-monitoring_include_web: false
+# Publish the web dashboard only when a host name is configured or the role is
+# intentionally managing an existing install.
+monitoring_include_web: >-
+  {{
+    (monitoring_web_host | default('') | trim | length) > 0
+    or (monitoring_web_manage_existing_install | default(false) | bool)
+  }}
 
-# Keep notifications disabled by default at the group level so only explicit
-# collector hosts opt into them through host vars.
-monitoring_include_notify: false
+# Send notifications only when an ntfy URL is configured or the role is
+# intentionally managing an existing install.
+monitoring_include_notify: >-
+  {{
+    (vault_monitoring_notify_ntfy_url | default('') | trim | length) > 0
+    or (monitoring_notify_manage_existing_install | default(false) | bool)
+  }}
+
+# Keep the role-internal service states beside the aggregate includes. This
+# switchboard is the one place to check whether monitoring roles are included
+# and whether their managed services/timers should stay active.
+monitoring_status_enabled: true
+monitoring_storage_health_enabled: true
+monitoring_docker_tag_enabled: true
+monitoring_collect_enabled: true
+monitoring_web_enabled: "{{ monitoring_include_web | bool }}"
+monitoring_notify_enabled: true

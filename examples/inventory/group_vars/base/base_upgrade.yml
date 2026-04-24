@@ -3,7 +3,6 @@
 # Shared upgrade variables for the example lab.
 # Defines the immediate APT upgrade behavior available during the base phase.
 
-base_upgrade_enabled: false
 # Reuse package metadata for one hour so repeated explicit maintenance runs can
 # stay idempotent unless the cache is actually stale.
 base_upgrade_cache_valid_time: 3600
