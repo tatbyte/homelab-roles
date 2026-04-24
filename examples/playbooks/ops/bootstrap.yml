@@ -7,13 +7,15 @@
 - name: Bootstrap hosts using the initial admin account
   hosts: bootstrap
   become: true
+  vars:
+    ansible_user: "{{ bootstrap_login_user }}"
   gather_facts: false
   pre_tasks:
     - name: Set bootstrap connection variables
       ansible.builtin.set_fact:
         ansible_user: "{{ bootstrap_login_user }}"
-        ansible_password: "{{ bootstrap_login_password }}"
-        ansible_become_password: "{{ bootstrap_login_become_password }}"
+        ansible_password: "{{ bootstrap_login_password | default(omit, true) }}"
+        ansible_become_password: "{{ bootstrap_login_become_password | default(omit, true) }}"
       tags: [always]
   roles:
     - role: bootstrap

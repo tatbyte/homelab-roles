@@ -3,6 +3,22 @@
 Release history for `homelab-roles`.
 Documents notable changes across repository structure, roles, examples, and documentation.
 
+## [Unreleased]
+### Added
+- Added a dedicated `base_firewall_repair` role plus `examples/playbooks/ops/base_firewall_repair.yml` for manual UFW/backend recovery when a host has masked UFW service state or mixed iptables backends.
+
+### Changed
+- Simplified `docker_traefik` by removing the Docker API detection and `DOCKER_API_VERSION` injection workaround now that newer pinned Traefik releases cover the Docker-provider compatibility issue directly.
+- Updated the example Traefik inventory and shared role default to pin `traefik:v3.6.13` instead of the older `v3.4` line.
+- Kept destructive firewall backend repair out of the normal `base_firewall` convergence path so recurring runs only manage the requested UFW baseline.
+- Defaulted `base_firewall_repair` to non-destructive behavior by requiring an explicit opt-in to flush the entire nftables ruleset.
+- Fixed UFW rule validation to match actual `ufw show added` output format (omits `in` direction word for non-interface rules).
+- Fixed `base_firewall` logging convergence on inactive or freshly reset hosts by persisting `LOGLEVEL` in `/etc/ufw/ufw.conf` instead of calling `ufw logging <level>` before the final firewall enable step.
+
+### Documentation
+- Updated the `docker_traefik` role reference and example inventory docs to drop the old Docker API override guidance.
+- Updated the `base_firewall` and `base_firewall_repair` role docs to distinguish routine convergence from manual repair.
+
 ## [v2.11.3]
 ### Changed
 - Added the additive `base_packages_default` plus `base_packages_additional` pattern to `base_packages`, with derived effective install handling so inventories can extend the shared baseline without replacing it.

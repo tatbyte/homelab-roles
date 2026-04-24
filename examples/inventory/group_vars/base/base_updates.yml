@@ -3,7 +3,6 @@
 # Shared update variables for the example lab.
 # Defines the unattended-upgrades package and automatic-update policy used during the base phase.
 
-base_updates_enabled: false
 # Package list installed with APT to provide unattended-upgrades support.
 # Keep `unattended-upgrades` in this list whenever automatic upgrades stay
 # enabled so the backend package exists for the managed APT policy.

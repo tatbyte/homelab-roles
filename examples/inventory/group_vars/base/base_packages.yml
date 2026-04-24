@@ -3,7 +3,6 @@
 # Shared package variables for the example lab.
 # Defines common packages to install and packages to keep absent during the base phase.
 
-base_packages_enabled: true
 # Packages that should exist on almost every homelab host.
 # Keep this role generic: only "common everywhere" packages belong here.
 base_packages_default:

@@ -10,11 +10,19 @@ Explains how the role manages a UFW baseline on Debian-family hosts during the b
 - Requires role-declared firewall rules to use a `managed:`-style comment prefix for traceable cleanup
 - Refuses to enable a deny-or-reject incoming firewall baseline unless the managed rules still allow SSH or Ansible access on the management port
 - Configures UFW logging plus default incoming and outgoing policies
+- Persists UFW logging in `ufw.conf` so first runs and post-reset runs still converge while the firewall is inactive
 - Ensures the requested UFW rules exist without resetting the firewall by default
 - Removes stale UFW rules whose comments use the managed prefix when they are no longer declared
 - Can optionally purge unmanaged UFW rules by resetting and rebuilding the managed ruleset
 - Enables or disables UFW according to the role input
 - Verifies effective firewall status, the stored desired-state checksum, and the stored added-rule commands after changes
+
+## Repair Flow
+
+Destructive backend repair work is intentionally kept out of this normal role.
+Use the separate `base_firewall_repair` role through an ops playbook when a
+host needs manual recovery from a masked UFW service, mixed
+`iptables-legacy`/`iptables-nft` state, or broken UFW cached rule state.
 
 ## Variables
 
@@ -78,6 +86,7 @@ Use `base_firewall_base_rules` for the shared baseline, `base_firewall_role_decl
 If you set `base_firewall_default_incoming_policy` to `deny` or `reject`, keep at least one incoming `allow` or `limit` rule for the SSH or Ansible management port in the effective `base_firewall_rules` list or the role will fail early.
 Keep `base_firewall_rules` ordered for readability and stable `ufw show added` output.
 Rule directions use `in` and `out` so the stored commands match the long-form syntax used by the Ansible UFW module.
+The role writes the requested logging level to `/etc/ufw/ufw.conf` before the final enabled or disabled state is enforced, so inactive or freshly reset hosts do not fail on `ufw logging <level>` while still converging to the requested runtime log level on the next enable or reload.
 When additive mode is active, `base_firewall` only removes live UFW rules whose comments start with `base_firewall_managed_comment_prefix` when `base_firewall_remove_stale_managed_rules: true`.
 Manual rules without that prefix are left untouched unless `base_firewall_purge_unmanaged_rules: true`.
 

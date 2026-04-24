@@ -1,0 +1,35 @@
+---
+# roles/base_firewall_repair/tasks/assert.yml
+# Validate operator-selected repair options before making any host changes.
+
+- name: "Assert | Validate base_firewall_repair variables"
+  ansible.builtin.assert:
+    that:
+      - base_firewall_repair_safety_net_enabled is boolean
+      - base_firewall_repair_safety_net_service_name is string
+      - (base_firewall_repair_safety_net_service_name | trim | length) > 0
+      - base_firewall_repair_safety_net_on_active_sec is integer
+      - (base_firewall_repair_safety_net_on_active_sec | int) > 0
+      - base_firewall_repair_safety_net_on_unit_active_sec is integer
+      - (base_firewall_repair_safety_net_on_unit_active_sec | int) > 0
+      - base_firewall_repair_manage_ufw_service is boolean
+      - base_firewall_repair_pin_nft_backend is boolean
+      - base_firewall_repair_flush_legacy_tables is boolean
+      - base_firewall_repair_flush_nftables_ruleset is boolean
+      - base_firewall_repair_reset_ufw is boolean
+      - base_firewall_repair_stop_docker is boolean
+      - base_firewall_repair_start_docker_after is boolean
+      - base_firewall_repair_enable_ufw_after is boolean
+      - base_firewall_repair_safety_net_cleanup is boolean
+      - base_firewall_repair_legacy_tables is sequence
+      - base_firewall_repair_legacy_tables is not string
+      - >-
+        (
+          base_firewall_repair_legacy_tables
+          | difference(['filter', 'nat', 'mangle', 'raw'])
+          | length
+        ) == 0
+    fail_msg: >-
+      base_firewall_repair variables must use valid booleans, positive safety
+      timer values, and legacy table names from filter, nat, mangle, and raw
+    quiet: true

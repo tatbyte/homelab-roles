@@ -22,6 +22,12 @@ Explains how the role applies explicit APT package upgrades on Debian-family hos
 | `base_upgrade_autoremove` | `false` | no | Whether the role should remove unused dependency packages after the requested upgrade |
 | `base_upgrade_allow_reboot` | `false` | no | Whether the role may reboot the host automatically when package maintenance requires it |
 | `base_upgrade_fail_if_reboot_required` | `false` | no | Whether the role should fail validation when the host still requires reboot after package maintenance |
+| `base_upgrade_lock_timeout` | `600` | no | Seconds to wait for the APT/dpkg lock before failing; set to `0` to skip waiting |
+| `base_upgrade_lock_check_delay` | `5` | no | Seconds to sleep between APT/dpkg lock checks |
+| `base_upgrade_reboot_timeout` | `900` | no | Seconds to wait for a rebooted host to become available before failing |
+| `base_upgrade_reboot_connect_timeout` | `10` | no | Seconds to use for each reboot SSH connection attempt |
+| `base_upgrade_reboot_post_reboot_delay` | `30` | no | Seconds to wait after the host first reconnects before running the reboot test command |
+| `base_upgrade_reboot_test_command` | `whoami` | no | Command Ansible runs after reconnecting to confirm the host is ready |
 
 ## Usage
 
@@ -46,6 +52,12 @@ base_upgrade_mode: safe
 base_upgrade_autoremove: false
 base_upgrade_allow_reboot: false
 base_upgrade_fail_if_reboot_required: false
+base_upgrade_lock_timeout: 600
+base_upgrade_lock_check_delay: 5
+base_upgrade_reboot_timeout: 900
+base_upgrade_reboot_connect_timeout: 10
+base_upgrade_reboot_post_reboot_delay: 30
+base_upgrade_reboot_test_command: whoami
 ```
 
 Use `base_updates` when you want to manage unattended-upgrades policy for future automatic maintenance.

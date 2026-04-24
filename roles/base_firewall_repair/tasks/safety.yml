@@ -1,0 +1,49 @@
+---
+# roles/base_firewall_repair/tasks/safety.yml
+# Installs a temporary timer that disables UFW during repair testing.
+
+- name: "Safety | Deploy UFW emergency-disable service unit"
+  ansible.builtin.copy:
+    dest: "/etc/systemd/system/{{ base_firewall_repair_safety_net_service_name }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=UFW emergency disable safety net
+      Documentation=https://github.com/tatbyte/homelab-roles
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/sbin/ufw disable
+      StandardOutput=journal
+      StandardError=journal
+
+- name: "Safety | Deploy UFW emergency-disable timer unit"
+  ansible.builtin.copy:
+    dest: "/etc/systemd/system/{{ base_firewall_repair_safety_net_service_name }}.timer"
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=UFW emergency disable timer
+      Documentation=https://github.com/tatbyte/homelab-roles
+
+      [Timer]
+      OnActiveSec={{ base_firewall_repair_safety_net_on_active_sec }}
+      OnUnitActiveSec={{ base_firewall_repair_safety_net_on_unit_active_sec }}
+      Persistent=false
+
+      [Install]
+      WantedBy=timers.target
+
+- name: "Safety | Reload systemd daemon"
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: "Safety | Start UFW emergency-disable timer"
+  ansible.builtin.systemd:
+    name: "{{ base_firewall_repair_safety_net_service_name }}.timer"
+    state: started
+    enabled: true

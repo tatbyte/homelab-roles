@@ -5,10 +5,6 @@
 # admin-auth, and DNS firewall behavior exercised through the aggregate
 # `docker` role.
 
-# Keep the AdGuard role internally enabled when the aggregate toggle turns it
-# on for the example lab.
-docker_adguard_enabled: true
-
 # Inherit the engine-level Compose support package choice so the service role
 # stays on the same package family as `docker_engine`.
 docker_adguard_packages: "{{ docker_engine_compose_packages | default([]) }}"

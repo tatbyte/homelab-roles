@@ -8,3 +8,9 @@ base_upgrade_mode: safe
 base_upgrade_autoremove: false
 base_upgrade_allow_reboot: false
 base_upgrade_fail_if_reboot_required: false
+base_upgrade_lock_timeout: 600
+base_upgrade_lock_check_delay: 5
+base_upgrade_reboot_timeout: 900
+base_upgrade_reboot_connect_timeout: 10
+base_upgrade_reboot_post_reboot_delay: 30
+base_upgrade_reboot_test_command: whoami

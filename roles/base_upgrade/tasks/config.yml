@@ -3,15 +3,36 @@
 # Config phase tasks for the `base_upgrade` role.
 # Refreshes APT metadata, applies the requested upgrade mode, optionally removes unused packages, and handles reboot detection.
 
+- name: "Config | Wait for existing APT or dpkg lock holders"
+  ansible.builtin.command:
+    argv:
+      - timeout
+      - "{{ base_upgrade_lock_timeout | string }}"
+      - sh
+      - -c
+      - >-
+        while fuser
+        /var/lib/dpkg/lock-frontend
+        /var/lib/dpkg/lock
+        /var/cache/apt/archives/lock
+        /var/lib/apt/lists/lock
+        >/dev/null 2>&1; do
+          sleep {{ base_upgrade_lock_check_delay | int }};
+        done
+  changed_when: false
+  when: (base_upgrade_lock_timeout | int) > 0
+
 - name: "Config | Refresh APT package metadata"
   ansible.builtin.apt:
     update_cache: true
     cache_valid_time: "{{ base_upgrade_cache_valid_time }}"
+    lock_timeout: "{{ base_upgrade_lock_timeout }}"
 
 - name: "Config | Apply requested package upgrades"
   ansible.builtin.apt:
     upgrade: "{{ base_upgrade_mode }}"
     force_apt_get: true
+    lock_timeout: "{{ base_upgrade_lock_timeout }}"
   register: base_upgrade_upgrade_result
   environment:
     DEBIAN_FRONTEND: noninteractive
@@ -20,6 +41,7 @@
   ansible.builtin.apt:
     autoremove: true
     purge: false
+    lock_timeout: "{{ base_upgrade_lock_timeout }}"
   register: base_upgrade_autoremove_result
   environment:
     DEBIAN_FRONTEND: noninteractive
@@ -88,7 +110,11 @@
 
 - name: "Config | Reboot after upgrade when requested"
   ansible.builtin.reboot:
+    connect_timeout: "{{ base_upgrade_reboot_connect_timeout }}"
     msg: Reboot initiated by the base_upgrade role after package upgrades.
+    post_reboot_delay: "{{ base_upgrade_reboot_post_reboot_delay }}"
+    reboot_timeout: "{{ base_upgrade_reboot_timeout }}"
+    test_command: "{{ base_upgrade_reboot_test_command }}"
   when:
     - base_upgrade_allow_reboot
     - base_upgrade_reboot_required

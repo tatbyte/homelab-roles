@@ -12,3 +12,8 @@
 backup_include_restic: false
 backup_include_restic_prune: false
 backup_include_restic_check: false
+
+backup_restic_enabled: false
+backup_restic_prune_enabled: false
+backup_restic_check_enabled: false
+restore_restic_enabled: false

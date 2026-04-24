@@ -3,7 +3,6 @@
 # Shared hosts-file variables for the example lab.
 # Defines the inventory-driven `/etc/hosts` block settings used during the base phase.
 
-base_hosts_enabled: false
 # Inventory group used to build the managed `/etc/hosts` block.
 # Keep `all` here so every host in the example lab learns the inventory
 # hostname-to-address mappings for every other managed host.

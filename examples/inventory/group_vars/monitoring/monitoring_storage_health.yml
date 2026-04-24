@@ -7,7 +7,6 @@
 
 # Keep the storage-health timer enabled so the example lab exercises the
 # dedicated per-device JSON contract alongside the host-status role.
-monitoring_storage_health_enabled: true
 
 # Keep the JSON output path explicit in inventory so collection and validation
 # consumers can inspect or override it without opening the shared role

@@ -3,7 +3,6 @@
 # Shared SSH daemon variables for the example lab.
 # Defines the SSH daemon package, service, and managed policy enforced during the base phase.
 
-base_sshd_enabled: true
 # Package list installed with APT to provide the SSH daemon on the host.
 base_sshd_packages:
   - openssh-server    # OpenSSH server package for Debian-family hosts
@@ -24,10 +23,18 @@ base_sshd_password_authentication: true
 # Keep public-key authentication enabled for the automation account.
 base_sshd_pubkey_authentication: true
 
-# Optional login allow-list for the example lab. The role validates that these
-# users are present in the effective AllowUsers result after SSH config merge.
-base_sshd_allow_users:
-  - vagrant      # Used by Vagrant for VM lifecycle (halt/up) and testing automation
-  - ansible
-  - admin
-  - human-user    # Example human admin account managed by the user layer
+# Optional login allow-list for the example lab. Keep provider, bootstrap, and
+# human users able to log in; `unique` keeps the list safe when two names match.
+base_sshd_allow_users: >-
+  {{
+    [
+      'vagrant',
+      bootstrap_user,
+      bootstrap_login_user,
+      user_account_name
+    ]
+    | map('trim')
+    | reject('equalto', '')
+    | unique
+    | list
+  }}

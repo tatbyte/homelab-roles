@@ -16,3 +16,10 @@ monitoring_include_docker_tag: false
 monitoring_include_collect: false
 monitoring_include_web: false
 monitoring_include_notify: false
+
+monitoring_status_enabled: false
+monitoring_storage_health_enabled: false
+monitoring_docker_tag_enabled: false
+monitoring_collect_enabled: false
+monitoring_web_enabled: false
+monitoring_notify_enabled: false

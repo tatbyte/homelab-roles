@@ -3,11 +3,18 @@
 # Backup-layer toggle variables for hosts in the dedicated example `backup`
 # inventory group.
 # Keeps the aggregate backup layer disabled by default in `group_vars/all`, then
-# enables the recurring Restic workflow for the example backup hosts while
-# leaving host_vars free to override any toggle later.
+# enables the recurring Restic workflow for hosts in the `backup` group.
 
 # The example backup group should exercise the recurring Restic workflow by
-# default. A specific example host can still opt out in host vars when needed.
+# default.
 backup_include_restic: true
 backup_include_restic_prune: true
 backup_include_restic_check: true
+
+# Keep the role-internal service states together with the aggregate includes so
+# one file answers both questions: "is the role included?" and "should it keep
+# its managed service/timer active?"
+backup_restic_enabled: true
+backup_restic_prune_enabled: true
+backup_restic_check_enabled: true
+restore_restic_enabled: true

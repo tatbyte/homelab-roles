@@ -3,7 +3,6 @@
 # Shared sudo variables for the example lab.
 # Defines the sudo package, managed user, and sudo group enforced during the base phase.
 
-base_sudo_enabled: true
 # Package list installed with APT to provide sudo on the host.
 base_sudo_packages:
   - sudo             # privilege escalation package used by the base_sudo role

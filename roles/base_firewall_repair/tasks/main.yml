@@ -1,0 +1,31 @@
+---
+# roles/base_firewall_repair/tasks/main.yml
+# Entrypoint for manual firewall/backend repair operations.
+
+- name: Assert
+  ansible.builtin.import_tasks: assert.yml
+  tags: [assert, base_firewall_repair, base_firewall_repair_assert]
+
+- name: Safety
+  ansible.builtin.import_tasks: safety.yml
+  tags: [config, base_firewall_repair, base_firewall_repair_safety]
+  when: base_firewall_repair_safety_net_enabled | bool
+
+- name: Config
+  ansible.builtin.import_tasks: config.yml
+  tags: [config, base_firewall_repair, base_firewall_repair_config]
+
+- name: Validate
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate, base_firewall_repair, base_firewall_repair_validate]
+
+- name: "Cleanup | Stop and disable safety timer when requested"
+  ansible.builtin.systemd:
+    name: "{{ base_firewall_repair_safety_net_service_name }}.timer"
+    state: stopped
+    enabled: false
+  changed_when: false
+  failed_when: false
+  when:
+    - base_firewall_repair_safety_net_enabled | bool
+    - base_firewall_repair_safety_net_cleanup | bool

@@ -1,0 +1,29 @@
+---
+# roles/base_firewall_repair/defaults/main.yml
+# Defaults for the manual UFW/backend repair helper.
+
+base_firewall_repair_safety_net_enabled: true
+base_firewall_repair_safety_net_service_name: ufw-safedisable
+base_firewall_repair_safety_net_on_active_sec: 5
+base_firewall_repair_safety_net_on_unit_active_sec: 30
+
+base_firewall_repair_manage_ufw_service: true
+base_firewall_repair_pin_nft_backend: true
+base_firewall_repair_flush_legacy_tables: true
+# Default to non-destructive behavior. Flushing the entire ruleset is a
+# recovery tactic that should be explicitly requested per incident.
+base_firewall_repair_flush_nftables_ruleset: false
+base_firewall_repair_reset_ufw: false
+base_firewall_repair_stop_docker: true
+base_firewall_repair_start_docker_after: true
+base_firewall_repair_enable_ufw_after: false
+
+# When true, stop and disable the safety timer at the end of the role run.
+# The unit files are left in place so a future repair can re-enable quickly.
+base_firewall_repair_safety_net_cleanup: false
+
+base_firewall_repair_legacy_tables:
+  - filter
+  - nat
+  - mangle
+  - raw

@@ -1,9 +1,9 @@
 ---
 # examples/inventory/group_vars/all/user.yml
 # Shared aggregate user-role variables for the example lab.
-# Defines the optional aggregate-role toggles for the example user layer.
-# Keep these disabled by default here, then enable them per host in
-# `examples/inventory/host_vars/<host>/vars.yml`.
+# Defines default-off aggregate-role toggles for the example user layer.
+# `examples/inventory/group_vars/user/user.yml` enables the normal example
+# human-admin workflow for hosts in the `user` inventory group.
 
 # Keep these aggregate toggles in the same order used by
 # `roles/user/tasks/main.yml`.
@@ -13,8 +13,7 @@
 user_include_groups: false
 
 # 3. `user_sudo` runs after account and supplementary-group state when enabled.
-# Keep this enabled in the example lab so the human admin account has one
-# explicit managed sudoers drop-in instead of relying only on distro defaults.
+# Disabled here because this file is the broad default layer.
 user_include_sudo: false
 
 # If you later disable `user_include_sudo`, set this to true for one cleanup
@@ -22,39 +21,32 @@ user_include_sudo: false
 user_cleanup_disabled_sudo_drop_in: false
 
 # 4. `user_password` runs after account, group, and sudo state when enabled.
-# Keep password management enabled in the example lab so the example human
-# admin account has a usable local password in addition to any SSH access.
+# Disabled here because this file is the broad default layer.
 # The companion `user_password.yml` file uses the plaintext test password
 # `password` as a documented local-lab example, so replace that demo hash
 # before using this pattern on a real host.
 user_include_password: false
 
 # 5. `user_ssh` runs after account, group, sudo, and password state.
-# Keep this enabled in the example lab so the human admin account gets a
-# managed `.ssh` baseline with authorized keys plus optional client files.
+# Disabled here because this file is the broad default layer.
 user_include_ssh: false
 
 # 6. `user_zshell` runs after the optional SSH-access layer.
-# Keep this enabled in the example lab so the human admin account gets the
-# managed zsh login shell and a managed `.zshrc`.
+# Disabled here because this file is the broad default layer.
 user_include_zshell: false
 
 # 7. `user_profile` runs after the optional zsh shell layer.
-# Keep this enabled in the example lab so the human admin account gets managed
-# login/session defaults in `.profile` and a simple `.bash_profile` bridge.
+# Disabled here because this file is the broad default layer.
 user_include_profile: false
 
 # 8. `user_directories` runs after the optional login/profile layer.
-# Keep this enabled in the example lab so the human admin account gets a small
-# standard workspace layout under its existing home directory.
+# Disabled here because this file is the broad default layer.
 user_include_directories: false
 
 # 9. `user_git` runs after the optional directory-standardization layer.
-# Keep this enabled in the example lab so the human admin account gets a small
-# managed Git identity plus alias baseline in `~/.gitconfig`.
+# Disabled here because this file is the broad default layer.
 user_include_git: false
 
 # 10. `user_vim` runs after the optional Git layer.
-# Keep this enabled in the example lab so the human admin account gets a managed
-# `.vimrc` editor configuration baseline.
+# Disabled here because this file is the broad default layer.
 user_include_vim: false
